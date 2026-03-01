@@ -145,18 +145,18 @@ Inputs/Prereqs: production Dockerfile.
 
 Notes/Decisions:
 - Prereq: create GitHub repo + set remote; enable GHCR for the owner/org.
-- Branch model: `main` is stable (batched releases), `dev` is fast channel; promote from `dev` to `main` when stable.
+- Branch model: `master` is stable (batched releases), `dev` is fast channel; promote from `dev` to `master` when stable.
 - Target image path: `ghcr.io/<org>/gulgrir`.
-- Trigger: tag-only releases (`vX.Y.Z`) + manual dispatch (no push-on-commit).
-- Tags: `latest` + version tag.
-- Branch policy: `main` stable; optional `dev` for fast iteration; no separate nightly for now.
+- Trigger: tag-only releases (stable `vX.Y`, dev `vX.Y.Z`) + manual dispatch (no push-on-commit).
+- Tags: stable publishes `latest` + `vX.Y`; dev publishes `dev` + `vX.Y.Z`.
+- Branch policy: `master` stable; `dev` for fast iteration; no separate nightly for now.
 
 Tasks:
 - [x] Verify `gh` CLI installed and authenticated
 - [x] Create GitHub repo and set `origin` remote
-- [x] Create `dev` branch and push both `main` and `dev`
+- [x] Create `dev` branch and push both `master` and `dev`
 - [x] Add GH Actions workflow
-- [ ] Configure tags (latest + version/SHA)
+- [x] Configure tags (stable `vX.Y`, dev `vX.Y.Z`)
 - [ ] Optional: SBOM/provenance
 
 Outputs/Artifacts:
@@ -172,8 +172,8 @@ Session checklist:
 - [x] Add `origin` remote and push current branch
 - [x] Create/push `dev` branch
 - [x] Draft workflow
-- [ ] Add tag logic
-- [ ] Verify actions permissions
+- [x] Add tag logic
+- [x] Verify actions permissions
 
 Notes/Decisions:
 - (Capture tagging scheme and security options)

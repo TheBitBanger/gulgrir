@@ -84,6 +84,8 @@ jobs:
           context: .
           file: docker/app.Dockerfile
           push: true
+          provenance: true
+          sbom: true
           tags: ${{ steps.resolve.outputs.image_tags }}
           labels: |
             org.opencontainers.image.source=${{ github.repositoryUrl }}

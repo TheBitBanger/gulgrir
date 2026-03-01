@@ -157,7 +157,7 @@ Tasks:
 - [x] Create `dev` branch and push both `master` and `dev`
 - [x] Add GH Actions workflow
 - [x] Configure tags (stable `vX.Y`, dev `vX.Y.Z`)
-- [ ] Optional: SBOM/provenance
+- [x] Optional: SBOM/provenance
 
 Outputs/Artifacts:
 - `.github/workflows/publish-image.yml`
@@ -206,10 +206,10 @@ Goal: quick validation steps post-deploy.
 Inputs/Prereqs: running container.
 
 Tasks:
-- [ ] Container boot
-- [ ] DB connectivity
-- [ ] Login/signup
-- [ ] Basic page render
+- [x] Container boot
+- [x] DB connectivity
+- [x] Login/signup
+- [x] Basic page render
 
 Outputs/Artifacts:
 - `docs/smoke-tests.md`
@@ -218,8 +218,8 @@ Exit criteria:
 - Checklist can be followed end-to-end
 
 Session checklist:
-- [ ] Write smoke checklist
-- [ ] Include expected results per step
+- [x] Write smoke checklist
+- [x] Include expected results per step
 
 Notes/Decisions:
 - (Capture any test environment requirements)

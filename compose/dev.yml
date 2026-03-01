@@ -1,7 +1,10 @@
 name: gulgrir
 services:
   app:
-    image: ghcr.io/org/media:0.1.0
+    build:
+      context: ..
+      dockerfile: docker/app.Dockerfile
+    image: gulgrir:dev
     container_name: gulgrir_web
     restart: unless-stopped
     env_file: ../.env

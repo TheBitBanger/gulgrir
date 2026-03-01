@@ -1,8 +1,0 @@
-name: gulgrir
-services:
-  app:
-    build:
-      context: ..
-      dockerfile: docker/app.Dockerfile
-    volumes:
-      - ../src:/app/src

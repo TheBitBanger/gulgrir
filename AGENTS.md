@@ -10,7 +10,7 @@ this document.
 - App package: `src/tracker`
 - Project config: `src/gulgrir`
 - Entrypoint: `src/manage.py`
-- Docker Compose: `compose/prod.yml`, `compose/local.yml`
+- Docker Compose: `compose/dev.yml`, `compose/dev.bind.yml`
 - Database: PostgreSQL (container `db` in Compose)
 
 ## Rules from other agent configs
@@ -21,14 +21,14 @@ this document.
 ## Build, run, and environment
 
 Local dev uses Docker Compose. The app container runs Django and depends on
-PostgreSQL. The production Compose file wires ports and env vars.
+PostgreSQL. The dev Compose file wires ports and env vars.
 
 Common commands (run from repo root):
 
-- Start database only (from README):
-  - `docker compose -f compose/prod.yml -f compose/local.yml up -d db`
+- Start database only (dev, with bind mounts):
+  - `docker compose -f compose/dev.yml -f compose/dev.bind.yml up -d db`
 - Start app + db:
-  - `docker compose -f compose/prod.yml -f compose/local.yml up -d`
+  - `docker compose -f compose/dev.yml -f compose/dev.bind.yml up -d`
 - Run the app (inside container via compose entrypoint):
   - `python /app/src/manage.py runserver 0.0.0.0:8765`
 - Migrations are applied in container entrypoint:
@@ -38,7 +38,7 @@ Common commands (run from repo root):
 
 Environment variables:
 
-- `.env` is used by Compose (`compose/prod.yml`)
+- `.env` is used by Compose (`compose/dev.yml`)
 - `DJANGO_SECRET_KEY` and `DJANGO_DEBUG` are read in `src/gulgrir/settings.py`
 - Postgres vars: `POSTGRES_USER`, `POSTGRES_PASSWORD`
 
@@ -147,7 +147,7 @@ Suggested type-check command (if mypy is installed):
 
 - Templates and static assets live under `src/tracker/templates` and
   `src/tracker/static`.
-- Compose uses `compose/local.yml` to mount `src/` into the container.
+- Compose uses `compose/dev.bind.yml` to mount `src/` into the container.
 - The app runs on port `8765` by default (`GULGRIR_PORT` env var).
 
 ## When adding new tooling

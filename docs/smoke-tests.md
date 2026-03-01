@@ -15,6 +15,8 @@ Quick checks to validate a deployment without full regression testing.
   - Command: `curl -fsS http://localhost:8765/static/admin/css/base.css`
 - [ ] Admin static JS returns 200
   - Command: `curl -fsS http://localhost:8765/static/admin/js/nav_sidebar.js`
+- [ ] Container logs show no errors
+  - Command: `docker compose logs --tail=200`
 
 ## Manual (UI)
 - [ ] Load `/admin/` and verify styles load

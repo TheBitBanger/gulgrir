@@ -1,0 +1,5 @@
+name: gulgrir
+services:
+  app:
+    volumes:
+      - ../src:/app/src

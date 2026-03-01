@@ -120,7 +120,7 @@ Tasks:
 - [x] Add db + app services
 - [x] Add volumes for data
 - [x] Add `.env` support
-- [ ] Revisit dev compose setup; consolidate layered files into a single dev compose with bind mounts
+- [x] Revisit dev compose setup; consolidate layered files into a single dev compose with bind mounts
 
 Outputs/Artifacts:
 - `compose.yml`

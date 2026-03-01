@@ -17,7 +17,8 @@ dependencies = [
     "django (>=5.2.1,<6.0.0)",
     "psycopg2-binary (>=2.9.10,<3.0.0)",
     "pytz (>=2025.2,<2026.0)",
-    "gunicorn (>=25.1.0,<26.0.0)"
+    "gunicorn (>=25.1.0,<26.0.0)",
+    "whitenoise (>=6.9.0,<7.0.0)"
 ]
 package-mode = false
 
@@ -28,4 +29,3 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.group.dev.dependencies]
 django-stubs = {extras = ["compatible-mypy"], version = "^5.2.0"}
-

@@ -8,9 +8,7 @@
 - Stable releases use `vX.Y` tags on `master` (publishes `latest` + `vX.Y`).
 - Dev releases use `vX.Y.Z` tags on `dev` (publishes `dev` + `vX.Y.Z`).
 
-# Install (Current Compose Setup)
-
-This documents the current behavior using `compose/prod.yml` + `compose/local.yml`.
+# Install (Docker Compose)
 
 ## Requirements
 
@@ -18,13 +16,14 @@ This documents the current behavior using `compose/prod.yml` + `compose/local.ym
 
 ## Create a compose.yml
 
-Create a `compose.yml` file with the following content:
+Create a `compose.yml` file with the following content. You can use `dev`,
+`latest`, or a pinned version tag like `v0.1.0` for the image.
 
 ```yaml
 name: gulgrir
 services:
   app:
-    image: ghcr.io/org/media:latest
+    image: ghcr.io/thebitbanger/gulgrir:dev
     restart: unless-stopped
     env_file: .env
     ports:
@@ -58,17 +57,31 @@ DJANGO_ADMIN_PASS=admin
 POSTGRES_USER=gulgrir
 POSTGRES_PASSWORD=gulgrir
 GULGRIR_PORT=8765
+DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
+DJANGO_CSRF_TRUSTED_ORIGINS=http://localhost:8765
 ```
 
 Notes:
 - `DJANGO_ADMIN_USER` / `DJANGO_ADMIN_PASS` are used to auto-create a superuser on first run.
 - Change the defaults for any real deployment.
 - `GULGRIR_PORT` controls the host port that maps to container port 8765.
+- `DJANGO_ALLOWED_HOSTS` should include any hostnames or IPs you use to access the app.
+- `DJANGO_CSRF_TRUSTED_ORIGINS` must include the full scheme + host (and port if used).
+
+## If using a reverse proxy
+
+Add the public URL(s) and enable proxy headers. Example:
+
+```
+DJANGO_ALLOWED_HOSTS=gulgrir.your-domain.com,your-domain.com
+DJANGO_CSRF_TRUSTED_ORIGINS=https://gulgrir.your-domain.com,http://your-domain.com:8765
+DJANGO_SECURE_PROXY_SSL_HEADER=true
+```
 
 ## Start the stack
 
 ```
-docker compose -f compose/prod.yml -f compose/local.yml up -d
+docker compose up -d
 ```
 
 ## Access
@@ -96,7 +109,7 @@ mkdir -p backups
 ## Backup the database
 
 ```
-docker compose -f compose/prod.yml -f compose/local.yml exec -T db pg_dump -U gulgrir -d gulgrir -F c > backups/gulgrir_$(date +%F_%H%M%S).dump
+docker compose exec -T db pg_dump -U gulgrir -d gulgrir -F c > backups/gulgrir_$(date +%F_%H%M%S).dump
 ```
 
 # Restores
@@ -104,17 +117,17 @@ docker compose -f compose/prod.yml -f compose/local.yml exec -T db pg_dump -U gu
 ## Start the database only
 
 ```
-docker compose -f compose/prod.yml -f compose/local.yml up -d db
+docker compose up -d db
 ```
 
 ## Restore the dump
 
 ```
-cat backups/<dump file>.dump | docker compose -f compose/prod.yml -f compose/local.yml exec -T db pg_restore -U gulgrir -d gulgrir --clean --if-exists
+cat backups/<dump file>.dump | docker compose exec -T db pg_restore -U gulgrir -d gulgrir --clean --if-exists
 ```
 
 ## Start the application
 
 ```
-docker compose -f compose/prod.yml -f compose/local.yml up -d app
+docker compose up -d app
 ```

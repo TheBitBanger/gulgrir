@@ -22,3 +22,4 @@ COPY ./docker/scripts/entrypoint.sh /app/docker/scripts/entrypoint.sh
 ENV PYTHONPATH=/app/src
 
 RUN chmod +x /app/docker/scripts/entrypoint.sh
+RUN python /app/src/manage.py collectstatic --noinput

@@ -76,8 +76,8 @@ Exit criteria:
 
 Session checklist:
 - [x] Create baseline doc outline and fill first pass
-- [ ] Add install section with compose commands
-- [ ] Add release checklist skeleton
+- [x] Add install section with compose commands
+- [x] Add release checklist skeleton
 
 Notes/Decisions:
 - (Capture choices about doc location, structure, or scope)
@@ -120,6 +120,7 @@ Tasks:
 - [x] Add db + app services
 - [x] Add volumes for data
 - [x] Add `.env` support
+- [ ] Revisit dev compose setup; consolidate layered files into a single dev compose with bind mounts
 
 Outputs/Artifacts:
 - `compose.yml`
@@ -130,9 +131,9 @@ Exit criteria:
 - Data persists via volumes
 
 Session checklist:
-- [ ] Draft compose services
-- [ ] Add volumes and env file
-- [ ] Document usage in README
+- [x] Draft compose services
+- [x] Add volumes and env file
+- [x] Document usage in README
 
 Notes/Decisions:
 - (Capture env var defaults and volume paths)
@@ -151,10 +152,10 @@ Notes/Decisions:
 - Branch policy: `main` stable; optional `dev` for fast iteration; no separate nightly for now.
 
 Tasks:
-- [ ] Verify `gh` CLI installed and authenticated
-- [ ] Create GitHub repo and set `origin` remote
-- [ ] Create `dev` branch and push both `main` and `dev`
-- [ ] Add GH Actions workflow
+- [x] Verify `gh` CLI installed and authenticated
+- [x] Create GitHub repo and set `origin` remote
+- [x] Create `dev` branch and push both `main` and `dev`
+- [x] Add GH Actions workflow
 - [ ] Configure tags (latest + version/SHA)
 - [ ] Optional: SBOM/provenance
 
@@ -166,11 +167,11 @@ Exit criteria:
 - Image is available in GHCR
 
 Session checklist:
-- [ ] Check `gh --version` and `gh auth status`
-- [ ] Create repo via `gh repo create` (or manually)
-- [ ] Add `origin` remote and push current branch
-- [ ] Create/push `dev` branch
-- [ ] Draft workflow
+- [x] Check `gh --version` and `gh auth status`
+- [x] Create repo via `gh repo create` (or manually)
+- [x] Add `origin` remote and push current branch
+- [x] Create/push `dev` branch
+- [x] Draft workflow
 - [ ] Add tag logic
 - [ ] Verify actions permissions
 

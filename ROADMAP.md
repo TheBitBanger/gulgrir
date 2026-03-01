@@ -184,8 +184,8 @@ Goal: clear deploy steps for home server.
 Inputs/Prereqs: compose.yml and image.
 
 Tasks:
-- [ ] Add home-server install steps
-- [ ] Add DB migration + backup/restore steps
+- [x] Add home-server install steps
+- [x] Add DB migration + backup/restore steps
 
 Outputs/Artifacts:
 - `docs/deploy.md`

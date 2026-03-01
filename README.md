@@ -84,6 +84,17 @@ DJANGO_SECURE_PROXY_SSL_HEADER=true
 docker compose up -d
 ```
 
+## Upgrades
+
+To upgrade to a newer image, pull and recreate the app container:
+
+```
+docker compose pull app
+docker compose up -d --force-recreate
+```
+
+Migrations run automatically when the container starts.
+
 ## Access
 
 Visit: `http://localhost:8765`
@@ -97,6 +108,11 @@ On first run, the entrypoint auto-creates a superuser using `DJANGO_ADMIN_USER` 
 ## Database Backup Location
 
 Database backups are written to `./backups` on the host (from the db container).
+
+## Release channel
+
+Only the dev channel is available right now. Stable releases will be added once
+the first stable milestone is ready.
 
 # Backups
 

@@ -18,7 +18,7 @@ Use this checklist for each release. Keep it short and executable.
 - [ ] Verify migration/restore steps match current docs
 
 ## Owner QA (manual)
-- [ ] Owner runs smoke tests
+- [ ] Owner runs smoke tests (`docs/smoke-tests.md`)
 - [ ] Owner performs UX/UI validation
 
 ## Release Complete

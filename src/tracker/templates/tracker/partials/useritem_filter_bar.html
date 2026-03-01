@@ -1,0 +1,45 @@
+<!-- filter controls -->
+<form
+  id="filter-form"
+  hx-get="{% url 'useritem_dashboard' %}"
+  hx-target="#item-table"
+  hx-swap="outerHTML"
+  hx-replace-url="true"
+  hx-trigger="change delay:150ms, keyup changed delay:300ms from:input[name='title_icontains']"
+  hx-include="#filter-form"
+  class="space-y-2"
+>
+  {% include "tracker/partials/controls/_multicheck.html" with field=form.shelf label="Shelf" %}
+  {% include "tracker/partials/controls/_multicheck.html" with field=form.media_type label="Media type" %}
+  {% include "tracker/partials/controls/_multicheck.html" with field=form.tags label="Tags" %}
+  <label class="mr-1 inline-flex items-center gap-1">
+    {{ form.is_project }} {{ form.is_project.label }}
+  </label>
+  <label class="inline-flex items-center gap-1">
+    {{ form.title_icontains.label_tag }} {{ form.title_icontains }}
+  </label>
+  <!-- clear filters -->
+  <button type="button" hx-get="{% url 'useritem_dashboard' %}" hx-target="#item-table" hx-swap="outerHTML" hx-params="none" hx-on:click="document.getElementById('filter-form').reset()" class="ml-2 px-2 py-1 border rounded">
+    Clear Filters
+  </button>
+</form>
+<!-- save current filter -->
+<!-- <form id="save-filter-form" hx-post="{% url 'save_filter' %}" hx-include="#filter-form" hx-target="#saved-filters" hx-swap="innerHTML" hx-on:filter-saved=" -->
+<!--         this.reset(); -->
+<!--       " class="mt-2 flex gap-2"> -->
+<!--   {% csrf_token %} -->
+<!--   <input type="text" name="filter_name" placeholder="Filter name" class="border rounded p-1 text-sm"> -->
+<!--   <button class="btn" type="submit">Save filter</button> -->
+<!-- </form> -->
+
+<form
+  id="save-filter-form"
+  hx-post="{% url 'save_filter' %}"
+  hx-include="#filter-form"
+  hx-swap="none"
+  class="mt-2 flex gap-2"
+>
+  {% csrf_token %}
+  <input type="text" name="filter_name" placeholder="Filter name" class="border rounded p-1 text-sm">
+  <button class="btn" type="submit">Save filter</button>
+</form>

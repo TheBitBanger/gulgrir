@@ -1,0 +1,14 @@
+{% extends "tracker/base.html" %}
+{% block content %}
+<h1 class="text-xl font-semibold mb-4">My tags</h1>
+
+<a class="btn mb-2" href="{% url 'tag_add' %}">➕ New tag</a>
+
+<ul class="list-disc ml-6">
+  {% for tag in object_list %}
+    <li>{{ tag.name }}</li>
+  {% empty %}
+    <li>No tags yet.</li>
+  {% endfor %}
+</ul>
+{% endblock %}

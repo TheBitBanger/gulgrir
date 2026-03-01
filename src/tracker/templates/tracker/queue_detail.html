@@ -1,0 +1,59 @@
+{% extends "tracker/base.html" %}
+{% block content %}
+<h1>{{ queue.name }}</h1>
+
+<form method="post" action="{% url 'bulk_action' %}">
+  {% csrf_token %}
+  <!-- bulk toolbar -->
+  <div class="mb-2 flex items-center gap-4">
+    <label class="inline-flex items-center">
+      <input id="toggle-all" type="checkbox" class="mr-1">
+      <span>Select / deselect all</span>
+    </label>
+
+    <!-- when you click either button the browser will POST action=<value> -->
+    <button type="submit" name="action" value="completed"  class="btn">
+      Mark completed
+    </button>
+    <button type="submit" name="action" value="revisited" class="btn">
+      Mark revisited
+    </button>
+  </div>
+  <table class="w-full border-collapse">
+    <thead>
+      <tr class="border-b">
+        <th></th>
+        <th class="text-left p-1">Title</th>
+        <th>Shelf</th>
+        <th>Completed</th>
+        <th>Revisited</th>
+        <th>Tags</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for ui in items %}
+        <tr>
+          <td><input type="checkbox" name="item_ids" value="{{ ui.id }}" class="bulk-box" /></td>
+          <td>{{ ui.title_override|default_if_none:ui.item.title }}</td>
+          <td>{{ ui.get_shelf_display }}</td>
+          <td>{{ ui.last_completed_at|date:tpl_fmt|default:"-" }}</td>
+          <td>{{ ui.last_revisited_at|date:tpl_fmt|default:"-" }}</td>
+          <td>{% for t in ui.tags.all %}{{ t.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6">No items matched.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</form>
+<!-- tiny JS only for the toggle-all behaviour -->
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const toggleAll = document.getElementById("toggle-all");
+  if (!toggleAll) return;
+  toggleAll.addEventListener("change", e => {
+    document.querySelectorAll(".bulk-box").forEach(cb => cb.checked = e.target.checked);
+  });
+});
+</script>
+{% endblock %}

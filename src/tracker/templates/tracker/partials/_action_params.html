@@ -1,0 +1,5 @@
+{% for field in form %}
+  <label class="inline-flex items-center gap-1">
+    {{ field.label_tag }} {{ field }}
+  </label>
+{% endfor %}

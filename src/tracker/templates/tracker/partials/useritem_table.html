@@ -1,0 +1,62 @@
+{% comment %} src/tracker/templates/tracker/partials/useritem_table.html {% endcomment %}
+
+{% comment %} TODO: add mark completed/revisited {% endcomment %}
+<table id="item-table" class="w-full table-fixed text-sm">
+  <colgroup>
+    <col class="w-8">      <!-- checkbox + folder icon -->
+    <col class="w-2/5">    <!-- title -->
+    <col class="w-16">     <!-- tier -->
+    <col class="w-28">     <!-- shelf -->
+    <col class="w-28">     <!-- completed -->
+    <col class="w-28">     <!-- revisited -->
+    <col class="w-1/5">    <!-- tags -->
+    <col class="w-12">     <!-- actions -->
+  </colgroup>
+  <thead>
+    <tr class="border-b">
+      <th class="text-left">
+        <input id="check-all" type="checkbox" class="cursor-pointer" />
+      </th>
+      <th class="text-left p-1">Title</th>
+      <th>Tier</th>
+      <th>Shelf</th>
+      <th>Completed</th>
+      <th>Revisited</th>
+      <th>Tags</th>
+      <th class="w-24"></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for ui in items %}
+      <tr class="border-b">
+        <td class="text-left">
+          <input type="checkbox" name="selected_ids" value="{{ ui.id }}" class="row-check mr-1" />{% if ui.is_project %}📁{% endif %}
+        </td>
+        <td class="p-1">{{ ui.display_title }}</td>
+        <td class="p-1">
+          {% with t=ui.get_tier_display %}
+            {% if t and t != "-" %}
+              <span class="inline-flex items-center justify-center min-w-8 px-2 py-0.5 rounded-full border">
+                {{ t }}
+              </span>
+            {% else %}
+              -
+            {% endif %}
+          {% endwith %}
+        </td>
+        <td class="p-1">{{ ui.get_shelf_display }}</td>
+        <td class="p-1">{{ ui.last_completed_at|date:tpl_fmt|default:"-" }}</td>
+        <td class="p-1">{{ ui.last_revisited_at|date:tpl_fmt|default:"-" }}</td>
+        <td class="p-1">
+          {% for t in ui.tags.all %}{{ t.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+        </td>
+        <td class="text-right">
+          <a href="{% url 'useritem_edit' ui.pk %}">✏️</a>
+          <a href="{% url 'useritem_delete' ui.pk %}">🗑️</a>
+        </td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="8" class="p-2">Nothing here yet.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{% block title %}gulgrir{% endblock %}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {% load static %}
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://unpkg.com/alpinejs@3.14.9/dist/cdn.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.js"></script>
+  <script defer>
+    document.addEventListener("DOMContentLoaded", () => {
+      const fpFormat = "{{ fp_fmt|escapejs }}";
+      document.querySelectorAll(".js-date").forEach(el => {
+        flatpickr(el, {
+          dateFormat: "Y-m-d",
+          altInput: true,
+          altFormat: fpFormat,
+          allowInput: true,
+        });
+      });
+    });
+  </script>
+  <style>[x-cloak]{display:none !important}</style>
+</head>
+<body class="container mx-auto p-4">
+  <nav class="mb-4 space-x-4">
+    <a href="{% url 'useritem_dashboard' %}">My items</a>
+    <a href="{% url 'queue_list' %}">My queues</a>
+    <a href="{% url 'tag_list' %}">My tags</a>
+    <a href="{% url 'item_list' %}">Global library</a>
+    <a href="{% url 'preferences' %}">Settings</a>
+  </nav>
+  {% block content %}{% endblock %}
+  {% if is_paginated %}
+    <div class="mt-4 space-x-2">
+      {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}">« prev</a>
+      {% endif %}
+      Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+      {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}">next »</a>
+      {% endif %}
+    </div>
+  {% endif %}
+  <!-- HTMX (required for all hx-* attributes) -->
+  <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.5/dist/htmx.min.js"></script>
+  <script src="{% static "tracker/js/action_toast.js" %}"></script>
+  <script src="{% static "tracker/js/checkbox_bulk.js" %}"></script>
+  <!-- <script> -->
+  <!--   /* Make the params fragment load automatically after #action_select swaps in */ -->
+  <!--   document.addEventListener("htmx:afterSettle", function (evt) { -->
+  <!--     const target = evt.detail && evt.detail.target; -->
+  <!--     if (!target || target.id !== "action_select") return; -->
+  <!---->
+  <!--     const sel = target.querySelector("select"); -->
+  <!--     if (!sel) return; -->
+  <!---->
+  <!--     if (sel.value) { -->
+  <!--       sel.dispatchEvent(new Event("change", { bubbles: true })); -->
+  <!--     } -->
+  <!--   }); -->
+  <!-- </script> -->
+</body>
+</html>

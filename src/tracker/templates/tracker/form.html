@@ -1,0 +1,319 @@
+{% extends "tracker/base.html" %}
+
+{% block content %}
+<div class="max-w-3xl">
+  <h1 class="text-xl font-semibold mb-4">
+    {{ view.object|default:"New" }} {{ model_verbose|capfirst }}
+  </h1>
+
+  <form method="post" class="space-y-6">
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <div class="rounded-lg border p-3 text-sm">
+        {{ form.non_field_errors }}
+      </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {% for field in form.visible_fields %}
+        {% if enable_tag_picker and field.name == "tags" %}
+          <div class="md:col-span-2">
+            <label class="block text-sm mb-1">Tags</label>
+
+            <div id="tag-picker"
+                 class="rounded-lg border p-3 space-y-3"
+                 data-create-url="{% url 'tag_quick_create' %}"
+                 data-x="24"
+                 data-hx-disable="true">
+
+              <div class="flex items-center gap-2">
+                <input id="tag-filter"
+                       type="text"
+                       class="w-full rounded-lg border px-3 py-2 text-sm"
+                       placeholder="Filter tags or type a new one... (Enter to create)"
+                       autocomplete="off" />
+                <button type="button"
+                        id="tag-clear"
+                        class="rounded-lg border px-3 py-2 text-sm">
+                  Clear
+                </button>
+              </div>
+
+              <div>
+                <div class="text-xs uppercase tracking-wide opacity-70 mb-2">
+                  Selected
+                </div>
+                <div id="tag-selected" class="flex flex-wrap gap-2"></div>
+              </div>
+
+              <div>
+                <div class="text-xs uppercase tracking-wide opacity-70 mb-2">
+                  Available
+                </div>
+
+                <div id="tag-create-row" class="hidden mb-2">
+                  <button type="button"
+                          id="tag-create-btn"
+                          class="w-full text-left rounded-lg border px-3 py-2 text-sm">
+                    Press Enter / click to create
+                  </button>
+                </div>
+
+                <div id="tag-available" class="flex flex-wrap gap-2"></div>
+              </div>
+
+              <div id="tag-hidden-inputs"></div>
+
+              {# Keep the real field hidden in DOM for name/validation #}
+              <div class="hidden">
+                {{ field }}
+              </div>
+            </div>
+
+            {% if field.errors %}
+              <div class="mt-1 text-xs">{{ field.errors }}</div>
+            {% endif %}
+          </div>
+        {% else %}
+          {# Generic field rendering, works for all models/forms #}
+          {% if field.field.widget.input_type == "checkbox" %}
+            <div class="md:col-span-2">
+              <label class="flex items-center gap-2 text-sm mt-2">
+                {{ field }} <span>{{ field.label }}</span>
+              </label>
+              {% if field.errors %}<div class="mt-1 text-xs">{{ field.errors }}</div>{% endif %}
+            </div>
+          {% else %}
+            <div class="{% if field.name == 'item' or field.name == 'title_override' %}md:col-span-2{% endif %}">
+              <label for="{{ field.id_for_label }}" class="block text-sm mb-1">
+                {{ field.label }}
+              </label>
+              {{ field }}
+              {% if field.help_text %}<div class="mt-1 text-xs opacity-70">{{ field.help_text }}</div>{% endif %}
+              {% if field.errors %}<div class="mt-1 text-xs">{{ field.errors }}</div>{% endif %}
+            </div>
+          {% endif %}
+        {% endif %}
+      {% endfor %}
+    </div>
+
+
+    {% if enable_tag_picker %}
+      {{ all_tags|json_script:"all-tags-data" }}
+      {{ selected_tag_ids|json_script:"selected-tag-ids" }}
+
+      <script>
+        (function () {
+          const picker = document.getElementById("tag-picker");
+          if (!picker) return;
+
+          const hiddenSelect = picker.querySelector('select[name="tags"]');
+          if (hiddenSelect) hiddenSelect.disabled = true;
+
+          const X = parseInt(picker.dataset.x || "24", 10);
+          const createUrl = picker.dataset.createUrl;
+
+          const allTags = JSON.parse(document.getElementById("all-tags-data").textContent || "[]");
+          const initialSelected = JSON.parse(document.getElementById("selected-tag-ids").textContent || "[]");
+
+          const filterEl = document.getElementById("tag-filter");
+          const clearBtn = document.getElementById("tag-clear");
+          const selectedEl = document.getElementById("tag-selected");
+          const availableEl = document.getElementById("tag-available");
+          const hiddenInputsEl = document.getElementById("tag-hidden-inputs");
+
+          const createRow = document.getElementById("tag-create-row");
+          const createBtn = document.getElementById("tag-create-btn");
+
+          let expanded = false;
+          let filter = "";
+          const selected = new Set(initialSelected.map(Number));
+
+          function getCookie(name) {
+            const m = document.cookie.match(new RegExp("(^|; )" + name + "=([^;]*)"));
+            return m ? decodeURIComponent(m[2]) : "";
+          }
+          function norm(s) { return (s || "").trim().toLowerCase(); }
+
+          function pill(tag, isSelected) {
+            const b = document.createElement("button");
+            b.type = "button";
+            b.className =
+              "inline-flex items-center gap-1 rounded-full border px-2 py-1 text-sm " +
+              (isSelected ? "font-medium" : "");
+            if (isSelected) {
+              b.style.background = "rgba(255,255,255,0.08)";
+              const check = document.createElement("span");
+              check.textContent = "✓";
+              check.className = "text-xs opacity-80";
+              b.appendChild(check);
+            }
+
+            const t = document.createElement("span");
+            t.textContent = tag.name;
+            b.appendChild(t);
+
+            b.addEventListener("click", (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              toggle(tag.id);
+            });
+            return b;
+          }
+
+          let renderQueued = false;
+          function queueRender() {
+            if (renderQueued) return;
+            renderQueued = true;
+            requestAnimationFrame(() => {
+              renderQueued = false;
+              render();
+            });
+          }
+
+          function toggle(id) {
+            id = Number(id)
+            if (selected.has(id)) selected.delete(id);
+            else selected.add(id);
+            queueRender();
+          }
+
+          function renderHiddenInputs() {
+            hiddenInputsEl.innerHTML = "";
+            Array.from(selected)
+              .sort((a, b) => a - b)
+              .forEach((id) => {
+                const inp = document.createElement("input");
+                inp.type = "hidden";
+                inp.name = "tags";
+                inp.value = String(id);
+                hiddenInputsEl.appendChild(inp);
+              });
+          }
+
+          function renderSelected() {
+            selectedEl.innerHTML = "";
+            const selectedTags = allTags
+              .filter(t => selected.has(Number(t.id)))
+              .sort((a,b) => a.name.localeCompare(b.name));
+            selectedTags.forEach(t => selectedEl.appendChild(pill(t, true)));
+          }
+
+          function renderAvailable() {
+            availableEl.innerHTML = "";
+
+            const f = norm(filter);
+            const filtered = allTags
+              .filter(t => f === "" || norm(t.name).includes(f))
+              .sort((a,b) => a.name.localeCompare(b.name));
+
+            const visible = expanded ? filtered : filtered.slice(0, X);
+            visible.forEach(t => {
+              availableEl.appendChild(pill(t, selected.has(Number(t.id))));
+            });
+
+            if (!expanded && filtered.length > X) {
+              const more = document.createElement("button");
+              more.type = "button";
+              more.className = "inline-flex items-center rounded-full border px-2 py-1 text-sm opacity-70";
+              more.textContent = "…";
+              more.addEventListener("click", () => { expanded = true; queueRender(); });
+              availableEl.appendChild(more);
+            }
+
+            const raw = (filter || "").trim();
+            const canCreate = raw.length > 0 && !allTags.some(t => norm(t.name) === norm(raw));
+            if (canCreate) {
+              createRow.classList.remove("hidden");
+              createBtn.textContent = `Press Enter / click to create "${raw}"`;
+            } else {
+              createRow.classList.add("hidden");
+            }
+          }
+
+          async function createTag(name) {
+            const payload = { name: name.trim() };
+            if (!payload.name) return;
+
+            const res = await fetch(createUrl, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": getCookie("csrftoken"),
+              },
+              body: JSON.stringify(payload),
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+              alert(data.error || "Could not create tag");
+              return;
+            }
+
+            const id = Number(data.id);
+            if (!allTags.some(t => Number(t.id) === id)) {
+              allTags.push({ id, name: data.name });
+            }
+
+            selected.add(id);
+            filter = "";
+            filterEl.value = "";
+            expanded = false;
+            queueRender();
+          }
+
+          function render() {
+            renderHiddenInputs();
+            renderSelected();
+            renderAvailable();
+          }
+
+          filterEl.addEventListener("input", (e) => {
+            filter = e.target.value || "";
+            expanded = false;
+            queueRender();
+          });
+
+          filterEl.addEventListener("keydown", async (e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              const raw = (filterEl.value || "").trim();
+              const canCreate = raw.length > 0 && !allTags.some(t => norm(t.name) === norm(raw));
+              if (canCreate) await createTag(raw);
+            } else if (e.key === "Escape") {
+              filter = "";
+              filterEl.value = "";
+              expanded = false;
+              queueRender();
+            }
+          });
+
+          createBtn.addEventListener("click", async () => {
+            const raw = (filterEl.value || "").trim();
+            if (raw) await createTag(raw);
+          });
+
+          clearBtn.addEventListener("click", () => {
+            selected.clear();
+            queueRender();
+          });
+
+          queueRender();
+        })();
+      </script>
+    {% endif %}
+
+    <div class="flex items-center gap-3">
+      <button type="submit"
+              class="inline-flex items-center justify-center rounded-lg border px-4 py-2 text-sm font-medium shadow-sm hover:opacity-90">
+        Save
+      </button>
+      <a href="javascript:history.back()"
+         class="text-sm underline underline-offset-4 opacity-80 hover:opacity-100">
+        Cancel
+      </a>
+    </div>
+  </form>
+</div>
+{% endblock %}

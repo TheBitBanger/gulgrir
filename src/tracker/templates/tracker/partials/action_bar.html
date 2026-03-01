@@ -1,0 +1,31 @@
+<form
+  hx-post="{% url 'useritem_actions' %}"
+  hx-swap="none"
+  hx-include="#filter-form, #current_filter, input[name='selected_ids']:checked"
+  class="flex items-center gap-2 mt-2 text-sm"
+>
+  {% csrf_token %}
+
+  {# action group ------------------------------------------------------------- #}
+  <select name="action_group"
+          hx-get="{% url 'action_list' %}"
+          hx-target="#action_select"
+          hx-swap="outerHTML"
+          hx-trigger="load, change"
+          hx-params="action_group"
+          class="border rounder px-2 py-1">
+    <option value="selector" selected>Selectors</options>
+    <option value="bulk">Bulk actions</options>
+  </select>
+
+  {# action slug -------------------------------------------------------------- #}
+  {% include "tracker/partials/_action_select.html" with actions=actions_default %}
+
+  {# dynamic parameters ------------------------------------------------------- #}
+  <span id="param_zone" class="flex gap-2"></span>
+
+  <button type="submit" class="border rounded px-3 py-1 bg-blue-600 text-white hover:bg-blue-700">
+    Execute
+  </button>
+
+</form>

@@ -1,0 +1,31 @@
+[tool.mypy]
+plugins = ["mypy_django_plugin.main", "django-stubs"]
+
+[tool.django-stubs]
+django_settings_module = "gulgrir.settings"
+
+[project]
+name = "gulgrir"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Your Name",email = "you@example.com"}
+]
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "django (>=5.2.1,<6.0.0)",
+    "psycopg2-binary (>=2.9.10,<3.0.0)",
+    "pytz (>=2025.2,<2026.0)",
+    "gunicorn (>=25.1.0,<26.0.0)"
+]
+package-mode = false
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.group.dev.dependencies]
+django-stubs = {extras = ["compatible-mypy"], version = "^5.2.0"}
+

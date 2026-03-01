@@ -1,0 +1,16 @@
+{% extends "tracker/base.html" %}
+{% block content %}
+<h1 class="text-xl font-semibold mb-4">My queues</h1>
+
+<a href="{% url 'queue_add' %}" class="btn mb-2">➕ New queue</a>   {# ← add this #}
+
+<ul>
+  {% for q in queues %}
+    <li><a href="{% url 'queue_detail' q.pk %}">{{ q.name }}</a></li>
+  {% empty %}
+    <li>No queues yet.</li>
+  {% endfor %}
+</ul>
+
+<a href="{% url 'no_queue' %}">Items in no queue</a>
+{% endblock %}

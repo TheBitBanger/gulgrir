@@ -3,6 +3,11 @@
 - `docs/behavior-baseline.md`
 - `docs/release-checklist.md`
 
+# Release Tags
+
+- Stable releases use `vX.Y` tags on `master` (publishes `latest` + `vX.Y`).
+- Dev releases use `vX.Y.Z` tags on `dev` (publishes `dev` + `vX.Y.Z`).
+
 # Install (Current Compose Setup)
 
 This documents the current behavior using `compose/prod.yml` + `compose/local.yml`.

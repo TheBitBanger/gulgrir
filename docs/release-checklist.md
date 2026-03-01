@@ -9,8 +9,9 @@ Use this checklist for each release. Keep it short and executable.
 
 ## Build and Publish (GHCR)
 - [ ] Build production image
-- [ ] Tag image (`latest` + version/SHA)
-- [ ] Push image to GHCR
+- [ ] Stable tag: `vX.Y` on `master` (publishes `latest` + `vX.Y`)
+- [ ] Dev tag: `vX.Y.Z` on `dev` (publishes `dev` + `vX.Y.Z`)
+- [ ] Push tag to GitHub to trigger the workflow
 
 ## Deployment Prep
 - [ ] Confirm `compose.yml` and `.env` examples are up to date

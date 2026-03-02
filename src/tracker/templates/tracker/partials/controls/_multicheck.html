@@ -2,11 +2,11 @@
   <button type="button"
           @click="open = !open"
           @keydown.escape.window="open = false"
-          class="px-2 py-1 border rounded w-52 flex justify-between items-center">
+          class="control w-52 flex justify-between items-center">
     <span class="truncate">
       {% with sel=field.value %}
         {% if sel %}
-          {{ sel|length }} selected
+          {{ label }} ({{ sel|length }})
         {% else %}
           {{ label }}
         {% endif %}
@@ -23,14 +23,14 @@
   <div x-show="open"
        @click.outside="open = false"
        x-cloak
-       class="absolute z-10 mt-1 w-52 max-h-60 overflow-y-auto bg-white border rounded shadow-lg">
+       class="dropdown-panel absolute z-10 mt-1 w-52 max-h-60 overflow-y-auto border rounded shadow-lg">
     {% with sel=field.value %}
       {% for value, label in field.field.choices %}
         <label class="flex items-center gap-2 px-2 py-1 whitespace-nowrap">
           <input type="checkbox"
                  name="{{ field.html_name }}"
                  value="{{ value }}"
-                 {% if value in sel %}checked{% endif %}>
+                 {% if value|stringformat:"s" in sel %}checked{% endif %}>
           <span class="truncate">{{ label }}</span>
         </label>
       {% endfor %}

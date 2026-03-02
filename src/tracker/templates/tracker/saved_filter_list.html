@@ -1,0 +1,38 @@
+{% extends "tracker/base.html" %}
+{% block content %}
+<h1 class="text-xl font-semibold mb-4">Saved filters</h1>
+
+<p class="text-sm text-muted mb-3">Create filters from the item dashboard filter bar.</p>
+
+<table class="w-full border-collapse">
+  <thead>
+    <tr class="border-b">
+      <th class="text-left p-1">Name</th>
+      <th class="text-left p-1">Created</th>
+      <th class="text-left p-1">Summary</th>
+      <th class="w-24"></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for sf in object_list %}
+      <tr class="border-b">
+        <td class="p-1">
+          <a href="{% url 'useritem_dashboard' %}?{{ sf.query_params }}" class="link">
+            {{ sf.name }}
+          </a>
+        </td>
+        <td class="p-1">{{ sf.created_at|date:tpl_fmt }}</td>
+        <td class="p-1 text-sm">{{ sf.summary }}</td>
+        <td class="p-1 text-right">
+          <a href="{% url 'saved_filter_edit' sf.pk %}" class="mr-2">✏️</a>
+          <a href="{% url 'saved_filter_delete' sf.pk %}">🗑️</a>
+        </td>
+      </tr>
+    {% empty %}
+      <tr>
+        <td colspan="4" class="p-2">No saved filters yet.</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

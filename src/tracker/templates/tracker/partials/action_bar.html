@@ -2,7 +2,7 @@
   hx-post="{% url 'useritem_actions' %}"
   hx-swap="none"
   hx-include="#filter-form, #current_filter, input[name='selected_ids']:checked"
-  class="flex items-center gap-2 mt-2 text-sm"
+  class="action-bar flex items-center gap-2 mt-2 mb-2 text-sm"
 >
   {% csrf_token %}
 
@@ -13,7 +13,7 @@
           hx-swap="outerHTML"
           hx-trigger="load, change"
           hx-params="action_group"
-          class="border rounder px-2 py-1">
+          class="control">
     <option value="selector" selected>Selectors</options>
     <option value="bulk">Bulk actions</options>
   </select>

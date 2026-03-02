@@ -2,13 +2,30 @@
 <form
   id="filter-form"
   hx-get="{% url 'useritem_dashboard' %}"
-  hx-target="#item-table"
+  hx-target="#dash-fragment"
   hx-swap="outerHTML"
   hx-replace-url="true"
   hx-trigger="change delay:150ms, keyup changed delay:300ms from:input[name='title_icontains']"
   hx-include="#filter-form"
   class="space-y-2"
 >
+  <script>
+    (function () {
+      const form = document.getElementById("filter-form");
+      if (!form) return;
+
+      form.addEventListener("htmx:configRequest", function (evt) {
+        const input = form.querySelector('input[name="title_icontains"]');
+        if (!input) return;
+        if (input.value.trim() === "") {
+          delete evt.detail.parameters.title_icontains;
+        }
+      });
+    })();
+  </script>
+  {% if active_filter %}
+    <input type="hidden" name="sf" value="{{ active_filter.id }}">
+  {% endif %}
   {% include "tracker/partials/controls/_multicheck.html" with field=form.shelf label="Shelf" %}
   {% include "tracker/partials/controls/_multicheck.html" with field=form.media_type label="Media type" %}
   {% include "tracker/partials/controls/_multicheck.html" with field=form.tags label="Tags" %}
@@ -19,7 +36,7 @@
     {{ form.title_icontains.label_tag }} {{ form.title_icontains }}
   </label>
   <!-- clear filters -->
-  <button type="button" hx-get="{% url 'useritem_dashboard' %}" hx-target="#item-table" hx-swap="outerHTML" hx-params="none" hx-on:click="document.getElementById('filter-form').reset()" class="ml-2 px-2 py-1 border rounded">
+  <button type="button" hx-get="{% url 'useritem_dashboard' %}" hx-target="#dash-fragment" hx-swap="outerHTML" hx-params="none" hx-on:click="document.getElementById('filter-form').reset()" class="btn ml-2">
     Clear Filters
   </button>
 </form>
@@ -29,8 +46,70 @@
   hx-include="#filter-form"
   hx-swap="none"
   class="mt-2 flex gap-2"
+  data-active-filter-name="{{ active_filter.name|default:'' }}"
+  data-active-filter-id="{{ active_filter.id|default:'' }}"
 >
   {% csrf_token %}
-  <input type="text" name="filter_name" placeholder="Filter name" class="border rounded p-1 text-sm">
-  <button class="btn" type="submit">Save filter</button>
+  {% if active_filter %}
+    <input type="hidden" name="active_filter_id" value="{{ active_filter.id }}">
+    <input type="hidden" name="active_filter_name" value="{{ active_filter.name }}">
+  {% endif %}
+  <input
+    type="text"
+    name="filter_name"
+    placeholder="Filter name"
+    value="{{ active_filter.name|default:'' }}"
+    class="border rounded p-1 text-sm"
+  >
+  <button class="btn" type="submit">
+    {% if active_filter %}
+      Update filter
+    {% else %}
+      Save filter
+    {% endif %}
+  </button>
 </form>
+
+<script>
+  (function () {
+    const form = document.getElementById("save-filter-form");
+    if (!form) return;
+
+    form.addEventListener("htmx:beforeRequest", function (evt) {
+      const activeName = form.dataset.activeFilterName || "";
+      const activeId = form.dataset.activeFilterId || "";
+      if (!activeId) return;
+
+      const nameInput = form.querySelector('input[name="filter_name"]');
+      const nextName = nameInput ? nameInput.value.trim() : "";
+      if (nextName && nextName === activeName) {
+        const ok = confirm("Update this saved filter?");
+        if (!ok) {
+          evt.preventDefault();
+        }
+      }
+    });
+
+    form.addEventListener("htmx:responseError", function (evt) {
+      const xhr = evt.detail.xhr;
+      if (xhr.status === 409) {
+        const ok = confirm(xhr.responseText || "Update existing saved filter?");
+        if (!ok) {
+          return;
+        }
+        let overwrite = form.querySelector('input[name="overwrite_existing"]');
+        if (!overwrite) {
+          overwrite = document.createElement("input");
+          overwrite.type = "hidden";
+          overwrite.name = "overwrite_existing";
+          form.appendChild(overwrite);
+        }
+        overwrite.value = "1";
+        htmx.trigger(form, "submit");
+        return;
+      }
+      const message = xhr.responseText || "Unable to save filter.";
+      alert(message);
+    });
+  })();
+</script>

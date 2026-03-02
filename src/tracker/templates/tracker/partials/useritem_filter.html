@@ -3,7 +3,6 @@
 {% comment %} ------------------------------------------------------------ {% endcomment %}
 
 <div id="dash-fragment">
-
-
+  {% include "tracker/partials/useritem_filter_bar.html" %}
   {% include "tracker/partials/useritem_table.html" with items=items %}
 </div>

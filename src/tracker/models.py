@@ -1,6 +1,8 @@
+from urllib.parse import urlencode
+
 from django.conf import settings
 from django.db import models, transaction
-from django.db.models import JSONField, OuterRef, Q, Subquery
+from django.db.models import OuterRef, Q, Subquery
 from django.db.models.functions import Lower
 from django.utils import timezone
 from pytz import common_timezones
@@ -167,70 +169,6 @@ class Tag(models.Model):
         return self.name
 
 
-class Queue(models.Model):
-    """
-    A saved filter + ordering definition (JSON DSL) that is evaluated at read
-    time.
-    Example filter JSON:
-        {
-            "media_type": ["game"],
-            "is_project": false,
-            "tags": ["replayable"],
-            "title_override__not_null": true
-        }
-    Example ordering JSON:
-        { "field": "created_at", "direction": "asc" }
-    """
-
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="queues"
-    )
-    name = models.CharField(max_length=64)
-    filter_definition = JSONField(default=dict, blank=True)
-    ordering_definition = JSONField(default=dict, blank=True)
-    position = models.PositiveIntegerField(default=0)
-
-    class Meta:
-        unique_together = ("user", "name")
-        ordering = ("position",)
-
-    def __str__(self):
-        return self.name
-
-    # helper API used by the views
-    def as_q(self) -> Q:
-        """
-        Translate the sored filter_definition into a Django Q object.
-        Supported keys:
-            media_type: list[str]
-            is_project: bool
-            title_override__not_null: bool
-            tags: list[str]
-        """
-        fd = self.filter_definition or {}
-        q = Q(user=self.user)
-
-        if "media_type" in fd:
-            q &= Q(item__media_type__in=fd["media_type"])
-        if "is_project" in fd:
-            q &= Q(is_project=fd["is_project"])
-        if fd.get("title_override__not_null"):
-            q &= ~Q(title_override__isnull=True)
-        if "tags" in fd and fd["tags"]:
-            q &= Q(tags__name__in=fd["tags"])
-        if "shelf" in fd and fd["shelf"]:
-            q &= Q(shelf__in=fd["shelf"])
-
-        return q
-
-    def ordering_clause(self) -> list[str]:
-        od = self.ordering_definition or {}
-        field = od.get("field", "created_at")
-        direction = "" if od.get("direction", "asc") == "asc" else "-"
-
-        return [f"{direction}{field}"]
-
-
 class Profile(models.Model):
     class Theme(models.TextChoices):
         SYSTEM = "system", "System"
@@ -305,3 +243,68 @@ class SavedFilter(models.Model):
             q &= Q(tier__in=d["tier"])
 
         return q
+
+    def summary(self) -> str:
+        d = self.definition or {}
+        parts: list[str] = []
+
+        shelf_values = d.get("shelf") or []
+        if shelf_values:
+            shelf_map = {value: label for value, label in UserItem.Shelf.choices}
+            shelf_labels = [shelf_map.get(value, value) for value in shelf_values]
+            parts.append(f"Shelf={', '.join(shelf_labels)}")
+
+        media_values = d.get("media_type") or []
+        if media_values:
+            media_map = {value: label for value, label in Item.MediaType.choices}
+            media_labels = [media_map.get(value, value) for value in media_values]
+            parts.append(f"Media={', '.join(media_labels)}")
+
+        tag_ids = d.get("tags") or []
+        if tag_ids:
+            tag_map = {
+                tag_id: name
+                for tag_id, name in Tag.objects.filter(
+                    user=self.user, id__in=tag_ids
+                ).values_list("id", "name")
+            }
+            tag_names = [tag_map.get(tag_id, str(tag_id)) for tag_id in tag_ids]
+            parts.append(f"Tags={', '.join(tag_names)}")
+
+        if d.get("title_icontains"):
+            parts.append(f"Title~\"{d['title_icontains']}\"")
+
+        if d.get("is_project") is True:
+            parts.append("Projects")
+
+        tier_values = d.get("tier") or []
+        if tier_values:
+            tier_map = {value: label for value, label in UserItem.Tier.choices}
+            tier_labels = [tier_map.get(value, str(value)) for value in tier_values]
+            parts.append(f"Tier={', '.join(tier_labels)}")
+
+        return " | ".join(parts) if parts else "All items"
+
+    def query_params(self) -> str:
+        d = self.definition or {}
+        params: list[tuple[str, str]] = [("sf", str(self.pk))]
+
+        for value in d.get("shelf") or []:
+            params.append(("shelf", value))
+
+        for value in d.get("media_type") or []:
+            params.append(("media_type", value))
+
+        if d.get("is_project") is True:
+            params.append(("is_project", "on"))
+
+        if d.get("title_icontains"):
+            params.append(("title_icontains", d["title_icontains"]))
+
+        for value in d.get("tags") or []:
+            params.append(("tags", str(value)))
+
+        for value in d.get("tier") or []:
+            params.append(("tier", str(value)))
+
+        return urlencode(params, doseq=True)

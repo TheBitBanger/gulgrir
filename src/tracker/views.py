@@ -7,9 +7,7 @@ from django.db import IntegrityError
 from django.db.models import Q
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.template.loader import render_to_string
 from django.urls import reverse, reverse_lazy
-from django.utils.http import urlencode
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.http import require_POST
@@ -21,53 +19,8 @@ from tracker.actions import Action
 from tracker.actions import registry as action_registry
 
 from .forms import ProfileForm, UserItemFilterForm, UserItemForm
-from .models import Item, Profile, Queue, SavedFilter, Tag, UserItem, UserItemHistory
+from .models import Item, Profile, SavedFilter, Tag, UserItem, UserItemHistory
 from .services import build_useritem_queryset
-
-
-@login_required
-def queue_list(request):
-    queues = request.user.queues.all()
-
-    return render(request, "tracker/queue_list.html", {"queues": queues})
-
-
-@login_required
-def queue_detail(request, pk):
-    queue = get_object_or_404(Queue, pk=pk, user=request.user)
-    items = (
-        UserItem.objects.filter(queue.as_q())
-        .select_related("item")
-        .prefetch_related("tags")
-        .with_latest_dates()
-        .order_by(*queue.ordering_clause())
-    )
-
-    return render(
-        request,
-        "tracker/queue_detail.html",
-        {"queue": queue, "items": items},
-    )
-
-
-@login_required
-def no_queue(request):
-    """All UserItems that do **not** match any of the user's queues."""
-    # Build a big OR of every queue filter, the negate
-    qs = request.user.queues.all()
-    combined_q = Q()
-    for q in qs:
-        combined_q |= q.as_q()
-
-    items = (
-        UserItem.objects.filter(user=request.user)
-        .exclude(combined_q)
-        .select_related("item")
-        .prefetch_related("tags")
-        .with_latest_dates()
-    )
-
-    return render(request, "tracker/no_queue.html", {"items": items})
 
 
 @require_POST
@@ -222,6 +175,25 @@ class TagList(OwnObjectsMixin, ListView):
     template_name = "tracker/tag_list.html"
 
 
+class SavedFilterList(OwnObjectsMixin, ListView):
+    model = SavedFilter
+    template_name = "tracker/saved_filter_list.html"
+
+
+class SavedFilterUpdate(OwnObjectsMixin, UpdateView):
+    model = SavedFilter
+    fields = ["name"]
+    template_name = "tracker/form.html"
+    success_url = reverse_lazy("saved_filter_list")
+    extra_context = {"model_verbose": SavedFilter._meta.verbose_name}
+
+
+class SavedFilterDelete(OwnObjectsMixin, DeleteView):
+    model = SavedFilter
+    template_name = "tracker/confirm_delete.html"
+    success_url = reverse_lazy("saved_filter_list")
+
+
 @method_decorator(csrf_protect, name="dispatch")
 class TagQuickCreate(LoginRequiredMixin, View):
     def post(self, request):
@@ -258,30 +230,6 @@ class TagQuickCreate(LoginRequiredMixin, View):
             return JsonResponse({"error": "Could not create tag"}, status=400)
 
 
-class QueueCreate(LoginRequiredMixin, CreateView):
-    model = Queue
-    fields = ["name", "filter_definition", "ordering_definition", "position"]
-    template_name = "tracker/form.html"
-    success_url = reverse_lazy("queue_manage")
-    extra_context = {"model_verbose": Queue._meta.verbose_name}
-
-    def form_valid(self, form):
-        form.instance.user = self.request.user
-        return super().form_valid(form)
-
-
-class QueueList(OwnObjectsMixin, ListView):
-    model = Queue
-    template_name = "tracker/queue_manage.html"
-
-
-class QueueUpdate(OwnObjectsMixin, UpdateView):
-    model = Queue
-    fields = ["name", "filter_definition", "ordering_definition", "position"]
-    template_url = "tracker/form.html"
-    success_url = reverse_lazy("queue_manage")
-
-
 class PreferenceView(UpdateView):
     template_name = "tracker/preferences.html"
     model = Profile
@@ -306,10 +254,17 @@ def useritem_dashboard(request):
 
     # pass saved filters for the sidebar
     saved_filters = request.user.saved_filters.all()
+    active_filter = None
+    if sf_id := request.GET.get("sf"):
+        active_filter = (
+            SavedFilter.objects.filter(pk=sf_id, user=request.user)
+            .only("id", "name", "definition", "user")
+            .first()
+        )
 
     # pass the filter form status to all subsequent requests to restore state
     data = request.GET.copy()
-    data.pop("filter", None)
+    data.pop("sf", None)
     form = UserItemFilterForm(data, user=request.user)
 
     items = build_useritem_queryset(request)
@@ -321,14 +276,10 @@ def useritem_dashboard(request):
             "form": UserItemFilterForm(request.GET or None, user=request.user),
             "items": items,
             "saved_filters": saved_filters,
+            "active_filter": active_filter,
         }
 
-        if target == "item-table":
-            # normal filtering -> only replace the table
-            return render(request, "tracker/partials/useritem_table.html", ctx)
-        else:
-            # clear button or anything else -> replace filters + table
-            return render(request, "tracker/partials/useritem_filter.html", ctx)
+        return render(request, "tracker/partials/useritem_filter.html", ctx)
     # end htmx ---------------------------------------------------------------
 
     # full page render
@@ -341,6 +292,7 @@ def useritem_dashboard(request):
             "items": items,
             "actions": action_registry.values(),
             "actions_default": actions_default,
+            "active_filter": active_filter,
         },
     )
 
@@ -354,14 +306,35 @@ def save_current_filter(request):
 
     # The filter name lives in a form field, so get it from POST
     name = (request.POST.get("filter_name") or "Unnamed").strip()
+    definition = form.to_definition()
+    active_filter_id = request.POST.get("active_filter_id")
+    active_filter_name = request.POST.get("active_filter_name")
 
-    sf, _created = SavedFilter.objects.update_or_create(
-        user=request.user,
-        name=name,
-        defaults={"definition": form.to_definition()},
-    )
+    if active_filter_id and active_filter_name and name == active_filter_name:
+        sf = get_object_or_404(SavedFilter, pk=active_filter_id, user=request.user)
+        sf.definition = definition
+        sf.name = name
+        sf.save()
+    else:
+        existing = SavedFilter.objects.filter(user=request.user, name=name).first()
+        if existing:
+            if request.POST.get("overwrite_existing") == "1":
+                existing.definition = definition
+                existing.save()
+                sf = existing
+            else:
+                return HttpResponse(
+                    "A saved filter with this name already exists. Update it instead?",
+                    status=409,
+                )
+        else:
+            sf = SavedFilter.objects.create(
+                user=request.user,
+                name=name,
+                definition=definition,
+            )
 
-    url = f"{reverse('useritem_dashboard')}?{urlencode({'filter': sf.pk})}"
+    url = f"{reverse('useritem_dashboard')}?{sf.query_params()}"
     resp = HttpResponse("")
     resp["HX-Redirect"] = url
 

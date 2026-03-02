@@ -4,8 +4,7 @@
 <h1 class="text-xl font-semibold mb-4">My items</h1>
 
 <div class="flex gap-8">
-  <!-- remove this bit when the filter bar is populated by a filter, this makes the filter bar the canonical source of truth -->
-  <input id="current_filter" type="hidden" name="filter" value="{{ request.GET.filter|default:'' }}">
+  <input id="current_filter" type="hidden" name="sf" value="{{ active_filter.id|default:'' }}">
 
   <!-- left sidebar: saved filters -->
   <aside class="w-56">
@@ -14,7 +13,7 @@
       {% for sf in saved_filters %}
         <li>
           <a
-              href="{% url 'useritem_dashboard' %}?filter={{ sf.pk }}"
+              href="{% url 'useritem_dashboard' %}?{{ sf.query_params }}"
               class="link"
           >
             {{ sf.name }}
@@ -29,9 +28,9 @@
   <!-- main column -->
   <section class="flex-1">
     <a class="btn mb-2" href="{% url 'useritem_add' %}">➕ Add to my list</a>
+    {% include "tracker/partials/action_bar.html" %}
     <div id="dash-fragment">
     {% include "tracker/partials/useritem_filter_bar.html" %}
-    {% include "tracker/partials/action_bar.html" %}
     {% include "tracker/partials/useritem_table.html" %}
   </section>
 

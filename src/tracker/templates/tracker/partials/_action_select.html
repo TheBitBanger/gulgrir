@@ -4,7 +4,7 @@
         hx-target="#param_zone"
         hx-trigger="load, change"
         hx-swap="innerHTML"
-        class="border rounded px-2 py-1">
+        class="control">
   {% for act in actions %}
     <option value="{{ act.slug }}">{{ act.label }}</option>
   {% endfor %}

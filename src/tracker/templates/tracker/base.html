@@ -165,6 +165,35 @@
       border: 1px solid var(--danger);
     }
 
+    .control {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 0.25rem;
+      padding: 0.25rem 0.5rem;
+      font-size: 0.875rem;
+      line-height: 1.25rem;
+      min-height: 2rem;
+    }
+
+    .action-bar select,
+    .action-bar input {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 0.25rem;
+      padding: 0.25rem 0.5rem;
+      font-size: 0.875rem;
+      line-height: 1.25rem;
+      min-height: 2rem;
+    }
+
+    .dropdown-panel {
+      background: var(--surface);
+      color: var(--text);
+      border-color: var(--border);
+    }
+
     .link {
       color: var(--accent);
       text-decoration: underline;
@@ -182,8 +211,8 @@
 <body class="container mx-auto p-4">
   <nav class="mb-4 space-x-4">
     <a href="{% url 'useritem_dashboard' %}">My items</a>
-    <a href="{% url 'queue_list' %}">My queues</a>
     <a href="{% url 'tag_list' %}">My tags</a>
+    <a href="{% url 'saved_filter_list' %}">Saved filters</a>
     <a href="{% url 'item_list' %}">Global library</a>
     <a href="{% url 'preferences' %}">Settings</a>
   </nav>

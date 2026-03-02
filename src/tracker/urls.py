@@ -24,23 +24,23 @@ tag_patterns = [
     path("quick-create/", views.TagQuickCreate.as_view(), name="tag_quick_create"),
 ]
 
-queue_patterns = [
-    path("", views.QueueList.as_view(), name="queue_manage"),
-    path("add/", views.QueueCreate.as_view(), name="queue_add"),
-    path("<int:pk>/edit/", views.QueueUpdate.as_view(), name="queue_edit"),
+saved_filter_patterns = [
+    path("", views.SavedFilterList.as_view(), name="saved_filter_list"),
+    path("<int:pk>/edit/", views.SavedFilterUpdate.as_view(), name="saved_filter_edit"),
+    path(
+        "<int:pk>/delete/",
+        views.SavedFilterDelete.as_view(),
+        name="saved_filter_delete",
+    ),
 ]
 
 urlpatterns = [
-    # queue views
-    path("queues/", views.queue_list, name="queue_list"),
-    path("queues/<int:pk>/", views.queue_detail, name="queue_detail"),
-    path("no-queue/", views.no_queue, name="no_queue"),
     path("bulk-action/", views.bulk_history_action, name="bulk_action"),
     # crud section
     path("library/items/", include((item_patterns))),
     path("my/items/", include((useritem_patterns))),
     path("my/tags/", include((tag_patterns))),
-    path("my/queues/", include((queue_patterns))),
+    path("my/filters/", include((saved_filter_patterns))),
     # preferences
     path("settings/preferences/", views.preference_view, name="preferences"),
 ]

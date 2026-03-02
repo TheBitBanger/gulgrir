@@ -122,6 +122,10 @@ class UserItemFilterForm(forms.Form):
             self.fields["tags"].queryset = Tag.objects.filter(user=user)
         self.fields["tags"].widget = forms.CheckboxSelectMultiple()
         self.fields["tags"].help_text = ""
+        self.fields["title_icontains"].widget.attrs.setdefault(
+            "class",
+            "control",
+        )
 
     def to_definition(self):
         """

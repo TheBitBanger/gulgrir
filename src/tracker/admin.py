@@ -2,7 +2,7 @@ from django.contrib import admin
 from django import forms
 from django.db.models import QuerySet
 
-from .models import Item, UserItem, UserItemHistory, Tag, Queue, Profile, SavedFilter
+from .models import Item, UserItem, UserItemHistory, Tag, Profile, SavedFilter
 
 
 @admin.action(description="Mark selected UserItems as completed")
@@ -197,12 +197,6 @@ class TagAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         obj.user = request.user
         super().save_model(request, obj, form, change)
-
-
-@admin.register(Queue)
-class QueueAdmin(admin.ModelAdmin):
-    list_display = ("name", "user", "position")
-    list_editable = ("position",)
 
 
 @admin.register(Profile)

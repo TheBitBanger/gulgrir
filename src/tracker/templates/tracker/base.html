@@ -1,10 +1,42 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme-preference="{{ theme_preference }}">
 <head>
   <meta charset="utf-8">
   <title>{% block title %}gulgrir{% endblock %}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   {% load static %}
+  <script>
+    (() => {
+      const root = document.documentElement;
+      const serverPref = root.getAttribute("data-theme-preference") || "";
+      let storedPref = null;
+      try {
+        storedPref = localStorage.getItem("theme_preference");
+      } catch (err) {
+        storedPref = null;
+      }
+      const hasServerPref = serverPref !== "" && serverPref !== "None" && serverPref !== "null";
+      const preference = hasServerPref ? serverPref : (storedPref || "system");
+      const resolveTheme = (value) => {
+        if (value === "dark" || value === "light") {
+          return value;
+        }
+        return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light";
+      };
+      const resolved = resolveTheme(preference);
+      root.dataset.theme = resolved;
+      try {
+        if (hasServerPref) {
+          localStorage.setItem("theme_preference", preference);
+        }
+        localStorage.setItem("theme_resolved", resolved);
+      } catch (err) {
+        // storage disabled; ignore
+      }
+    })();
+  </script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://unpkg.com/alpinejs@3.14.9/dist/cdn.min.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
@@ -22,7 +54,130 @@
       });
     });
   </script>
-  <style>[x-cloak]{display:none !important}</style>
+  <style>
+    :root[data-theme="dark"] {
+      --bg: #1a1b26;
+      --surface: #16161e;
+      --surface-2: #292e42;
+      --text: #c0caf5;
+      --muted: #a9b1d6;
+      --border: #3b4261;
+      --accent: #7aa2f7;
+      --accent-contrast: #1a1b26;
+      --success: #9ece6a;
+      --warn: #e0af68;
+      --danger: #f7768e;
+    }
+
+    :root[data-theme="light"] {
+      --bg: #e1e2e7;
+      --surface: #d0d5e3;
+      --surface-2: #c4c8da;
+      --text: #3760bf;
+      --muted: #6172b0;
+      --border: #b4b5b9;
+      --accent: #2e7de9;
+      --accent-contrast: #e1e2e7;
+      --success: #587539;
+      --warn: #8c6c3e;
+      --danger: #f52a65;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    nav a {
+      color: var(--text);
+    }
+
+    nav a:hover {
+      color: var(--accent);
+    }
+
+    a {
+      color: var(--accent);
+    }
+
+    a:hover {
+      color: var(--accent);
+      text-decoration: underline;
+    }
+
+    input,
+    select,
+    textarea {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 0.25rem;
+      padding: 0.25rem 0.5rem;
+    }
+
+    ::placeholder {
+      color: var(--muted);
+    }
+
+    .border,
+    .border-b,
+    .border-t,
+    .border-l,
+    .border-r {
+      border-color: var(--border);
+    }
+
+    table {
+      border-color: var(--border);
+      background: var(--surface);
+    }
+
+    thead th {
+      background: var(--surface-2);
+    }
+
+    th,
+    td {
+      border-color: var(--border);
+    }
+
+    .btn {
+      background: var(--accent);
+      color: var(--accent-contrast);
+      border: 1px solid var(--accent);
+      border-radius: 0.25rem;
+      padding: 0.25rem 0.75rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      text-decoration: none;
+    }
+
+    .btn:hover {
+      color: var(--accent-contrast);
+      text-decoration: none;
+      filter: brightness(1.05);
+    }
+
+    .btn-danger {
+      background: var(--danger);
+      color: var(--accent-contrast);
+      border: 1px solid var(--danger);
+    }
+
+    .link {
+      color: var(--accent);
+      text-decoration: underline;
+    }
+
+    .text-muted {
+      color: var(--muted);
+    }
+
+    [x-cloak] {
+      display: none !important;
+    }
+  </style>
 </head>
 <body class="container mx-auto p-4">
   <nav class="mb-4 space-x-4">

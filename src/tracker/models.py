@@ -232,10 +232,20 @@ class Queue(models.Model):
 
 
 class Profile(models.Model):
+    class Theme(models.TextChoices):
+        SYSTEM = "system", "System"
+        LIGHT = "light", "Light"
+        DARK = "dark", "Dark"
+
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="profile",
+    )
+    theme = models.CharField(
+        max_length=16,
+        choices=Theme.choices,
+        default=Theme.SYSTEM,
     )
     date_format = models.CharField(
         max_length=32,

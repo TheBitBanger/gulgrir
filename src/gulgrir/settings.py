@@ -78,6 +78,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "tracker.context_processors.date_format",
+                "tracker.context_processors.theme_preference",
             ],
         },
     },

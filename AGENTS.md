@@ -36,6 +36,14 @@ Common commands (run from repo root):
 - A superuser is auto-created in container entrypoint:
   - `python /app/src/manage.py createsuperuser_if_none`
 
+Local virtualenv workflow (Poetry):
+
+- Enter shell: `poetry shell`
+- Run Django commands: `poetry run python src/manage.py <command>`
+- Note: default DB host is `db`, so local commands need the Compose network or a local DB override.
+- To run migrations against the Compose DB:
+  - `docker compose -f compose/dev.yml -f compose/dev.bind.yml exec app python /app/src/manage.py migrate`
+
 Environment variables:
 
 - `.env` is used by Compose (`compose/dev.yml`)

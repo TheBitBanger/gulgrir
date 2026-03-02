@@ -15,13 +15,13 @@
         <li>
           <a
               href="{% url 'useritem_dashboard' %}?filter={{ sf.pk }}"
-              class="text-blue-600" hover:underline"
+              class="link"
           >
             {{ sf.name }}
           </a>
         </li>
       {% empty %}
-        <li class="text-sm text-gray-400">None yet</li>
+        <li class="text-sm text-muted">None yet</li>
       {% endfor %}
     </ul>
   </aside>

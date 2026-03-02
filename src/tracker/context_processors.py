@@ -1,3 +1,8 @@
+from django.core.exceptions import ObjectDoesNotExist
+
+from .models import Profile
+
+
 def _django_fmt(strftime_fmt: str) -> str:
     """Convert a limited subset of strftime tokens to Django date-filter
         codes."""
@@ -25,3 +30,15 @@ def date_format(request):
         "fp_fmt": "Y-m-d",
         "tpl_fmt": "Y-m-d",
     }
+
+
+def theme_preference(request):
+    if request.user.is_authenticated:
+        try:
+            preference = request.user.profile.theme
+        except ObjectDoesNotExist:
+            preference = Profile.Theme.SYSTEM
+
+        return {"theme_preference": preference}
+
+    return {"theme_preference": ""}

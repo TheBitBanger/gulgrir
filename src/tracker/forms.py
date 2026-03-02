@@ -81,10 +81,14 @@ PRESETS = [
 
 class ProfileForm(forms.ModelForm):
     date_format = forms.ChoiceField(choices=PRESETS, label="Preferred date format")
+    theme = forms.ChoiceField(
+        choices=Profile.Theme.choices,
+        label="Theme",
+    )
 
     class Meta:
         model = Profile
-        fields = ["date_format", "timezone"]
+        fields = ["date_format", "timezone", "theme"]
 
 
 class UserItemFilterForm(forms.Form):

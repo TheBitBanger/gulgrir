@@ -5,7 +5,7 @@
 
 <form method="post">
   {% csrf_token %}
-  <button type="submit" class="btn bg-red-600 text-white">Delete</button>
+  <button type="submit" class="btn btn-danger">Delete</button>
   <a href="{{ success_url|default:request.META.HTTP_REFERER }}" class="btn">Cancel</a>
 </form>
 {% endblock %}

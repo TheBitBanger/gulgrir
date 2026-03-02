@@ -13,15 +13,6 @@
     <ul id="saved-filters" class="space-y-1">
       {% for sf in saved_filters %}
         <li>
-          <!-- <a -->
-          <!--   hx-get="{% url 'useritem_dashboard' %}?filter={{ sf.pk }}" -->
-          <!--   hx-target="#item-table" -->
-          <!--   hx-swap="outerHTML" -->
-          <!--   hx-push-url="true" -->
-          <!--   class="text-blue-600 hover:underline" -->
-          <!-- > -->
-          <!--   {{ sf.name }} -->
-          <!-- </a> -->
           <a
               href="{% url 'useritem_dashboard' %}?filter={{ sf.pk }}"
               class="text-blue-600" hover:underline"

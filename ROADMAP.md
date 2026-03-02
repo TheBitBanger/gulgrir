@@ -1,39 +1,33 @@
-# Full Rewrite & Migration Roadmap
+# Django-First Roadmap
 
-This roadmap covers stabilization of the current Django app, then a parallel-stack migration to a new system. It includes the agreed tech stack, architecture, and the integration of time tracking (specification.md) mapped to UserItems (media/projects).
+This roadmap covers stabilization of the current Django app, then a focused build-out of core features in Django. The guiding principle is developer joy and simplicity: ship a working, maintainable product first, and only consider a different stack if forced by real constraints.
 
 ---
 
-# A. Target Stack (for the rewrite)
+# A. Target Stack (Django-First)
 
 ## Backend
-- NestJS (TypeScript)
-- Reasons: strong structure for large domain, end-to-end typing, great queue tooling.
+- Django 5.2 (Python 3.11+)
+- Reasons: fastest path to a correct, maintainable CRUD app with auth, admin, and migrations included.
 
 ## Frontend
-- SvelteKit
-- Reasons: eye-candy friendly, great animations, small bundles.
+- Django templates + HTMX + small JS modules
+- Reasons: modern UX without SPA complexity; fast iteration.
 
 ## Data & Infra
-- PostgreSQL (shared during migration)
-- Redis (BullMQ queues)
-- Optional: Meilisearch for fuzzy search (later)
-- Reverse proxy: Caddy (or Nginx)
+- PostgreSQL
+- Optional: lightweight job runner (Django Q or similar)
+- Optional: Redis only if/when queues outgrow simple scheduling
 
 ## Deployment
 - Docker Compose
 - GHCR image distribution for users
 
 ## Architecture Summary
-- Services (bounded contexts):
-  - media, projects, user_items, lists, ratings, revisits
-  - time_tracking (specification.md mapped to UserItems)
-  - reminders, random_picker
-  - providers (TVDB/IMDB/etc)
-  - imports/exports
-- Data ownership model:
-  - Shared DB during migration
-  - Each table has a single writer (Django or new stack)
+- Single Django monolith with clear internal modules
+- Services layer for core domain logic
+- Provider adapters isolated behind interfaces
+- Keep exit ramps open, but do not plan a rewrite
 
 ---
 
@@ -59,23 +53,19 @@ Goal: baseline docs and release cadence clarity.
 Inputs/Prereqs: current behavior and known limitations.
 
 Tasks:
-- [x] Document current behavior baseline (features/known issues)
 - [x] Add user install path to README
 - [x] Add release checklist
 - [x] Align admin env vars with createsuperuser_if_none
 
 Outputs/Artifacts:
-- `docs/behavior-baseline.md`
 - README install section (or `docs/install.md` if preferred)
 - `docs/release-checklist.md`
 
 Exit criteria:
-- Baseline doc exists and is referenced from README
 - Install path documented with commands that match compose files
 - Release checklist is present and usable
 
 Session checklist:
-- [x] Create baseline doc outline and fill first pass
 - [x] Add install section with compose commands
 - [x] Add release checklist skeleton
 
@@ -228,128 +218,70 @@ Exit criteria: users can run `docker compose up -d` using the published image an
 
 ---
 
-# C. Parallel Stack Migration (Strangler-Fig)
+# C. Core Feature Build (Django)
 
-Strategy: new stack runs in parallel; features migrate slice-by-slice. No “hand-wired” TS into Django.
+Focus: deliver the time tracking feature and provider integrations inside the existing Django app, with simple UX and minimal infrastructure.
 
-## C1. New Stack Baseline
-- Bootstrap NestJS + SvelteKit + Postgres + Redis
-- Add auth (local users, isolated per user)
-- Decide shared DB schema boundaries
-- Set up reverse proxy routing (`/new/*` to new UI, `/` stays Django)
+## C1. Time Tracking Core
+- Active timer (single active per user)
+- Time entries (start/end/duration)
+- Profiles / groups / assignments
 
-Exit: new stack runs alongside Django with its own empty schema.
-
-## C2. Data Ownership Model
-- Shared Postgres
-- Rules:
-  - Django owns legacy tables
-  - New stack owns new tables
-  - No dual writers
-
-Exit: data model documented with table ownership matrix.
-
-## C3. First Read-Only Slice (UI)
-- Build a read-only UserItem list view in new UI
-- Validate display parity vs Django
-- Keep Django the source of truth for writes
-
-Exit: new UI shows current data without writes.
-
----
-
-# D. Early Implementation of specification.md (Time Tracking)
-
-Map “Activities” to UserItems. This becomes the first new-stack-owned subsystem.
-
-## D1. Time Tracking Core Tables (New Stack Ownership)
-- active_timer (single active per user)
-- time_entries (start/end/duration)
-- profiles / groups / assignments
-
-## D2. UI + API for Timer Core
-- Start/stop timer
+## C2. Timer UI + Sync
+- Start/pause/stop timer
 - Manual time entry
 - Edit entry
-- Single active timer enforcement
-- Timezone awareness
+- Client-side timer with periodic sync
+- Enforce single active timer per user
+- Timezone-aware display
 
-## D3. Stats + Basic Visualization
+## C3. Stats + Simple Visualization
 - Time window selection
 - Activity breakdown
 - Group profile breakdown
+- Simple charts/lists for trends and distribution
 
-Exit: time tracking works end-to-end in the new stack.
-
----
-
-# E. Write-Path Migration (Media & Projects)
-
-Migrate features from Django to the new stack, one slice at a time.
-
-## E1. Ratings + Backlog
-- Ratings CRUD
-- Backlog state
-- Revisit tracking
-
-## E2. Random Picker
-- Weighted selection
-- Filters by type, status, etc.
-
-## E3. Reminders
-- Revisit reminders
-- Notification scheduling
-
-Exit: key write paths moved off Django.
-
----
-
-# F. Providers + Import/Export
-
-## F1. Providers
-- Scheduled sync (daily)
-- Rate limiting + backoff
+## C4. Providers + Imports
+- Scheduled provider fetch
 - Provider adapters per media type
+- Import lists from providers on demand
+- Rate limiting + backoff
 
-## F2. Import/Export
-- Import lists from providers
-- Export data (JSON/CSV)
-- Background jobs for large exports
-
-Exit: provider integration stable.
+Exit: time tracking and provider sync/import work end-to-end in Django.
 
 ---
 
-# G. Testing Strategy
+# D. Stable Release (Post Time Tracking)
 
-## G1. Step-0
+Goal: publish the first stable image once time tracking is polished.
+
+Tasks:
+- [ ] Cut stable tag `vX.Y` on `master`
+- [ ] Publish `latest` + `vX.Y` image tags
+- [ ] Update README to reference stable image/tag
+- [ ] Run smoke tests against the stable image
+
+Exit criteria: stable image is published and documented for end users.
+
+---
+
+# E. Testing Strategy
+
+## E1. Step-0
 - Container smoke tests
 
-## G2. API Tests
-- Core endpoints for UserItems + TimeTracking
-
-## G3. Integration Tests
+## E2. Core Feature Tests
 - Timer invariants (single active timer)
 - Stats consistency after edits
 
-## G4. Provider Tests
+## E3. Provider Tests
 - Mocked provider responses
 - Rate limiting behavior
 
 ---
 
-# H. Full Cutover
-
-- Switch main routing to new app
-- Django read-only fallback
-- Data verification
-- Retire Django once stable
-
----
-
 # Notes for Next Session
-- Stack: NestJS + SvelteKit + Postgres + Redis + BullMQ
-- Time tracking spec maps to UserItems (media/projects)
-- Incremental migration with shared DB and strict ownership
-- Step-0 stabilization is required before rewrite work
-- Step-0 progress: B1/B2/B3 done; B4 pending GH repo + GHCR setup
+- Stack: Django + Postgres + HTMX + minimal JS
+- Focus: ship time tracking and provider sync/import in Django
+- Keep infrastructure minimal; add queues only if needed
+- Step-0 progress: B1/B2/B3/B4/B5/B6 done; stable release deferred to D

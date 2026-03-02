@@ -167,18 +167,6 @@ class UserItemCreate(LoginRequiredMixin, CreateView):
         return ctx
 
 
-# class UserItemList(OwnObjectsMixin, ListView):
-#    model = UserItem
-#    template_name = "tracker/useritem_dashboard.html"
-#    paginate_by = 30
-#    ordering = "-created_at"
-#
-#    def get_queryset(self):
-#        return with_latest_dates(
-#            super().get_queryset().prefetch_related("tags", "item")
-#        )
-
-
 class UserItemUpdate(OwnObjectsMixin, UpdateView):
     form_class = UserItemForm
     model = UserItem
@@ -373,38 +361,11 @@ def save_current_filter(request):
         defaults={"definition": form.to_definition()},
     )
 
-    # SavedFilter.objects.update_or_create(
-    #     user=request.user,
-    #     name=request.POST.get("filter_name", "Unnamed"),
-    #     defaults={"definition": form.to_definition()},
-    # )
-
     url = f"{reverse('useritem_dashboard')}?{urlencode({'filter': sf.pk})}"
     resp = HttpResponse("")
     resp["HX-Redirect"] = url
 
     return resp
-
-    # saved_filters = SavedFilter.objects.filter(user=request.user)
-    # html = render_to_string(
-    #     "tracker/partials/useritem_saved_filters.html",
-    #     {"saved_filters": saved_filters},
-    #     request=request,
-    # )
-    #
-    # response = HttpResponse(html)
-    # # instruct htmx to clear the input after the swap
-    # response["HX-Trigger"] = "filter-saved"
-    #
-    # return response
-
-
-@login_required
-def apply_saved_filter(request, pk):
-    sf = get_object_or_404(SavedFilter, pk=pk, user=request.user)
-    # redirect with filter params encoded in URL for shareability
-
-    return redirect(f"{reverse('useritem_dashboard')}?filter={pk}")
 
 
 # unified executor for all actions

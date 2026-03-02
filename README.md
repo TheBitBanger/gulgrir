@@ -1,6 +1,5 @@
 # Docs
 
-- `docs/behavior-baseline.md`
 - `docs/release-checklist.md`
 
 # Release Tags

@@ -77,31 +77,3 @@ def build_useritem_queryset(request: HttpRequest) -> QuerySet[UserItem]:
         .with_latest_dates()
         .order_by("last_revisited_at")
     )
-
-    # # determine the correct data source: POST or GET
-    # data_source: QueryDict = request.POST if request.method == "POST" else request.GET
-    #
-    # # fetch the definition from a SavedFilter
-    # definition: dict[str, str] = {}
-    # if filter_id := data_source.get("filter"):
-    #     sf = SavedFilter.objects.filter(pk=filter_id, user=request.user).first()
-    #     if sf:
-    #         definition = sf.definition
-    #
-    # # overwrite the definition with selected filters not from a SavedFilter
-    # form = UserItemFilterForm(data_source, user=request.user)
-    # if form.is_valid():
-    #     data_def = form.to_definition()
-    #     if data_def:
-    #         definition = data_def
-    #
-    # # create a SavedFilter from the resulting definition
-    # q_obj = SavedFilter(user=request.user, definition=definition).as_q()
-    #
-    # # returned filtered qs
-    # return (
-    #     UserItem.objects.filter(q_obj, user=request.user)
-    #     .prefetch_related("tags", "item")
-    #     .with_latest_dates()
-    #     .order_by("last_revisited_at")
-    # )

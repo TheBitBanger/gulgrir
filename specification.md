@@ -30,7 +30,6 @@ Users configure:
 
 * Timezone
 * Notification preferences
-* Webhook endpoints (optional)
 
 ---
 
@@ -111,6 +110,8 @@ The timer:
 * Does not require second-level precision
 * Minute-level accuracy is sufficient
 * Minor discrepancies are acceptable
+* May run on the client and periodically sync with the server
+* Can re-sync on navigation without losing correctness
 
 The interface may display time in minutes instead of seconds.
 
@@ -266,49 +267,20 @@ Notifications occur while a timer is active.
 Notification types:
 
 * In-app notifications
-* Webhook events
+---
+
+# 11. Providers and Imports
+
+The system must support provider integrations for data ingestion.
+
+Requirements:
+
+* Fetch data from providers on a schedule
+* Import lists from providers on demand
 
 ---
 
-# 11. Webhooks
-
-Users can configure webhook endpoints.
-
-Webhook events must be triggered for relevant actions such as:
-
-* Timer started
-* Timer stopped
-* Time entry created
-* Time entry edited
-* Time entry deleted
-
-Webhook payloads must include sufficient information to identify:
-
-* User
-* Activity
-* Time entry
-* Event type
-* Timestamp
-
-The system must attempt delivery and retry if delivery fails.
-
----
-
-# 12. API
-
-The system must expose an API that allows external systems to:
-
-* Retrieve activities
-* Retrieve time entries
-* Retrieve aggregated statistics
-* Start or stop timers
-* Create or modify entries
-
-The API must respect user authentication and authorization.
-
----
-
-# 13. Timezone Handling
+# 12. Timezone Handling
 
 The system must support a user-configurable timezone.
 
@@ -320,7 +292,7 @@ Rules:
 
 ---
 
-# 14. Data Volume Expectations
+# 13. Data Volume Expectations
 
 The system should comfortably support:
 
@@ -328,7 +300,7 @@ The system should comfortably support:
 
 ---
 
-# 15. Multi-User Behavior
+# 14. Multi-User Behavior
 
 The application must support multiple independent users.
 
@@ -340,7 +312,7 @@ Requirements:
 
 ---
 
-# 16. Authentication
+# 15. Authentication
 
 Authentication is handled locally within the application.
 
@@ -355,22 +327,7 @@ External authentication providers are not required.
 
 ---
 
-# 17. Data Export
-
-Users must be able to export their data.
-
-Exports must include:
-
-* Activities
-* Time entries
-* Durations
-* Timestamps
-
-Supported formats may include structured formats such as CSV or JSON.
-
----
-
-# 18. Web Application Requirements
+# 16. Web Application Requirements
 
 The application must:
 
@@ -381,7 +338,7 @@ The application must:
 
 ---
 
-# 19. Deployment Requirements
+# 17. Deployment Requirements
 
 The application must be:
 
@@ -399,7 +356,7 @@ The system must be able to start and operate using the provided compose configur
 
 ---
 
-# 20. Data Integrity Expectations
+# 18. Data Integrity Expectations
 
 The system must ensure:
 

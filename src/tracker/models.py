@@ -22,14 +22,10 @@ class Item(models.Model):
     media_type = models.CharField(
         max_length=20, choices=MediaType.choices, default=MediaType.OTHER
     )
-    # provider_name = models.CharField(max_length=64, blank=True, null=True)
-    # provider_item_id = models.CharField(max_length=128, blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    # class Meta:
-    # unique_together = ("provider_name", "provider_item_id")
 
     def __str__(self):
         return self.title

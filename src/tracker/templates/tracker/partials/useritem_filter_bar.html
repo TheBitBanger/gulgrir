@@ -23,15 +23,6 @@
     Clear Filters
   </button>
 </form>
-<!-- save current filter -->
-<!-- <form id="save-filter-form" hx-post="{% url 'save_filter' %}" hx-include="#filter-form" hx-target="#saved-filters" hx-swap="innerHTML" hx-on:filter-saved=" -->
-<!--         this.reset(); -->
-<!--       " class="mt-2 flex gap-2"> -->
-<!--   {% csrf_token %} -->
-<!--   <input type="text" name="filter_name" placeholder="Filter name" class="border rounded p-1 text-sm"> -->
-<!--   <button class="btn" type="submit">Save filter</button> -->
-<!-- </form> -->
-
 <form
   id="save-filter-form"
   hx-post="{% url 'save_filter' %}"

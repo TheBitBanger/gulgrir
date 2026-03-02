@@ -48,19 +48,5 @@
   <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.5/dist/htmx.min.js"></script>
   <script src="{% static "tracker/js/action_toast.js" %}"></script>
   <script src="{% static "tracker/js/checkbox_bulk.js" %}"></script>
-  <!-- <script> -->
-  <!--   /* Make the params fragment load automatically after #action_select swaps in */ -->
-  <!--   document.addEventListener("htmx:afterSettle", function (evt) { -->
-  <!--     const target = evt.detail && evt.detail.target; -->
-  <!--     if (!target || target.id !== "action_select") return; -->
-  <!---->
-  <!--     const sel = target.querySelector("select"); -->
-  <!--     if (!sel) return; -->
-  <!---->
-  <!--     if (sel.value) { -->
-  <!--       sel.dispatchEvent(new Event("change", { bubbles: true })); -->
-  <!--     } -->
-  <!--   }); -->
-  <!-- </script> -->
 </body>
 </html>

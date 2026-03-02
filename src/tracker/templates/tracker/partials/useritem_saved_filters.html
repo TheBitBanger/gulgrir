@@ -1,9 +1,0 @@
-{% for sf in saved_filters %}
-  <li>
-    <a hx-get="{% url 'apply_filter' sf.pk %}"
-       hx-target="#dash-fragment" hx-swap="outerHTML"
-       class="text-blue-600 hover:underline">{{ sf.name }}</a>
-  </li>
-{% empty %}
-  <li class="text-sm text-gray-400">None yet</li>
-{% endfor %}

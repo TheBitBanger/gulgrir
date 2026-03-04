@@ -93,11 +93,11 @@ WSGI_APPLICATION = "gulgrir.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": "gulgrir",
+        "NAME": os.getenv("POSTGRES_DB", "gulgrir"),
         "USER": os.getenv("POSTGRES_USER", "gulgrir"),
         "PASSWORD": os.getenv("POSTGRES_PASSWORD", "gulgrir"),
-        "HOST": "db",
-        "PORT": 5432,
+        "HOST": os.getenv("POSTGRES_HOST", "db"),
+        "PORT": int(os.getenv("POSTGRES_PORT", "5432")),
     }
 }
 

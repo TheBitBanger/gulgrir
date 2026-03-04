@@ -17,9 +17,9 @@ RUN poetry config virtualenvs.create false
 RUN poetry install --no-root --only main --no-interaction --no-ansi
 
 COPY ./src ./src
-COPY ./docker/scripts/entrypoint.sh /app/docker/scripts/entrypoint.sh
+COPY ./docker/app/entrypoint.sh /app/docker/app/entrypoint.sh
 
 ENV PYTHONPATH=/app/src
 
-RUN chmod +x /app/docker/scripts/entrypoint.sh
+RUN chmod +x /app/docker/app/entrypoint.sh
 RUN python /app/src/manage.py collectstatic --noinput

@@ -1,4 +1,4 @@
-name: Publish GHCR Image
+name: Publish Backup Image
 
 on:
   push:
@@ -45,16 +45,16 @@ jobs:
             REQUIRED_BRANCH="origin/dev"
             {
               echo "image_tags<<EOF"
-              echo "ghcr.io/thebitbanger/gulgrir:dev"
-              echo "ghcr.io/thebitbanger/gulgrir:${TAG}"
+              echo "ghcr.io/thebitbanger/kethuroth:dev"
+              echo "ghcr.io/thebitbanger/kethuroth:${TAG}"
               echo "EOF"
             } >> "${GITHUB_OUTPUT}"
           elif [[ "${TAG}" =~ ^v[0-9]+\.[0-9]+$ ]]; then
             REQUIRED_BRANCH="origin/master"
             {
               echo "image_tags<<EOF"
-              echo "ghcr.io/thebitbanger/gulgrir:latest"
-              echo "ghcr.io/thebitbanger/gulgrir:${TAG}"
+              echo "ghcr.io/thebitbanger/kethuroth:latest"
+              echo "ghcr.io/thebitbanger/kethuroth:${TAG}"
               echo "EOF"
             } >> "${GITHUB_OUTPUT}"
           else
@@ -82,7 +82,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: docker/app/Dockerfile
+          file: docker/backup/Dockerfile
           push: true
           provenance: true
           sbom: true

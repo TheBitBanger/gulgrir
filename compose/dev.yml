@@ -3,7 +3,7 @@ services:
   app:
     build:
       context: ..
-      dockerfile: docker/app.Dockerfile
+      dockerfile: docker/app/Dockerfile
     image: gulgrir:dev
     container_name: gulgrir_web
     restart: unless-stopped
@@ -12,7 +12,7 @@ services:
       - "${GULGRIR_PORT-8765}:8765"
     depends_on:
       - db
-    entrypoint: ["/app/docker/scripts/entrypoint.sh"]
+    entrypoint: ["/app/docker/app/entrypoint.sh"]
     command: "gunicorn gulgrir.wsgi:application --bind 0.0.0.0:8765 --workers 2"
 
   db:
@@ -22,6 +22,20 @@ services:
     container_name: gulgrir_db
     volumes:
       - pgdata:/var/lib/postgresql/data
+
+  backup:
+    build:
+      context: ..
+      dockerfile: docker/backup/Dockerfile
+    image: kethuroth:dev
+    env_file: ../.env
+    restart: unless-stopped
+    container_name: gulgrir_backup
+    depends_on:
+      - db
+    user: "${BACKUP_UID:-1000}:${BACKUP_GID:-1000}"
+    volumes:
+      - ../backups:/backups
 
 volumes:
   pgdata:

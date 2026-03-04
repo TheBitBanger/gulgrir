@@ -16,7 +16,8 @@
 ## Create a compose.yml
 
 Create a `compose.yml` file with the following content. You can use `dev`,
-`latest`, or a pinned version tag like `v0.1.0` for the image.
+`latest`, or a pinned version tag like `v0.1.0` for the image. The `backup`
+service is optional; remove it if you do not want scheduled backups.
 
 ```yaml
 name: gulgrir
@@ -29,7 +30,7 @@ services:
       - "${GULGRIR_PORT-8765}:8765"
     depends_on:
       - db
-    entrypoint: ["/app/docker/scripts/entrypoint.sh"]
+    entrypoint: ["/app/docker/app/entrypoint.sh"]
     command: "gunicorn gulgrir.wsgi:application --bind 0.0.0.0:8765 --workers 2"
 
   db:
@@ -38,6 +39,14 @@ services:
     env_file: .env
     volumes:
       - pgdata:/var/lib/postgresql/data
+
+  backup:
+    image: ghcr.io/thebitbanger/kethuroth:dev
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      - db
+    volumes:
       - ./backups:/backups
 
 volumes:
@@ -49,15 +58,31 @@ volumes:
 Create a `.env` file next to where you run docker compose:
 
 ```
+# Django
 DJANGO_SECRET_KEY=replace-me
 DJANGO_DEBUG=false
 DJANGO_ADMIN_USER=admin
 DJANGO_ADMIN_PASS=admin
-POSTGRES_USER=gulgrir
-POSTGRES_PASSWORD=gulgrir
-GULGRIR_PORT=8765
 DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
 DJANGO_CSRF_TRUSTED_ORIGINS=http://localhost:8765
+
+# Postgres
+POSTGRES_USER=gulgrir
+POSTGRES_PASSWORD=gulgrir
+POSTGRES_DB=gulgrir
+POSTGRES_HOST=db
+POSTGRES_PORT=5432
+
+# Backup
+BACKUP_SCHEDULE=0 5 * * *
+BACKUP_RETENTION_DAYS=7
+BACKUP_RETENTION_COUNT=30
+BACKUP_UID=1000
+BACKUP_GID=1000
+TZ=UTC
+
+# Gulgrir
+GULGRIR_PORT=8765
 ```
 
 Notes:
@@ -106,7 +131,8 @@ On first run, the entrypoint auto-creates a superuser using `DJANGO_ADMIN_USER` 
 
 ## Database Backup Location
 
-Database backups are written to `./backups` on the host (from the db container).
+Database backups are written to `./backups` on the host by the optional `backup`
+service.
 
 ## Release channel
 
@@ -121,28 +147,56 @@ the first stable milestone is ready.
 mkdir -p backups
 ```
 
-## Backup the database
+## Scheduled backups
+
+The `backup` service runs backups on a schedule. Configure it with:
+
+- `BACKUP_SCHEDULE` (cron format, default `0 5 * * *`)
+- `BACKUP_RETENTION_DAYS` (default `7`)
+- `BACKUP_RETENTION_COUNT` (default `30`)
+- `BACKUP_UID` / `BACKUP_GID` (optional, set to your host user/group to avoid root-owned files)
+- `TZ` (optional, set to your local timezone for schedule timing)
+
+The `backup` service includes a healthcheck that uses `pg_isready` to verify
+database connectivity. Check it with:
 
 ```
-docker compose exec -T db pg_dump -U gulgrir -d gulgrir -F c > backups/gulgrir_$(date +%F_%H%M%S).dump
+docker compose ps
+```
+
+To find your UID/GID:
+
+```
+id -u
+id -g
+```
+
+## On-demand backup
+
+```
+docker compose run --rm backup backup
 ```
 
 # Restores
 
-## Start the database only
+## Stop app services
 
 ```
-docker compose up -d db
+docker compose stop app
 ```
+
+If you have more services that connect to the database, stop them too. If your
+version of the stack does not include a service named in newer docs, ignore it.
+When in doubt, use the README that matches your image tag.
 
 ## Restore the dump
 
 ```
-cat backups/<dump file>.dump | docker compose exec -T db pg_restore -U gulgrir -d gulgrir --clean --if-exists
+docker compose run --rm backup restore /backups/<dump file>.dump
 ```
 
 ## Start the application
 
 ```
-docker compose up -d app
+docker compose start app
 ```

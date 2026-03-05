@@ -67,7 +67,7 @@ class ItemCreate(LoginRequiredMixin, CreateView):
     extra_context = {"model_verbose": Item._meta.verbose_name}
 
 
-class ItemList(ListView):
+class ItemList(LoginRequiredMixin, ListView):
     model = Item
     template_name = "tracker/item_list.html"
     paginate_by = 30

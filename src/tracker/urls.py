@@ -1,3 +1,4 @@
+from django.contrib.auth import views as auth_views
 from django.urls import path, include
 
 from . import views
@@ -37,6 +38,8 @@ saved_filter_patterns = [
 ]
 
 urlpatterns = [
+    path("login/", auth_views.LoginView.as_view(), name="login"),
+    path("logout/", auth_views.LogoutView.as_view(), name="logout"),
     path("bulk-action/", views.bulk_history_action, name="bulk_action"),
     # crud section
     path("library/items/", include((item_patterns))),

@@ -209,18 +209,41 @@
       color: var(--text);
     }
 
+    .user-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.15rem 0.6rem;
+      border-radius: 9999px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 0.8rem;
+    }
+
     [x-cloak] {
       display: none !important;
     }
   </style>
 </head>
 <body class="container mx-auto p-4">
-  <nav class="mb-4 space-x-4">
-    <a href="{% url 'useritem_dashboard' %}">My items</a>
-    <a href="{% url 'tag_list' %}">My tags</a>
-    <a href="{% url 'saved_filter_list' %}">Saved filters</a>
-    <a href="{% url 'item_list' %}">Global library</a>
-    <a href="{% url 'preferences' %}">Settings</a>
+  <nav class="mb-4 flex items-center justify-between gap-4">
+    <div class="flex flex-wrap items-center gap-4">
+      <a href="{% url 'useritem_dashboard' %}">My items</a>
+      <a href="{% url 'tag_list' %}">My tags</a>
+      <a href="{% url 'saved_filter_list' %}">Saved filters</a>
+      <a href="{% url 'item_list' %}">Global library</a>
+      <a href="{% url 'preferences' %}">Settings</a>
+    </div>
+    <div class="flex items-center gap-3">
+      {% if request.user.is_authenticated %}
+        <span class="user-pill">{{ request.user.username }}</span>
+        <form method="post" action="{% url 'logout' %}" class="inline">
+          {% csrf_token %}
+          <button type="submit" class="btn">Logout</button>
+        </form>
+      {% endif %}
+    </div>
   </nav>
   {% block content %}{% endblock %}
   {% if is_paginated %}

@@ -1,0 +1,50 @@
+{% extends "tracker/base.html" %}
+{% block content %}
+<div class="max-w-md">
+  <h1 class="text-xl font-semibold mb-4">Sign in</h1>
+
+  <form method="post" class="space-y-4">
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <div class="rounded-lg border p-3 text-sm">
+        {{ form.non_field_errors }}
+      </div>
+    {% endif %}
+
+    <div>
+      <label for="{{ form.username.id_for_label }}" class="block text-sm mb-1">
+        {{ form.username.label }}
+      </label>
+      {{ form.username }}
+      {% if form.username.errors %}
+        <div class="mt-1 text-xs">{{ form.username.errors }}</div>
+      {% endif %}
+    </div>
+
+    <div>
+      <label for="{{ form.password.id_for_label }}" class="block text-sm mb-1">
+        {{ form.password.label }}
+      </label>
+      {{ form.password }}
+      {% if form.password.errors %}
+        <div class="mt-1 text-xs">{{ form.password.errors }}</div>
+      {% endif %}
+    </div>
+
+    {% if next %}
+      <input type="hidden" name="next" value="{{ next }}">
+    {% endif %}
+
+    <div class="flex items-center gap-3">
+      <button type="submit"
+              class="inline-flex items-center justify-center rounded-lg border px-4 py-2 text-sm font-medium shadow-sm hover:opacity-90">
+        Sign in
+      </button>
+      <a href="{% url 'useritem_dashboard' %}" class="text-sm underline underline-offset-4 opacity-80 hover:opacity-100">
+        Cancel
+      </a>
+    </div>
+  </form>
+</div>
+{% endblock %}

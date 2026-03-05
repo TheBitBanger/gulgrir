@@ -221,6 +221,114 @@
       font-size: 0.8rem;
     }
 
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 1rem;
+    }
+
+    .panel-title {
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .panel-subtitle {
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin-top: -0.25rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .cover-placeholder {
+      background: linear-gradient(140deg, var(--surface-2), color-mix(in oklab, var(--accent) 18%, var(--surface)));
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      height: 220px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      gap: 0.35rem 1rem;
+      font-size: 0.9rem;
+    }
+
+    .meta-label {
+      color: var(--muted);
+      text-transform: uppercase;
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+    }
+
+    .meta-value {
+      color: var(--text);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.1rem 0.5rem;
+      border-radius: 9999px;
+      border: 1px solid var(--border);
+      font-size: 0.75rem;
+      color: var(--text);
+    }
+
+    .field-track {
+      position: relative;
+    }
+
+    .dirty-badge {
+      display: none;
+      margin-left: 0.5rem;
+      padding: 0.1rem 0.4rem;
+      border-radius: 9999px;
+      background: color-mix(in oklab, var(--warn) 30%, transparent);
+      border: 1px solid color-mix(in oklab, var(--warn) 60%, var(--border));
+      color: var(--text);
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .field-track.is-dirty .dirty-badge {
+      display: inline-flex;
+    }
+
+    .field-track.is-dirty input,
+    .field-track.is-dirty select,
+    .field-track.is-dirty textarea {
+      border-color: color-mix(in oklab, var(--warn) 70%, var(--border));
+      box-shadow: 0 0 0 1px color-mix(in oklab, var(--warn) 45%, transparent);
+    }
+
+    .history-list {
+      display: grid;
+      gap: 0.5rem;
+    }
+
+    .history-item {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.4rem 0.6rem;
+      border-radius: 0.5rem;
+      border: 1px solid var(--border);
+      background: color-mix(in oklab, var(--surface-2) 70%, transparent);
+      font-size: 0.85rem;
+    }
+
+    .history-icon {
+      font-size: 1rem;
+    }
+
     [x-cloak] {
       display: none !important;
     }

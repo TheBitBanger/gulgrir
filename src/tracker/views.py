@@ -152,6 +152,56 @@ class UserItemUpdate(OwnObjectsMixin, UpdateView):
         return ctx
 
 
+class UserItemDetail(OwnObjectsMixin, UpdateView):
+    form_class = UserItemForm
+    model = UserItem
+    template_name = "tracker/useritem_detail.html"
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["user"] = self.request.user
+
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+
+        ctx["enable_tag_picker"] = True
+        ctx["all_tags"] = list(
+            Tag.objects.filter(user=self.request.user)
+            .order_by("name")
+            .values("id", "name")
+        )
+
+        form = ctx.get("form")
+        if form is not None:
+            raw = form["tags"].value() or []
+            ctx["selected_tag_ids"] = [int(x) for x in raw]
+        else:
+            ctx["selected_tag_ids"] = []
+
+        user_item = self.object
+        ctx["item"] = user_item.item
+        ctx["history"] = user_item.history.order_by("-happened_at")
+        ctx["last_completed_at"] = (
+            user_item.history.filter(event_type=UserItemHistory.Event.COMPLETED)
+            .order_by("-happened_at")
+            .values_list("happened_at", flat=True)
+            .first()
+        )
+        ctx["last_revisited_at"] = (
+            user_item.history.filter(event_type=UserItemHistory.Event.REVISITED)
+            .order_by("-happened_at")
+            .values_list("happened_at", flat=True)
+            .first()
+        )
+
+        return ctx
+
+    def get_success_url(self):
+        return reverse("useritem_detail", kwargs={"pk": self.object.pk})
+
+
 class UserItemDelete(OwnObjectsMixin, DeleteView):
     model = UserItem
     success_url = reverse_lazy("useritem_dashboard")

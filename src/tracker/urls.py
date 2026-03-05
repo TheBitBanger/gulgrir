@@ -11,6 +11,7 @@ item_patterns = [
 useritem_patterns = [
     path("", views.useritem_dashboard, name="useritem_dashboard"),
     path("add/", views.UserItemCreate.as_view(), name="useritem_add"),
+    path("<int:pk>/", views.UserItemDetail.as_view(), name="useritem_detail"),
     path("<int:pk>/edit/", views.UserItemUpdate.as_view(), name="useritem_edit"),
     path("<int:pk>/delete/", views.UserItemDelete.as_view(), name="useritem_delete"),
     path("save-filter/", views.save_current_filter, name="save_filter"),

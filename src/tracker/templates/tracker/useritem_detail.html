@@ -1,0 +1,473 @@
+{% extends "tracker/base.html" %}
+{% block content %}
+<div class="space-y-6">
+  <div class="flex items-start justify-between gap-4">
+    <div>
+      <div class="flex items-center gap-3">
+        <h1 class="text-2xl font-semibold">{{ object.display_title }}</h1>
+        {% if item %}
+          <span class="badge">{{ item.get_media_type_display }}</span>
+        {% elif object.is_project %}
+          <span class="badge">Project</span>
+        {% endif %}
+      </div>
+      <div class="panel-subtitle">Detail view + inline edit</div>
+    </div>
+    <div class="text-sm text-muted">
+      ID #{{ object.pk }}
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <section class="space-y-4">
+      <div class="panel space-y-4">
+        <div class="panel-title">Item details</div>
+        <div class="cover-placeholder">Cover art placeholder</div>
+
+        <div class="meta-grid">
+          <div class="meta-label">Title</div>
+          <div class="meta-value">{{ object.display_title }}</div>
+
+          <div class="meta-label">Media</div>
+          <div class="meta-value">
+            {% if item %}{{ item.get_media_type_display }}{% else %}Project{% endif %}
+          </div>
+
+          <div class="meta-label">Release year</div>
+          <div class="meta-value">2021</div>
+
+          <div class="meta-label">Runtime</div>
+          <div class="meta-value">132 min</div>
+
+          <div class="meta-label">Genres</div>
+          <div class="meta-value">Drama, Mystery, Sci-Fi</div>
+
+          <div class="meta-label">Director</div>
+          <div class="meta-value">Avery Nakamura</div>
+
+          <div class="meta-label">Cast</div>
+          <div class="meta-value">Lina Park, Theo Reyes, Miles Okoro</div>
+
+          <div class="meta-label">Studio</div>
+          <div class="meta-value">Northwind Pictures</div>
+
+          <div class="meta-label">Rating</div>
+          <div class="meta-value">PG-13</div>
+        </div>
+
+        <div>
+          <div class="meta-label">Synopsis</div>
+          <p class="text-sm leading-relaxed">
+            After a failed expedition, a reclusive scientist returns to a coastal town to
+            unravel a signal that bends time. The discovery forces the team to revisit
+            their choices and the cost of rewriting the past.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="space-y-4">
+      <form method="post" class="panel space-y-6" id="useritem-form">
+        {% csrf_token %}
+
+        <div>
+          <div class="panel-title">Your details</div>
+          <div class="panel-subtitle">Edit your metadata, changes are tracked locally.</div>
+        </div>
+
+        {% if form.non_field_errors %}
+          <div class="rounded-lg border p-3 text-sm">
+            {{ form.non_field_errors }}
+          </div>
+        {% endif %}
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {% for field in form.visible_fields %}
+            {% if enable_tag_picker and field.name == "tags" %}
+              <div class="md:col-span-2 field-track" data-field-name="tags">
+                <label class="block text-sm mb-1">
+                  Tags
+                  <span class="dirty-badge">Edited</span>
+                </label>
+
+                <div id="tag-picker"
+                     class="rounded-lg border p-3 space-y-3"
+                     data-create-url="{% url 'tag_quick_create' %}"
+                     data-x="24"
+                     data-hx-disable="true">
+
+                  <div class="flex items-center gap-2">
+                    <input id="tag-filter"
+                           type="text"
+                           class="w-full rounded-lg border px-3 py-2 text-sm"
+                           placeholder="Filter tags or type a new one... (Enter to create)"
+                           autocomplete="off" />
+                    <button type="button"
+                            id="tag-clear"
+                            class="rounded-lg border px-3 py-2 text-sm">
+                      Clear
+                    </button>
+                  </div>
+
+                  <div>
+                    <div class="text-xs uppercase tracking-wide opacity-70 mb-2">Selected</div>
+                    <div id="tag-selected" class="flex flex-wrap gap-2"></div>
+                  </div>
+
+                  <div>
+                    <div class="text-xs uppercase tracking-wide opacity-70 mb-2">Available</div>
+
+                    <div id="tag-create-row" class="hidden mb-2">
+                      <button type="button"
+                              id="tag-create-btn"
+                              class="w-full text-left rounded-lg border px-3 py-2 text-sm">
+                        Press Enter / click to create
+                      </button>
+                    </div>
+
+                    <div id="tag-available" class="flex flex-wrap gap-2"></div>
+                  </div>
+
+                  <div id="tag-hidden-inputs"></div>
+
+                  <div class="hidden">
+                    {{ field }}
+                  </div>
+                </div>
+
+                {% if field.errors %}
+                  <div class="mt-1 text-xs">{{ field.errors }}</div>
+                {% endif %}
+              </div>
+            {% else %}
+              {% if field.field.widget.input_type == "checkbox" %}
+                <div class="md:col-span-2 field-track" data-field-name="{{ field.name }}">
+                  <label class="flex items-center gap-2 text-sm mt-2">
+                    {{ field }} <span>{{ field.label }}</span>
+                    <span class="dirty-badge">Edited</span>
+                  </label>
+                  {% if field.errors %}<div class="mt-1 text-xs">{{ field.errors }}</div>{% endif %}
+                </div>
+              {% else %}
+                <div class="field-track {% if field.name == 'item' or field.name == 'title_override' %}md:col-span-2{% endif %}"
+                     data-field-name="{{ field.name }}">
+                  <label for="{{ field.id_for_label }}" class="block text-sm mb-1">
+                    {{ field.label }}
+                    <span class="dirty-badge">Edited</span>
+                  </label>
+                  {{ field }}
+                  {% if field.help_text %}<div class="mt-1 text-xs opacity-70">{{ field.help_text }}</div>{% endif %}
+                  {% if field.errors %}<div class="mt-1 text-xs">{{ field.errors }}</div>{% endif %}
+                </div>
+              {% endif %}
+            {% endif %}
+          {% endfor %}
+        </div>
+
+        <div class="panel" style="padding: 0.75rem;">
+          <div class="panel-title">Dates</div>
+          <div class="meta-grid">
+            <div class="meta-label">🆕 Created</div>
+            <div class="meta-value">{{ object.created_at|date:tpl_fmt }}</div>
+
+            <div class="meta-label">👤 Created by</div>
+            <div class="meta-value">{{ object.created_by|default:"System" }}</div>
+
+            <div class="meta-label">✅ Completed</div>
+            <div class="meta-value">{{ last_completed_at|date:tpl_fmt|default:"-" }}</div>
+
+            <div class="meta-label">🔁 Revisited</div>
+            <div class="meta-value">{{ last_revisited_at|date:tpl_fmt|default:"-" }}</div>
+          </div>
+        </div>
+
+        <div class="panel" style="padding: 0.75rem;">
+          <div class="panel-title">Time tracking</div>
+          <p class="text-sm text-muted">Timer controls and summaries will appear here.</p>
+          <div class="mt-2 flex items-center gap-2">
+            <span class="badge">00:00:00</span>
+            <span class="badge">Session placeholder</span>
+          </div>
+        </div>
+
+        <div class="panel" style="padding: 0.75rem;">
+          <div class="panel-title">History</div>
+          <div class="history-list">
+            {% for entry in history %}
+              <div class="history-item">
+                <span class="history-icon">
+                  {% if entry.event_type == "completed" %}✅{% else %}🔁{% endif %}
+                </span>
+                <div>
+                  <div class="font-medium">
+                    {% if entry.event_type == "completed" %}Completed{% else %}Revisited{% endif %}
+                  </div>
+                  <div class="text-muted">{{ entry.happened_at|date:tpl_fmt }}</div>
+                </div>
+              </div>
+            {% empty %}
+              <div class="text-sm text-muted">No history yet.</div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <button type="submit"
+                  class="inline-flex items-center justify-center rounded-lg border px-4 py-2 text-sm font-medium shadow-sm hover:opacity-90">
+            Save changes
+          </button>
+          <a href="{% url 'useritem_dashboard' %}"
+             class="text-sm underline underline-offset-4 opacity-80 hover:opacity-100">
+            Back to list
+          </a>
+        </div>
+      </form>
+    </section>
+  </div>
+</div>
+
+{% if enable_tag_picker %}
+  {{ all_tags|json_script:"all-tags-data" }}
+  {{ selected_tag_ids|json_script:"selected-tag-ids" }}
+
+  <script>
+    (function () {
+      const picker = document.getElementById("tag-picker");
+      if (!picker) return;
+
+      const hiddenSelect = picker.querySelector('select[name="tags"]');
+      if (hiddenSelect) hiddenSelect.disabled = true;
+
+      const X = parseInt(picker.dataset.x || "24", 10);
+      const createUrl = picker.dataset.createUrl;
+
+      const allTags = JSON.parse(document.getElementById("all-tags-data").textContent || "[]");
+      const initialSelected = JSON.parse(document.getElementById("selected-tag-ids").textContent || "[]");
+      const initialSet = new Set(initialSelected.map(Number));
+
+      const filterEl = document.getElementById("tag-filter");
+      const clearBtn = document.getElementById("tag-clear");
+      const selectedEl = document.getElementById("tag-selected");
+      const availableEl = document.getElementById("tag-available");
+      const hiddenInputsEl = document.getElementById("tag-hidden-inputs");
+
+      const createRow = document.getElementById("tag-create-row");
+      const createBtn = document.getElementById("tag-create-btn");
+      const tagWrap = document.querySelector('[data-field-name="tags"]');
+
+      let expanded = false;
+      let filter = "";
+      const selected = new Set(initialSelected.map(Number));
+
+      function getCookie(name) {
+        const m = document.cookie.match(new RegExp("(^|; )" + name + "=([^;]*)"));
+        return m ? decodeURIComponent(m[2]) : "";
+      }
+      function norm(s) { return (s || "").trim().toLowerCase(); }
+
+      function pill(tag, isSelected) {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className =
+          "inline-flex items-center gap-1 rounded-full border px-2 py-1 text-sm " +
+          (isSelected ? "font-medium" : "");
+        if (isSelected) {
+          b.style.background = "rgba(255,255,255,0.08)";
+          const check = document.createElement("span");
+          check.textContent = "✓";
+          check.className = "text-xs opacity-80";
+          b.appendChild(check);
+        }
+
+        const t = document.createElement("span");
+        t.textContent = tag.name;
+        b.appendChild(t);
+
+        b.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          toggle(tag.id);
+        });
+        return b;
+      }
+
+      let renderQueued = false;
+      function queueRender() {
+        if (renderQueued) return;
+        renderQueued = true;
+        requestAnimationFrame(() => {
+          renderQueued = false;
+          render();
+        });
+      }
+
+      function toggle(id) {
+        id = Number(id);
+        if (selected.has(id)) selected.delete(id);
+        else selected.add(id);
+        queueRender();
+      }
+
+      function renderHiddenInputs() {
+        hiddenInputsEl.innerHTML = "";
+        Array.from(selected)
+          .sort((a, b) => a - b)
+          .forEach((id) => {
+            const inp = document.createElement("input");
+            inp.type = "hidden";
+            inp.name = "tags";
+            inp.value = String(id);
+            hiddenInputsEl.appendChild(inp);
+          });
+      }
+
+      function renderSelected() {
+        selectedEl.innerHTML = "";
+        const selectedTags = allTags
+          .filter(t => selected.has(Number(t.id)))
+          .sort((a,b) => a.name.localeCompare(b.name));
+        selectedTags.forEach(t => selectedEl.appendChild(pill(t, true)));
+      }
+
+      function renderAvailable() {
+        availableEl.innerHTML = "";
+
+        const f = norm(filter);
+        const filtered = allTags
+          .filter(t => f === "" || norm(t.name).includes(f))
+          .sort((a,b) => a.name.localeCompare(b.name));
+
+        const visible = expanded ? filtered : filtered.slice(0, X);
+        visible.forEach(t => {
+          availableEl.appendChild(pill(t, selected.has(Number(t.id))));
+        });
+
+        if (!expanded && filtered.length > X) {
+          const more = document.createElement("button");
+          more.type = "button";
+          more.className = "inline-flex items-center rounded-full border px-2 py-1 text-sm opacity-70";
+          more.textContent = "...";
+          more.addEventListener("click", () => { expanded = true; queueRender(); });
+          availableEl.appendChild(more);
+        }
+
+        const raw = (filter || "").trim();
+        const canCreate = raw.length > 0 && !allTags.some(t => norm(t.name) === norm(raw));
+        if (canCreate) {
+          createRow.classList.remove("hidden");
+          createBtn.textContent = `Press Enter / click to create "${raw}"`;
+        } else {
+          createRow.classList.add("hidden");
+        }
+      }
+
+      function updateDirty() {
+        if (!tagWrap) return;
+        const sameSize = selected.size === initialSet.size;
+        const isDirty = !sameSize || Array.from(selected).some((id) => !initialSet.has(id));
+        tagWrap.classList.toggle("is-dirty", isDirty);
+      }
+
+      async function createTag(name) {
+        const payload = { name: name.trim() };
+        if (!payload.name) return;
+
+        const res = await fetch(createUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": getCookie("csrftoken"),
+          },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.error || "Could not create tag");
+          return;
+        }
+
+        const id = Number(data.id);
+        if (!allTags.some(t => Number(t.id) === id)) {
+          allTags.push({ id, name: data.name });
+        }
+
+        selected.add(id);
+        filter = "";
+        filterEl.value = "";
+        expanded = false;
+        queueRender();
+      }
+
+      function render() {
+        renderHiddenInputs();
+        renderSelected();
+        renderAvailable();
+        updateDirty();
+      }
+
+      filterEl.addEventListener("input", (e) => {
+        filter = e.target.value || "";
+        expanded = false;
+        queueRender();
+      });
+
+      filterEl.addEventListener("keydown", async (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          const raw = (filterEl.value || "").trim();
+          const canCreate = raw.length > 0 && !allTags.some(t => norm(t.name) === norm(raw));
+          if (canCreate) await createTag(raw);
+        } else if (e.key === "Escape") {
+          filter = "";
+          filterEl.value = "";
+          expanded = false;
+          queueRender();
+        }
+      });
+
+      createBtn.addEventListener("click", async () => {
+        const raw = (filterEl.value || "").trim();
+        if (raw) await createTag(raw);
+      });
+
+      clearBtn.addEventListener("click", () => {
+        selected.clear();
+        queueRender();
+      });
+
+      queueRender();
+    })();
+  </script>
+{% endif %}
+
+<script>
+  (function () {
+    function snapshot(el) {
+      if (el.type === "checkbox") {
+        return el.checked ? "1" : "0";
+      }
+      return (el.value || "").trim();
+    }
+
+    document.querySelectorAll(".field-track").forEach((wrap) => {
+      if (wrap.dataset.fieldName === "tags") return;
+      const inputs = wrap.querySelectorAll("input, select, textarea");
+      if (!inputs.length) return;
+
+      const initial = Array.from(inputs).map(snapshot).join("||");
+      wrap.dataset.initial = initial;
+
+      const handler = () => {
+        const current = Array.from(inputs).map(snapshot).join("||");
+        wrap.classList.toggle("is-dirty", current !== wrap.dataset.initial);
+      };
+
+      inputs.forEach((el) => {
+        el.addEventListener("input", handler);
+        el.addEventListener("change", handler);
+      });
+    });
+  })();
+</script>
+{% endblock %}

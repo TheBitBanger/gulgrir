@@ -65,6 +65,7 @@ DJANGO_ADMIN_USER=admin
 DJANGO_ADMIN_PASS=admin
 DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
 DJANGO_CSRF_TRUSTED_ORIGINS=http://localhost:8765
+DJANGO_SECURE_PROXY_SSL_HEADER=true
 
 # Postgres
 POSTGRES_USER=gulgrir
@@ -91,6 +92,7 @@ Notes:
 - `GULGRIR_PORT` controls the host port that maps to container port 8765.
 - `DJANGO_ALLOWED_HOSTS` should include any hostnames or IPs you use to access the app.
 - `DJANGO_CSRF_TRUSTED_ORIGINS` must include the full scheme + host (and port if used).
+- `DJANGO_SECURE_PROXY_SSL_HEADER` should be `true` only when running behind a reverse proxy.
 
 ## If using a reverse proxy
 
@@ -113,7 +115,8 @@ docker compose up -d
 To upgrade to a newer image, pull and recreate the app container:
 
 ```
-docker compose pull app
+docker compose down
+docker compose pull
 docker compose up -d --force-recreate
 ```
 
@@ -141,11 +144,8 @@ the first stable milestone is ready.
 
 # Backups
 
-## Create the `backups` directory
-
-```
-mkdir -p backups
-```
+The `backup` service creates `./backups` automatically, but pre-creating the
+directory (and setting `BACKUP_UID` / `BACKUP_GID`) avoids root-owned files.
 
 ## Scheduled backups
 
@@ -170,6 +170,14 @@ To find your UID/GID:
 id -u
 id -g
 ```
+
+## Docs for your version
+
+If you are running a tagged release, use the GitHub branch switcher to select
+your tag so the README matches your image version.
+
+Note: GHCR package pages show the README from the default branch, which may not
+match your pinned tag.
 
 ## On-demand backup
 

@@ -1,5 +1,7 @@
 FROM postgres:16
 
+LABEL org.opencontainers.image.description="Docs: use the GitHub branch switcher to select your tag for the matching README."
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     curl \

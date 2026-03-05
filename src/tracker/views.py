@@ -4,7 +4,7 @@ import sys
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import IntegrityError
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
@@ -18,7 +18,7 @@ from django.views.generic.list import ListView
 from tracker.actions import Action
 from tracker.actions import registry as action_registry
 
-from .forms import ProfileForm, UserItemFilterForm, UserItemForm
+from .forms import ProfileForm, TagForm, UserItemFilterForm, UserItemForm
 from .models import Item, Profile, SavedFilter, Tag, UserItem, UserItemHistory
 from .services import build_useritem_queryset
 
@@ -160,10 +160,16 @@ class UserItemDelete(OwnObjectsMixin, DeleteView):
 
 class TagCreate(LoginRequiredMixin, CreateView):
     model = Tag
-    fields = ["name"]
+    form_class = TagForm
     template_name = "tracker/form.html"
     success_url = reverse_lazy("tag_list")
     extra_context = {"model_verbose": Tag._meta.verbose_name}
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["user"] = self.request.user
+
+        return kwargs
 
     def form_valid(self, form):
         form.instance.user = self.request.user
@@ -173,6 +179,40 @@ class TagCreate(LoginRequiredMixin, CreateView):
 class TagList(OwnObjectsMixin, ListView):
     model = Tag
     template_name = "tracker/tag_list.html"
+
+    def get_queryset(self):
+        return (
+            super()
+            .get_queryset()
+            .annotate(usage_count=Count("user_items"))
+            .order_by("name")
+        )
+
+
+class TagUpdate(OwnObjectsMixin, UpdateView):
+    model = Tag
+    form_class = TagForm
+    template_name = "tracker/form.html"
+    success_url = reverse_lazy("tag_list")
+    extra_context = {"model_verbose": Tag._meta.verbose_name}
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["user"] = self.request.user
+
+        return kwargs
+
+
+class TagDelete(OwnObjectsMixin, DeleteView):
+    model = Tag
+    template_name = "tracker/confirm_delete.html"
+    success_url = reverse_lazy("tag_list")
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["usage_count"] = self.object.user_items.count()
+
+        return ctx
 
 
 class SavedFilterList(OwnObjectsMixin, ListView):

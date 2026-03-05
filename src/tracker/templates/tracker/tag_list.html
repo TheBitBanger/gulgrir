@@ -4,11 +4,29 @@
 
 <a class="btn mb-2" href="{% url 'tag_add' %}">➕ New tag</a>
 
-<ul class="list-disc ml-6">
-  {% for tag in object_list %}
-    <li>{{ tag.name }}</li>
-  {% empty %}
-    <li>No tags yet.</li>
-  {% endfor %}
-</ul>
+<table class="w-full border-collapse">
+  <thead>
+    <tr class="border-b">
+      <th class="text-left p-1">Name</th>
+      <th class="text-left p-1">Used</th>
+      <th class="w-24"></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for tag in object_list %}
+      <tr class="border-b">
+        <td class="p-1">{{ tag.name }}</td>
+        <td class="p-1 text-sm">{{ tag.usage_count }}</td>
+        <td class="p-1 text-right">
+          <a href="{% url 'tag_edit' tag.pk %}" class="mr-2">✏️</a>
+          <a href="{% url 'tag_delete' tag.pk %}">🗑️</a>
+        </td>
+      </tr>
+    {% empty %}
+      <tr>
+        <td colspan="3" class="p-2">No tags yet.</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
 {% endblock %}

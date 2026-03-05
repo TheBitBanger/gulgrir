@@ -21,6 +21,8 @@ useritem_patterns = [
 tag_patterns = [
     path("", views.TagList.as_view(), name="tag_list"),
     path("add/", views.TagCreate.as_view(), name="tag_add"),
+    path("<int:pk>/edit/", views.TagUpdate.as_view(), name="tag_edit"),
+    path("<int:pk>/delete/", views.TagDelete.as_view(), name="tag_delete"),
     path("quick-create/", views.TagQuickCreate.as_view(), name="tag_quick_create"),
 ]
 

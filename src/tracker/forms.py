@@ -151,3 +151,35 @@ class UserItemFilterForm(forms.Form):
             d["tags"] = [tag.pk for tag in cd["tags"]]  # list[int]
 
         return d
+
+
+class TagForm(forms.ModelForm):
+    class Meta:
+        model = Tag
+        fields = ["name"]
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+
+        base = "w-full rounded-lg border px-3 py-2 text-sm"
+        for field in self.fields.values():
+            field.widget.attrs.setdefault("class", base)
+
+    def clean_name(self):
+        name = (self.cleaned_data.get("name") or "").strip()
+        if not name:
+            return name
+
+        if self.user is None:
+            return name
+
+        exists = (
+            Tag.objects.filter(user=self.user, name__iexact=name)
+            .exclude(pk=self.instance.pk)
+            .exists()
+        )
+        if exists:
+            raise forms.ValidationError("You already have a tag with this name.")
+
+        return name

@@ -197,17 +197,45 @@
     <section class="space-y-4">
       <div class="panel" style="padding: 0.75rem;">
         <div class="panel-title">Time tracking</div>
-        <p class="text-sm text-muted">Timer controls and summaries will appear here.</p>
-        <div class="mt-2 flex items-center gap-2">
-          <span class="badge">00:00:00</span>
-          <span class="badge">Session placeholder</span>
+        <p class="text-sm text-muted">Track focused time on this item.</p>
+        <div id="timer-panel"
+             class="mt-3 space-y-3"
+             data-start-url="{% url 'useritem_timer_start' object.pk %}"
+             data-stop-url="{% url 'useritem_timer_stop' object.pk %}">
+          <div class="flex items-center gap-2">
+            <button type="button"
+                    id="timer-start"
+                    class="inline-flex items-center justify-center rounded-lg border px-3 py-1 text-sm {% if timer_is_running %}opacity-50 cursor-not-allowed{% else %}bg-emerald-600 text-white{% endif %}"
+                    {% if timer_is_running %}disabled{% endif %}>
+              Start
+            </button>
+            <button type="button"
+                    id="timer-stop"
+                    class="inline-flex items-center justify-center rounded-lg border px-3 py-1 text-sm {% if timer_is_running %}bg-rose-600 text-white{% else %}opacity-50 cursor-not-allowed{% endif %}"
+                    {% if not timer_is_running %}disabled{% endif %}>
+              Stop
+            </button>
+          </div>
+          <div class="text-sm">
+            <div>
+              <span class="meta-label">Started</span>
+              <span id="timer-started-at">
+                {% if timer_started_at %}{{ timer_started_at|date:tpl_fmt }} {{ timer_started_at|date:"H:i" }}{% else %}-{% endif %}
+              </span>
+            </div>
+            <div class="mt-1">
+              <span class="meta-label">Duration</span>
+              <span id="timer-duration" class="badge">{{ timer_duration_display }}</span>
+            </div>
+          </div>
         </div>
       </div>
 
       <div class="panel" style="padding: 0.75rem;">
         <div class="panel-title">History</div>
         <div class="history-list">
-          {% for entry in history %}
+          {% for row in history_entries %}
+            {% with entry=row.entry %}
             <div class="history-item">
               <span class="history-icon">
                 {% if entry.event_type == "completed" %}✅{% else %}🔁{% endif %}
@@ -216,9 +244,18 @@
                 <div class="font-medium">
                   {% if entry.event_type == "completed" %}Completed{% else %}Revisited{% endif %}
                 </div>
-                <div class="text-muted">{{ entry.happened_at|date:tpl_fmt }}</div>
+                {% if entry.started_at and entry.ended_at %}
+                  <div class="text-muted">
+                    {{ entry.started_at|date:tpl_fmt }} {{ entry.started_at|date:"H:i" }} ->
+                    {{ entry.ended_at|date:tpl_fmt }} {{ entry.ended_at|date:"H:i" }}
+                  </div>
+                  <div class="text-muted">Duration {{ row.duration_display }}</div>
+                {% else %}
+                  <div class="text-muted">{{ entry.happened_at|date:tpl_fmt }}</div>
+                {% endif %}
               </div>
             </div>
+            {% endwith %}
           {% empty %}
             <div class="text-sm text-muted">No history yet.</div>
           {% endfor %}
@@ -227,6 +264,52 @@
     </section>
   </div>
 </div>
+
+<script>
+  (function () {
+    const panel = document.getElementById("timer-panel");
+    if (!panel) return;
+
+    const startBtn = document.getElementById("timer-start");
+    const stopBtn = document.getElementById("timer-stop");
+
+    function getCookie(name) {
+      const m = document.cookie.match(new RegExp("(^|; )" + name + "=([^;]*)"));
+      return m ? decodeURIComponent(m[2]) : "";
+    }
+
+    async function post(url, btn) {
+      if (btn) btn.disabled = true;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "X-CSRFToken": getCookie("csrftoken"),
+        },
+      });
+
+      if (!res.ok) {
+        let data = {};
+        try {
+          data = await res.json();
+        } catch (err) {
+          data = {};
+        }
+        alert(data.error || "Timer request failed");
+        if (btn) btn.disabled = false;
+        return;
+      }
+
+      window.location.reload();
+    }
+
+    if (startBtn) {
+      startBtn.addEventListener("click", () => post(panel.dataset.startUrl, startBtn));
+    }
+    if (stopBtn) {
+      stopBtn.addEventListener("click", () => post(panel.dataset.stopUrl, stopBtn));
+    }
+  })();
+</script>
 
 {% if enable_tag_picker %}
   {{ all_tags|json_script:"all-tags-data" }}

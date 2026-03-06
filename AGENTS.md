@@ -43,6 +43,8 @@ Local virtualenv workflow (Poetry):
 - Note: default DB host is `db`, so local commands need the Compose network or a local DB override.
 - To run migrations against the Compose DB:
   - `docker compose -f compose/dev.yml -f compose/dev.bind.yml exec app python /app/src/manage.py migrate`
+- When generating migrations, ensure the app container is running with bind mounts so new migration files are written to the host:
+  - `docker compose -f compose/dev.yml -f compose/dev.bind.yml exec app python /app/src/manage.py makemigrations`
 
 Environment variables:
 

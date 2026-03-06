@@ -14,6 +14,12 @@ useritem_patterns = [
     path("<int:pk>/", views.UserItemDetail.as_view(), name="useritem_detail"),
     path("<int:pk>/edit/", views.UserItemUpdate.as_view(), name="useritem_edit"),
     path("<int:pk>/delete/", views.UserItemDelete.as_view(), name="useritem_delete"),
+    path(
+        "<int:pk>/timer/start/",
+        views.useritem_timer_start,
+        name="useritem_timer_start",
+    ),
+    path("<int:pk>/timer/stop/", views.useritem_timer_stop, name="useritem_timer_stop"),
     path("save-filter/", views.save_current_filter, name="save_filter"),
     path("actions/", views.useritem_execute_action, name="useritem_actions"),
     path("actions/list/", views.list_actions, name="action_list"),

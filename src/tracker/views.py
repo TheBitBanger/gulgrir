@@ -3,11 +3,12 @@ import sys
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.db.models import Count, Q
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.http import require_POST
@@ -21,6 +22,18 @@ from tracker.actions import registry as action_registry
 from .forms import ProfileForm, TagForm, UserItemFilterForm, UserItemForm
 from .models import Item, Profile, SavedFilter, Tag, UserItem, UserItemHistory
 from .services import build_useritem_queryset
+
+
+def format_duration(duration) -> str:
+    if duration is None:
+        return "00:00:00"
+    total_seconds = int(duration.total_seconds())
+    if total_seconds < 0:
+        total_seconds = 0
+    hours = total_seconds // 3600
+    minutes = (total_seconds % 3600) // 60
+    seconds = total_seconds % 60
+    return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
 
 
 @require_POST
@@ -182,7 +195,18 @@ class UserItemDetail(OwnObjectsMixin, UpdateView):
 
         user_item = self.object
         ctx["item"] = user_item.item
-        ctx["history"] = user_item.history.order_by("-happened_at")
+        history_entries = []
+        for entry in user_item.history.order_by("-happened_at"):
+            duration = entry.duration
+            if duration is None and entry.started_at and entry.ended_at:
+                duration = entry.ended_at - entry.started_at
+            history_entries.append(
+                {
+                    "entry": entry,
+                    "duration_display": format_duration(duration),
+                }
+            )
+        ctx["history_entries"] = history_entries
         ctx["last_completed_at"] = (
             user_item.history.filter(event_type=UserItemHistory.Event.COMPLETED)
             .order_by("-happened_at")
@@ -195,6 +219,14 @@ class UserItemDetail(OwnObjectsMixin, UpdateView):
             .values_list("happened_at", flat=True)
             .first()
         )
+        ctx["timer_started_at"] = user_item.timer_started_at
+        ctx["timer_is_running"] = user_item.timer_started_at is not None
+        if user_item.timer_started_at:
+            ctx["timer_duration_display"] = format_duration(
+                timezone.now() - user_item.timer_started_at
+            )
+        else:
+            ctx["timer_duration_display"] = format_duration(None)
 
         return ctx
 
@@ -429,6 +461,56 @@ def save_current_filter(request):
     resp["HX-Redirect"] = url
 
     return resp
+
+
+@require_POST
+@login_required
+def useritem_timer_start(request, pk: int):
+    with transaction.atomic():
+        user_item = get_object_or_404(
+            UserItem.objects.select_for_update(), pk=pk, user=request.user
+        )
+        if user_item.timer_started_at:
+            return JsonResponse({"error": "Timer already running"}, status=409)
+        user_item.timer_started_at = timezone.now()
+        user_item.save(update_fields=["timer_started_at"])
+
+    return JsonResponse({"started_at": user_item.timer_started_at.isoformat()})
+
+
+@require_POST
+@login_required
+def useritem_timer_stop(request, pk: int):
+    with transaction.atomic():
+        user_item = get_object_or_404(
+            UserItem.objects.select_for_update(), pk=pk, user=request.user
+        )
+        if not user_item.timer_started_at:
+            return JsonResponse({"error": "Timer is not running"}, status=409)
+
+        started_at = user_item.timer_started_at
+        ended_at = timezone.now()
+        history = UserItemHistory(
+            user_item=user_item,
+            event_type=UserItemHistory.Event.REVISITED,
+            happened_at=ended_at,
+            started_at=started_at,
+            ended_at=ended_at,
+        )
+        history.save()
+
+        user_item.timer_started_at = None
+        user_item.save(update_fields=["timer_started_at"])
+
+    return JsonResponse(
+        {
+            "started_at": started_at.isoformat(),
+            "ended_at": ended_at.isoformat(),
+            "duration": history.duration.total_seconds()
+            if history.duration
+            else 0,
+        }
+    )
 
 
 # unified executor for all actions

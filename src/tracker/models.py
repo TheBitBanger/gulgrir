@@ -119,6 +119,7 @@ class UserItem(models.Model):
         null=True,
     )
     tags = models.ManyToManyField("Tag", blank=True, related_name="user_items")
+    timer_started_at = models.DateTimeField(null=True, blank=True)
 
     @property
     def display_title(self) -> str:
@@ -145,6 +146,16 @@ class UserItemHistory(models.Model):
     )
     happened_at = models.DateTimeField(default=timezone.now, blank=True)
     event_type = models.CharField(max_length=20, choices=Event.choices)
+    started_at = models.DateTimeField(null=True, blank=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
+    duration = models.DurationField(null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        if self.started_at and self.ended_at:
+            self.duration = self.ended_at - self.started_at
+        else:
+            self.duration = None
+        return super().save(*args, **kwargs)
 
 
 class Tag(models.Model):

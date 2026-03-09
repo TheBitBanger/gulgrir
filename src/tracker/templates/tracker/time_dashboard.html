@@ -1,0 +1,227 @@
+{% extends "tracker/base.html" %}
+{% block content %}
+<div class="space-y-6">
+  <div class="flex items-start justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-semibold">Time tracking dashboard</h1>
+      <div class="panel-subtitle">Balance-focused breakdowns across your layouts.</div>
+    </div>
+  </div>
+
+  <div class="panel space-y-4">
+    <div class="flex flex-wrap items-center gap-4">
+      <form method="get" class="flex items-center gap-2">
+        <label class="text-sm">Layout</label>
+        <select name="layout" class="control" onchange="this.form.submit()">
+          {% for l in layouts %}
+            <option value="{{ l.id }}" {% if layout and l.id == layout.id %}selected{% endif %}>
+              {{ l.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </form>
+
+      {% if layout %}
+        <form method="post" action="{% url 'time_bucket_add' %}" class="flex items-center gap-2">
+          {% csrf_token %}
+          <input type="hidden" name="layout_id" value="{{ layout.id }}">
+          <input type="text" name="bucket_name" class="control" placeholder="New bucket">
+          <select name="parent_id" class="control">
+            <option value="">Top level</option>
+            {% for opt in bucket_options %}
+              <option value="{{ opt.id }}">{{ opt.label }}</option>
+            {% endfor %}
+          </select>
+          <button type="submit" class="btn">Add bucket</button>
+        </form>
+      {% endif %}
+    </div>
+
+    <form method="post" action="{% url 'time_layout_add' %}" class="flex flex-wrap items-center gap-2">
+      {% csrf_token %}
+      <input type="text" name="layout_name" class="control" placeholder="New layout">
+      <input type="text" name="layout_description" class="control" placeholder="Description (optional)">
+      <button type="submit" class="btn">Create layout</button>
+    </form>
+  </div>
+
+  {% if not layout %}
+    <div class="panel">
+      <div class="text-sm text-muted">Create a layout to start tracking balance.</div>
+    </div>
+  {% else %}
+    <div class="panel space-y-4">
+      {% if selected_bucket %}
+        <div class="text-sm">
+          Viewing bucket: <strong>{{ selected_bucket.name }}</strong>
+          <a class="link ml-2" href="{% url 'time_dashboard' %}?layout={{ layout.id }}">Back to top</a>
+        </div>
+      {% endif %}
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {% for chart in daily_contexts %}
+          <div class="panel" style="padding: 0.75rem;">
+            <div class="flex items-center justify-between">
+              <div class="panel-title">{{ chart.label }}</div>
+              <div class="text-xs text-muted">{{ chart.total_display }}</div>
+            </div>
+            {% if chart.entries %}
+              <div class="space-y-2">
+                {% for entry in chart.entries %}
+                  <div class="flex items-center gap-3 text-sm">
+                    <div class="w-36 truncate">
+                      {% if entry.kind == "bucket" and entry.bucket_id %}
+                        <a class="link" href="{% url 'time_dashboard' %}?layout={{ layout.id }}&bucket={{ entry.bucket_id }}">{{ entry.label }}</a>
+                      {% else %}
+                        {{ entry.label }}
+                      {% endif %}
+                    </div>
+                    <div class="flex-1 h-2 rounded" style="background: var(--surface-2);">
+                      <div class="h-2 rounded" style="width: {{ entry.percent }}%; background: {% if entry.kind == 'bucket' %}var(--accent){% elif entry.kind == 'item' %}var(--success){% else %}var(--warn){% endif %};"></div>
+                    </div>
+                    <div class="text-xs text-muted">{{ entry.duration_display }}</div>
+                  </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="text-sm text-muted">No time tracked yet.</div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+
+      <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        {% for chart in rolling_contexts %}
+          <div class="panel" style="padding: 0.75rem;">
+            <div class="flex items-center justify-between">
+              <div class="panel-title">{{ chart.label }}</div>
+              <div class="text-xs text-muted">{{ chart.total_display }}</div>
+            </div>
+            {% if chart.entries %}
+              <div class="space-y-2">
+                {% for entry in chart.entries %}
+                  <div class="flex items-center gap-3 text-sm">
+                    <div class="w-40 truncate">
+                      {% if entry.kind == "bucket" and entry.bucket_id %}
+                        <a class="link" href="{% url 'time_dashboard' %}?layout={{ layout.id }}&bucket={{ entry.bucket_id }}">{{ entry.label }}</a>
+                      {% else %}
+                        {{ entry.label }}
+                      {% endif %}
+                    </div>
+                    <div class="flex-1 h-2 rounded" style="background: var(--surface-2);">
+                      <div class="h-2 rounded" style="width: {{ entry.percent }}%; background: {% if entry.kind == 'bucket' %}var(--accent){% elif entry.kind == 'item' %}var(--success){% else %}var(--warn){% endif %};"></div>
+                    </div>
+                    <div class="text-xs text-muted">{{ entry.duration_display }}</div>
+                  </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="text-sm text-muted">No time tracked yet.</div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+
+      <div class="panel" style="padding: 0.75rem;">
+        <div class="flex items-center justify-between">
+          <div class="panel-title">{{ all_time_context.label }}</div>
+          <div class="text-xs text-muted">{{ all_time_context.total_display }}</div>
+        </div>
+        {% if all_time_context.entries %}
+          <div class="space-y-2">
+            {% for entry in all_time_context.entries %}
+              <div class="flex items-center gap-3 text-sm">
+                <div class="w-48 truncate">
+                  {% if entry.kind == "bucket" and entry.bucket_id %}
+                    <a class="link" href="{% url 'time_dashboard' %}?layout={{ layout.id }}&bucket={{ entry.bucket_id }}">{{ entry.label }}</a>
+                  {% else %}
+                    {{ entry.label }}
+                  {% endif %}
+                </div>
+                <div class="flex-1 h-2 rounded" style="background: var(--surface-2);">
+                  <div class="h-2 rounded" style="width: {{ entry.percent }}%; background: {% if entry.kind == 'bucket' %}var(--accent){% elif entry.kind == 'item' %}var(--success){% else %}var(--warn){% endif %};"></div>
+                </div>
+                <div class="text-xs text-muted">{{ entry.duration_display }}</div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="text-sm text-muted">No time tracked yet.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+      <div class="panel" style="padding: 0.75rem;">
+        <div class="panel-title">Unassigned items</div>
+        {% if unassigned_items %}
+          <div class="space-y-3">
+            {% for row in unassigned_items %}
+              <div class="flex flex-wrap items-center gap-2 text-sm">
+                <div class="flex-1 min-w-[180px]">{{ row.item.display_title }}</div>
+                <div class="text-xs text-muted">{{ row.duration_display }}</div>
+                <form method="post" action="{% url 'time_assignment_update' %}" class="flex items-center gap-2">
+                  {% csrf_token %}
+                  <input type="hidden" name="layout_id" value="{{ layout.id }}">
+                  <input type="hidden" name="item_id" value="{{ row.item.id }}">
+                  <input type="hidden" name="action" value="assign">
+                  <select name="bucket_id" class="control">
+                    {% for opt in bucket_options %}
+                      <option value="{{ opt.id }}">{{ opt.label }}</option>
+                    {% endfor %}
+                  </select>
+                  <button type="submit" class="btn">Assign</button>
+                </form>
+                <form method="post" action="{% url 'time_assignment_update' %}" class="inline">
+                  {% csrf_token %}
+                  <input type="hidden" name="layout_id" value="{{ layout.id }}">
+                  <input type="hidden" name="item_id" value="{{ row.item.id }}">
+                  <input type="hidden" name="action" value="ignore">
+                  <button type="submit" class="btn btn-danger">Ignore</button>
+                </form>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="text-sm text-muted">No unassigned items.</div>
+        {% endif %}
+      </div>
+
+      <div class="panel" style="padding: 0.75rem;">
+        <div class="panel-title">Ignored items</div>
+        {% if ignored_items %}
+          <div class="space-y-3">
+            {% for row in ignored_items %}
+              <div class="flex flex-wrap items-center gap-2 text-sm">
+                <div class="flex-1 min-w-[180px]">{{ row.item.display_title }}</div>
+                <div class="text-xs text-muted">{{ row.duration_display }}</div>
+                <form method="post" action="{% url 'time_assignment_update' %}" class="inline">
+                  {% csrf_token %}
+                  <input type="hidden" name="layout_id" value="{{ layout.id }}">
+                  <input type="hidden" name="item_id" value="{{ row.item.id }}">
+                  <input type="hidden" name="action" value="unignore">
+                  <button type="submit" class="btn">Unignore</button>
+                </form>
+                <form method="post" action="{% url 'time_assignment_update' %}" class="flex items-center gap-2">
+                  {% csrf_token %}
+                  <input type="hidden" name="layout_id" value="{{ layout.id }}">
+                  <input type="hidden" name="item_id" value="{{ row.item.id }}">
+                  <input type="hidden" name="action" value="assign">
+                  <select name="bucket_id" class="control">
+                    {% for opt in bucket_options %}
+                      <option value="{{ opt.id }}">{{ opt.label }}</option>
+                    {% endfor %}
+                  </select>
+                  <button type="submit" class="btn">Assign</button>
+                </form>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="text-sm text-muted">No ignored items.</div>
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

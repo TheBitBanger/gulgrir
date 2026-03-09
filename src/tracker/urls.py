@@ -54,6 +54,10 @@ urlpatterns = [
     path("my/items/", include((useritem_patterns))),
     path("my/tags/", include((tag_patterns))),
     path("my/filters/", include((saved_filter_patterns))),
+    path("my/time/", views.time_dashboard, name="time_dashboard"),
+    path("my/time/layouts/add/", views.time_layout_create, name="time_layout_add"),
+    path("my/time/buckets/add/", views.time_bucket_create, name="time_bucket_add"),
+    path("my/time/assign/", views.time_assignment_update, name="time_assignment_update"),
     # preferences
     path("settings/preferences/", views.preference_view, name="preferences"),
 ]

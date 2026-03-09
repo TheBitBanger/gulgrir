@@ -319,3 +319,74 @@ class SavedFilter(models.Model):
             params.append(("tier", str(value)))
 
         return urlencode(params, doseq=True)
+
+
+class TimeLayout(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="time_layouts",
+    )
+    name = models.CharField(max_length=64)
+    description = models.TextField(blank=True)
+    order = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("order", "name")
+        unique_together = ("user", "name")
+
+    def __str__(self):
+        return f"{self.name}"
+
+
+class TimeBucket(models.Model):
+    layout = models.ForeignKey(
+        TimeLayout,
+        on_delete=models.CASCADE,
+        related_name="buckets",
+    )
+    name = models.CharField(max_length=64)
+    parent = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="children",
+    )
+    order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ("order", "name")
+        unique_together = ("layout", "parent", "name")
+
+    def __str__(self):
+        return f"{self.name}"
+
+
+class TimeBucketAssignment(models.Model):
+    layout = models.ForeignKey(
+        TimeLayout,
+        on_delete=models.CASCADE,
+        related_name="assignments",
+    )
+    user_item = models.ForeignKey(
+        UserItem,
+        on_delete=models.CASCADE,
+        related_name="time_assignments",
+    )
+    bucket = models.ForeignKey(
+        TimeBucket,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="assignments",
+    )
+    is_ignored = models.BooleanField(default=False)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("layout", "user_item")
+
+    def __str__(self):
+        return f"{self.user_item} -> {self.bucket or 'Unassigned'}"

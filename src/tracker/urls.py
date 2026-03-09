@@ -20,6 +20,7 @@ useritem_patterns = [
         name="useritem_timer_start",
     ),
     path("<int:pk>/timer/stop/", views.useritem_timer_stop, name="useritem_timer_stop"),
+    path("<int:pk>/timer/add/", views.useritem_timer_add_retro, name="useritem_timer_add"),
     path("save-filter/", views.save_current_filter, name="save_filter"),
     path("actions/", views.useritem_execute_action, name="useritem_actions"),
     path("actions/list/", views.list_actions, name="action_list"),

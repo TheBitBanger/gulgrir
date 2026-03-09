@@ -638,6 +638,64 @@
         }
       });
 
+      const retroForms = Array.from(document.querySelectorAll("[data-retro-form]"));
+      retroForms.forEach((form) => {
+        const errorBox = form.parentElement?.querySelector("#retro-errors");
+        form.addEventListener("submit", (event) => {
+          const errors = [];
+          const dateInput = form.querySelector("#retro-date");
+          const timeInput = form.querySelector("#retro-start-time");
+          const durationInput = form.querySelector("#retro-duration");
+
+          const dateValue = dateInput?.value.trim() || "";
+          const timeValue = timeInput?.value.trim() || "";
+          const durationValue = durationInput?.value.trim() || "";
+
+          if (!dateValue) {
+            errors.push({ label: "Date", message: "Enter a valid date" });
+          }
+
+          if (timeValue && !/^([01]\d|2[0-3]):[0-5]\d$/.test(timeValue)) {
+            errors.push({ label: "Start time", message: "Enter a valid time (HH:MM)" });
+          }
+
+          if (!durationValue) {
+            errors.push({ label: "Duration", message: "Duration required" });
+          } else {
+            const regex = /(\d+)\s*([hms])/gi;
+            const matches = Array.from(durationValue.matchAll(regex));
+            const remainder = durationValue.replace(regex, "").trim();
+            if (!matches.length || remainder) {
+              errors.push({ label: "Duration", message: "Use h/m/s (e.g. 1h 20m 10s)" });
+            } else {
+              let totalSeconds = 0;
+              matches.forEach((match) => {
+                const value = parseInt(match[1], 10);
+                const unit = match[2].toLowerCase();
+                if (unit === "h") totalSeconds += value * 3600;
+                if (unit === "m") totalSeconds += value * 60;
+                if (unit === "s") totalSeconds += value;
+              });
+              if (totalSeconds <= 0) {
+                errors.push({ label: "Duration", message: "Duration required" });
+              } else if (totalSeconds > 86400) {
+                errors.push({ label: "Duration", message: "Duration must be 24h or less" });
+              }
+            }
+          }
+
+          if (errors.length) {
+            event.preventDefault();
+            if (errorBox) {
+              errorBox.innerHTML = errors
+                .map((err) => `<div><strong>${err.label}:</strong> ${err.message}</div>`)
+                .join("");
+              errorBox.classList.remove("hidden");
+            }
+          }
+        });
+      });
+
       tick();
       setInterval(tick, 1000);
     })();

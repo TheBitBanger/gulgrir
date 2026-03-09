@@ -1,5 +1,7 @@
 import json
+import re
 import sys
+from datetime import date, datetime, time, timedelta
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -34,6 +36,131 @@ def format_duration(duration) -> str:
     minutes = (total_seconds % 3600) // 60
     seconds = total_seconds % 60
     return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+
+def parse_retro_duration(raw: str) -> tuple[timedelta | None, str | None]:
+    if not raw:
+        return None, "Duration required"
+
+    pattern = re.compile(r"(\d+)\s*([hms])", re.IGNORECASE)
+    matches = list(pattern.finditer(raw))
+    if not matches:
+        return None, "Use h/m/s (e.g. 1h 20m 10s)"
+
+    remainder = pattern.sub("", raw).strip()
+    if remainder:
+        return None, "Use h/m/s (e.g. 1h 20m 10s)"
+
+    total_seconds = 0
+    for match in matches:
+        value = int(match.group(1))
+        unit = match.group(2).lower()
+        if unit == "h":
+            total_seconds += value * 3600
+        elif unit == "m":
+            total_seconds += value * 60
+        elif unit == "s":
+            total_seconds += value
+
+    if total_seconds <= 0 or total_seconds > 86400:
+        if total_seconds <= 0:
+            return None, "Duration required"
+        return None, "Duration must be 24h or less"
+
+    return timedelta(seconds=total_seconds), None
+
+
+def parse_retro_date(raw: str, request) -> tuple[date | None, str | None]:
+    if not raw:
+        return None, "Enter a valid date"
+
+    fmt = "%Y-%m-%d"
+    if request.user.is_authenticated:
+        profile = getattr(request.user, "profile", None)
+        if profile and profile.date_format:
+            fmt = profile.date_format
+
+    try:
+        return datetime.strptime(raw, fmt).date(), None
+    except ValueError:
+        pass
+
+    try:
+        return datetime.strptime(raw, "%Y-%m-%d").date(), None
+    except ValueError:
+        return None, "Enter a valid date"
+
+
+def parse_retro_time(raw: str) -> tuple[time, str | None]:
+    if not raw:
+        return time(0, 0), None
+
+    try:
+        parsed = datetime.strptime(raw, "%H:%M").time()
+    except ValueError:
+        return time(0, 0), "Enter a valid time (HH:MM)"
+
+    return parsed, None
+
+
+def build_useritem_detail_context(
+    request,
+    user_item: UserItem,
+    form,
+    retro_values: dict[str, str],
+    retro_errors: dict[str, str],
+):
+    ctx: dict[str, object] = {}
+    ctx["form"] = form
+    ctx["object"] = user_item
+    ctx["item"] = user_item.item
+    ctx["enable_tag_picker"] = True
+    ctx["all_tags"] = list(
+        Tag.objects.filter(user=request.user)
+        .order_by("name")
+        .values("id", "name")
+    )
+
+    raw = form["tags"].value() or []
+    ctx["selected_tag_ids"] = [int(x) for x in raw]
+
+    history_entries = []
+    for entry in user_item.history.order_by("-happened_at"):
+        duration = entry.duration
+        if duration is None and entry.started_at and entry.ended_at:
+            duration = entry.ended_at - entry.started_at
+        history_entries.append(
+            {
+                "entry": entry,
+                "duration_display": format_duration(duration),
+            }
+        )
+    ctx["history_entries"] = history_entries
+    ctx["last_completed_at"] = (
+        user_item.history.filter(event_type=UserItemHistory.Event.COMPLETED)
+        .order_by("-happened_at")
+        .values_list("happened_at", flat=True)
+        .first()
+    )
+    ctx["last_revisited_at"] = (
+        user_item.history.filter(event_type=UserItemHistory.Event.REVISITED)
+        .order_by("-happened_at")
+        .values_list("happened_at", flat=True)
+        .first()
+    )
+    ctx["timer_started_at"] = user_item.timer_started_at
+    ctx["timer_is_running"] = user_item.timer_started_at is not None
+    if user_item.timer_started_at:
+        ctx["timer_duration_display"] = format_duration(
+            timezone.now() - user_item.timer_started_at
+        )
+    else:
+        ctx["timer_duration_display"] = format_duration(None)
+
+    ctx["retro_values"] = retro_values
+    ctx["retro_errors"] = retro_errors
+
+    return ctx
 
 
 @require_POST
@@ -227,6 +354,13 @@ class UserItemDetail(OwnObjectsMixin, UpdateView):
             )
         else:
             ctx["timer_duration_display"] = format_duration(None)
+
+        ctx["retro_values"] = {
+            "date": timezone.localdate().isoformat(),
+            "start_time": "",
+            "duration": "",
+        }
+        ctx["retro_errors"] = {}
 
         return ctx
 
@@ -511,6 +645,64 @@ def useritem_timer_stop(request, pk: int):
             else 0,
         }
     )
+
+
+@require_POST
+@login_required
+def useritem_timer_add_retro(request, pk: int):
+    user_item = get_object_or_404(UserItem, pk=pk, user=request.user)
+    date_raw = (request.POST.get("retro_date") or "").strip()
+    time_raw = (request.POST.get("retro_start_time") or "").strip()
+    duration_raw = (request.POST.get("retro_duration") or "").strip()
+
+    retro_errors: dict[str, str] = {}
+
+    parsed_date, date_error = parse_retro_date(date_raw, request)
+    if date_error:
+        retro_errors["Date"] = date_error
+
+    parsed_time, time_error = parse_retro_time(time_raw)
+    if time_error:
+        retro_errors["Start time"] = time_error
+
+    parsed_duration, duration_error = parse_retro_duration(duration_raw)
+    if duration_error:
+        retro_errors["Duration"] = duration_error
+
+    if retro_errors:
+        retro_values = {
+            "date": date_raw or timezone.localdate().isoformat(),
+            "start_time": time_raw,
+            "duration": duration_raw,
+        }
+        form = UserItemForm(instance=user_item, user=request.user)
+        ctx = build_useritem_detail_context(
+            request=request,
+            user_item=user_item,
+            form=form,
+            retro_values=retro_values,
+            retro_errors=retro_errors,
+        )
+        return render(request, "tracker/useritem_detail.html", ctx, status=400)
+
+    assert parsed_date is not None
+    assert parsed_duration is not None
+
+    tz = timezone.get_current_timezone()
+    started_at = timezone.make_aware(
+        datetime.combine(parsed_date, parsed_time), tz
+    )
+    ended_at = started_at + parsed_duration
+    history = UserItemHistory(
+        user_item=user_item,
+        event_type=UserItemHistory.Event.REVISITED,
+        happened_at=ended_at,
+        started_at=started_at,
+        ended_at=ended_at,
+    )
+    history.save()
+
+    return redirect("useritem_detail", pk=user_item.pk)
 
 
 # unified executor for all actions

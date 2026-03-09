@@ -241,6 +241,66 @@
             </div>
           </div>
         </div>
+
+        <div class="mt-4 pt-4 border-t">
+          <div class="panel-title">Add time retroactively</div>
+          <p class="text-sm text-muted">Log time for a past session without starting a timer.</p>
+
+          <div id="retro-errors"
+               class="mt-2 rounded-lg border p-3 text-sm {% if not retro_errors %}hidden{% endif %}">
+            {% if retro_errors %}
+              {% for field, message in retro_errors.items %}
+                <div><strong>{{ field }}:</strong> {{ message }}</div>
+              {% endfor %}
+            {% endif %}
+          </div>
+
+          <form method="post"
+                action="{% url 'useritem_timer_add' object.pk %}"
+                class="mt-3 space-y-3"
+                data-retro-form>
+            {% csrf_token %}
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label class="block text-sm mb-1" for="retro-date">Date</label>
+                <input
+                  id="retro-date"
+                  name="retro_date"
+                  type="text"
+                  class="control js-date w-full"
+                  value="{{ retro_values.date }}"
+                  placeholder="YYYY-MM-DD"
+                />
+              </div>
+              <div>
+                <label class="block text-sm mb-1" for="retro-start-time">Start time</label>
+                <input
+                  id="retro-start-time"
+                  name="retro_start_time"
+                  type="text"
+                  class="control w-full"
+                  value="{{ retro_values.start_time }}"
+                  placeholder="00:00"
+                />
+              </div>
+              <div>
+                <label class="block text-sm mb-1" for="retro-duration">Duration</label>
+                <input
+                  id="retro-duration"
+                  name="retro_duration"
+                  type="text"
+                  class="control w-full"
+                  value="{{ retro_values.duration }}"
+                  placeholder="1h 20m 10s"
+                />
+              </div>
+            </div>
+            <div class="text-xs text-muted">
+              Examples: 1h 30m, 90m, 45s, 1h20m10s.
+            </div>
+            <button type="submit" class="btn">Add time</button>
+          </form>
+        </div>
       </div>
 
       <div class="panel" style="padding: 0.75rem;">

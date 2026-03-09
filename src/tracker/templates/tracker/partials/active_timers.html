@@ -1,0 +1,44 @@
+{% if active_timers %}
+  <div class="active-timers" role="region" aria-label="Active timers">
+    <div class="active-timers__header">
+      <span class="active-timers__title">Active timers</span>
+      <span class="badge">{{ active_timers|length }}</span>
+    </div>
+    <div class="active-timers__list">
+      {% for timer in active_timers %}
+        {% if forloop.counter <= 10 %}
+          <div
+            class="active-timers__row{% if timer.id == active_timer_current_id %} active-timers__row--current{% endif %}"
+            data-active-timer
+            data-timer-started-at="{{ timer.started_at|date:'c' }}"
+            data-href="{% url 'useritem_detail' timer.id %}"
+          >
+            <div class="active-timers__main" title="{{ timer.title }}">
+              <span class="active-timers__status" aria-hidden="true"></span>
+              <span class="active-timers__name">{{ timer.title }}</span>
+            </div>
+            <div class="active-timers__meta">
+              <span class="active-timers__duration js-timer-duration" aria-live="polite">00:00:00</span>
+              <button
+                type="button"
+                class="icon-btn icon-btn--danger"
+                data-stop-url="{% url 'useritem_timer_stop' timer.id %}"
+                aria-label="Stop timer for {{ timer.title }}"
+                title="Stop timer"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <rect x="7" y="7" width="10" height="10"></rect>
+                </svg>
+              </button>
+            </div>
+          </div>
+        {% endif %}
+      {% endfor %}
+      {% if active_timers|length > 10 %}
+        <div class="active-timers__more text-muted">
+          +{{ active_timers|length|add:"-10" }} more
+        </div>
+      {% endif %}
+    </div>
+  </div>
+{% endif %}

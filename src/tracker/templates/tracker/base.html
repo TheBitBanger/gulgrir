@@ -83,6 +83,10 @@
       --danger: #f52a65;
     }
 
+    :root {
+      --active-timers-top: 7.5rem;
+    }
+
     body {
       background: var(--bg);
       color: var(--text);
@@ -229,6 +233,176 @@
       font-size: 0.8rem;
     }
 
+    .active-timers {
+      position: fixed;
+      top: var(--active-timers-top);
+      right: 1.5rem;
+      width: min(360px, 92vw);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 0.75rem;
+      z-index: 40;
+    }
+
+    .active-timers__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .active-timers__title {
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .active-timers__list {
+      display: grid;
+      gap: 0.35rem;
+    }
+
+    .active-timers__row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      border-radius: 0.5rem;
+      border: 1px solid var(--border);
+      padding: 0.35rem 0.5rem 0.35rem 0.85rem;
+      color: var(--text);
+      background: color-mix(in oklab, var(--surface-2) 70%, transparent);
+      cursor: pointer;
+    }
+
+    .active-timers__row:hover {
+      color: var(--text);
+      border-color: color-mix(in oklab, var(--accent) 55%, var(--border));
+      background: color-mix(in oklab, var(--surface-2) 85%, transparent);
+    }
+
+    .active-timers__row--current {
+      border-color: color-mix(in oklab, var(--accent) 75%, var(--border));
+      box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent) 35%, transparent);
+      background: color-mix(in oklab, var(--accent) 12%, var(--surface-2));
+      position: relative;
+    }
+
+    .active-timers__row--current::before {
+      content: "";
+      position: absolute;
+      left: -1px;
+      top: -1px;
+      bottom: -1px;
+      width: 8px;
+      border-radius: 0.5rem 0 0 0.5rem;
+      background: var(--accent);
+    }
+
+    .active-timers__main {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      min-width: 0;
+      flex: 1 1 auto;
+    }
+
+    .active-timers__status {
+      width: 0.5rem;
+      height: 0.5rem;
+      border-radius: 9999px;
+      background: var(--success);
+      box-shadow: 0 0 0 0 color-mix(in oklab, var(--success) 60%, transparent);
+      animation: timer-pulse 1.8s ease-out infinite;
+      flex-shrink: 0;
+    }
+
+    .active-timers__name {
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .active-timers__meta {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      flex-shrink: 0;
+    }
+
+
+    .active-timers__duration {
+      font-size: 0.75rem;
+      border-radius: 9999px;
+      border: 1px solid var(--border);
+      padding: 0.05rem 0.4rem;
+      background: var(--surface);
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .icon-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 2rem;
+      height: 2rem;
+      border-radius: 0.5rem;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 0.9rem;
+      line-height: 1;
+    }
+
+    .icon-btn svg {
+      width: 1.8rem;
+      height: 1.8rem;
+      display: block;
+      fill: currentColor;
+    }
+
+    .icon-btn--success {
+      border-color: color-mix(in oklab, var(--success) 55%, var(--border));
+      background: color-mix(in oklab, var(--success) 18%, transparent);
+    }
+
+    .icon-btn--danger {
+      border-color: color-mix(in oklab, var(--danger) 55%, var(--border));
+      background: color-mix(in oklab, var(--danger) 18%, transparent);
+    }
+
+    .icon-btn--success:hover {
+      border-color: color-mix(in oklab, var(--success) 75%, var(--border));
+      background: color-mix(in oklab, var(--success) 28%, transparent);
+    }
+
+    .icon-btn--danger:hover {
+      border-color: color-mix(in oklab, var(--danger) 75%, var(--border));
+      background: color-mix(in oklab, var(--danger) 28%, transparent);
+    }
+
+    .active-timers__more {
+      font-size: 0.75rem;
+      text-align: center;
+    }
+
+    @keyframes timer-pulse {
+      0% {
+        box-shadow: 0 0 0 0 color-mix(in oklab, var(--success) 50%, transparent);
+      }
+      60% {
+        box-shadow: 0 0 0 6px color-mix(in oklab, var(--success) 0%, transparent);
+      }
+      100% {
+        box-shadow: 0 0 0 0 color-mix(in oklab, var(--success) 0%, transparent);
+      }
+    }
+
     .panel {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -361,6 +535,7 @@
       {% endif %}
     </div>
   </nav>
+  {% include "tracker/partials/active_timers.html" %}
   {% block content %}{% endblock %}
   {% if is_paginated %}
     <div class="mt-4 space-x-2">
@@ -377,5 +552,95 @@
   <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.5/dist/htmx.min.js"></script>
   <script src="{% static "tracker/js/action_toast.js" %}"></script>
   <script src="{% static "tracker/js/checkbox_bulk.js" %}"></script>
+  <script>
+    (function () {
+      function getCookie(name) {
+        const m = document.cookie.match(new RegExp("(^|; )" + name + "=([^;]*)"));
+        return m ? decodeURIComponent(m[2]) : "";
+      }
+
+      async function post(url, button) {
+        if (!url) return false;
+        if (button) button.disabled = true;
+        const res = await fetch(url, {
+          method: "POST",
+          headers: {
+            "X-CSRFToken": getCookie("csrftoken"),
+          },
+        });
+        if (!res.ok) {
+          if (button) button.disabled = false;
+          return false;
+        }
+        return true;
+      }
+
+      function formatDuration(totalSeconds) {
+        const safeSeconds = Math.max(0, totalSeconds);
+        const hours = Math.floor(safeSeconds / 3600);
+        const minutes = Math.floor((safeSeconds % 3600) / 60);
+        const seconds = safeSeconds % 60;
+        return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+      }
+
+      function tick() {
+        const now = Date.now();
+        const tickTargets = Array.from(document.querySelectorAll("[data-timer-started-at]"));
+        tickTargets.forEach((row) => {
+          const startedAt = row.getAttribute("data-timer-started-at");
+          if (!startedAt) return;
+          const startedMs = Date.parse(startedAt);
+          if (Number.isNaN(startedMs)) return;
+          const elapsed = Math.floor((now - startedMs) / 1000);
+          const durationEl = row.querySelector(".js-timer-duration");
+          if (durationEl) durationEl.textContent = formatDuration(elapsed);
+        });
+      }
+
+      const timerRows = Array.from(document.querySelectorAll("[data-active-timer]"));
+      timerRows.forEach((row) => {
+        row.addEventListener("click", (event) => {
+          const target = event.target;
+          if (target instanceof HTMLElement && target.closest("[data-stop-url]")) {
+            return;
+          }
+          const href = row.getAttribute("data-href");
+          if (href) window.location.assign(href);
+        });
+      });
+
+      const stopButtons = Array.from(document.querySelectorAll("button[data-stop-url]"));
+      stopButtons.forEach((button) => {
+        button.addEventListener("click", async (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          const url = button.getAttribute("data-stop-url");
+          const ok = await post(url, button);
+          if (ok) window.location.reload();
+        });
+      });
+
+      const panels = Array.from(document.querySelectorAll("[data-timer-panel]"));
+      panels.forEach((panel) => {
+        const startBtn = panel.querySelector("[data-timer-action='start']");
+        const stopBtn = panel.querySelector("[data-timer-action='stop']");
+        if (startBtn) {
+          startBtn.addEventListener("click", async () => {
+            const ok = await post(panel.getAttribute("data-start-url"), startBtn);
+            if (ok) window.location.reload();
+          });
+        }
+        if (stopBtn) {
+          stopBtn.addEventListener("click", async () => {
+            const ok = await post(panel.getAttribute("data-stop-url"), stopBtn);
+            if (ok) window.location.reload();
+          });
+        }
+      });
+
+      tick();
+      setInterval(tick, 1000);
+    })();
+  </script>
 </body>
 </html>

@@ -79,6 +79,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "tracker.context_processors.date_format",
                 "tracker.context_processors.theme_preference",
+                "tracker.context_processors.active_timers",
             ],
         },
     },

@@ -1054,6 +1054,13 @@ def time_dashboard(request):
     bucket_options = []
     if layout:
         bucket_options = build_bucket_option_list(buckets)
+    bucket_by_id = {bucket.id: bucket for bucket in buckets}
+    selected_bucket = bucket_by_id.get(bucket_id) if bucket_id else None
+    breadcrumb_buckets: list[TimeBucket] = []
+    if selected_bucket is not None:
+        bucket_paths = build_bucket_paths(buckets)
+        path_ids = list(reversed(bucket_paths.get(selected_bucket.id, [])))
+        breadcrumb_buckets = [bucket_by_id[b_id] for b_id in path_ids if b_id in bucket_by_id]
 
     return render(
         request,
@@ -1068,7 +1075,8 @@ def time_dashboard(request):
             "all_time_context": all_time_context,
             "unassigned_items": all_time_assignments["unassigned_items"],
             "ignored_items": all_time_assignments["ignored_items"],
-            "selected_bucket": all_time_assignments["selected_bucket"],
+            "selected_bucket": selected_bucket,
+            "breadcrumb_buckets": breadcrumb_buckets,
         },
     )
 

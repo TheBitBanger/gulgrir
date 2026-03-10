@@ -51,10 +51,13 @@
     </div>
   {% else %}
     <div class="panel space-y-4">
-      {% if selected_bucket %}
-        <div class="text-sm">
-          Viewing bucket: <strong>{{ selected_bucket.name }}</strong>
-          <a class="link ml-2" href="{% url 'time_dashboard' %}?layout={{ layout.id }}">Back to top</a>
+      {% if layout %}
+        <div class="text-sm flex flex-wrap items-center gap-2">
+          <a class="link" href="{% url 'time_dashboard' %}?layout={{ layout.id }}">{{ layout.name }}</a>
+          {% for bucket in breadcrumb_buckets %}
+            <span class="text-muted">/</span>
+            <a class="link" href="{% url 'time_dashboard' %}?layout={{ layout.id }}&bucket={{ bucket.id }}">{{ bucket.name }}</a>
+          {% endfor %}
         </div>
       {% endif %}
 

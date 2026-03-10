@@ -14,8 +14,10 @@
   </colgroup>
   <thead>
     <tr class="border-b">
-      <th class="text-left">
-        <input id="check-all" type="checkbox" class="cursor-pointer" />
+      <th class="text-left p-1">
+        <div class="flex items-center">
+          <input id="check-all" type="checkbox" class="cursor-pointer" />
+        </div>
       </th>
       <th class="text-left p-1">Title</th>
       <th>Tier</th>
@@ -29,10 +31,13 @@
   <tbody>
     {% for ui in items %}
       <tr class="border-b">
-        <td class="text-left">
-          <input type="checkbox" name="selected_ids" value="{{ ui.id }}" class="row-check mr-1" />{% if ui.is_project %}📁{% endif %}
+        <td class="text-left p-1 pr-4">
+          <div class="flex items-center gap-1 leading-none">
+            <input type="checkbox" name="selected_ids" value="{{ ui.id }}" class="row-check" />
+            {% if ui.is_project %}📁{% endif %}
+          </div>
         </td>
-        <td class="p-1">
+        <td class="p-1 pl-4">
           <a href="{% url 'useritem_detail' ui.pk %}" class="link">
             {{ ui.display_title }}
           </a>

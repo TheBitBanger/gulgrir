@@ -1,17 +1,18 @@
 import json
 import re
 import sys
-from collections import defaultdict
 from datetime import date, datetime, time, timedelta
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import IntegrityError, transaction
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, Q
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.http import require_POST
@@ -35,6 +36,15 @@ from .models import (
     UserItemHistory,
 )
 from .services import build_useritem_queryset
+from .services.time_dashboard import (
+    build_bucket_children_map,
+    build_bucket_descendants,
+    build_bucket_option_list,
+    build_bucket_paths,
+    build_chart_entries,
+    day_range,
+    load_item_durations,
+)
 
 
 def format_duration(duration) -> str:
@@ -174,250 +184,6 @@ def build_useritem_detail_context(
     return ctx
 
 
-def format_seconds(total_seconds: int) -> str:
-    if total_seconds <= 0:
-        return "00:00:00"
-    hours = total_seconds // 3600
-    minutes = (total_seconds % 3600) // 60
-    seconds = total_seconds % 60
-    return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-
-
-def day_range(day: date) -> tuple[datetime, datetime]:
-    tz = timezone.get_current_timezone()
-    start = timezone.make_aware(datetime.combine(day, time.min), tz)
-    end = start + timedelta(days=1)
-    return start, end
-
-
-def load_item_durations(user, start: datetime | None, end: datetime | None) -> dict[int, int]:
-    qs = UserItemHistory.objects.filter(
-        user_item__user=user,
-        event_type=UserItemHistory.Event.REVISITED,
-        duration__isnull=False,
-        ended_at__isnull=False,
-    )
-    if start is not None:
-        qs = qs.filter(ended_at__gte=start)
-    if end is not None:
-        qs = qs.filter(ended_at__lt=end)
-
-    durations: dict[int, int] = {}
-    for row in qs.values("user_item_id").annotate(total=Sum("duration")):
-        total = row["total"]
-        if total is None:
-            continue
-        durations[int(row["user_item_id"])] = int(total.total_seconds())
-
-    return durations
-
-
-def build_bucket_paths(buckets: list[TimeBucket]) -> dict[int, list[int]]:
-    parent_map = {bucket.id: bucket.parent_id for bucket in buckets}
-    paths: dict[int, list[int]] = {}
-
-    def path_for(bucket_id: int) -> list[int]:
-        if bucket_id in paths:
-            return paths[bucket_id]
-        path = [bucket_id]
-        current = bucket_id
-        while parent_map.get(current):
-            parent = parent_map[current]
-            path.append(parent)
-            current = parent
-        paths[bucket_id] = path
-        return path
-
-    for bucket in buckets:
-        if bucket.id is not None:
-            path_for(bucket.id)
-
-    return paths
-
-
-def build_chart_entries(
-    *,
-    layout: TimeLayout,
-    buckets: list[TimeBucket],
-    assignments: dict[int, TimeBucketAssignment],
-    item_durations: dict[int, int],
-    user_items: dict[int, UserItem],
-    bucket_id: int | None,
-    top_n: int,
-) -> dict[str, object]:
-    bucket_by_id = {bucket.id: bucket for bucket in buckets}
-    bucket_children: dict[int | None, list[TimeBucket]] = defaultdict(list)
-    for bucket in buckets:
-        bucket_children[bucket.parent_id].append(bucket)
-    for child_list in bucket_children.values():
-        child_list.sort(key=lambda b: (b.order, b.name.lower()))
-
-    parent_map = {bucket.id: bucket.parent_id for bucket in buckets}
-
-    def top_bucket_id(bucket_id: int) -> int:
-        current = bucket_id
-        while parent_map.get(current):
-            current = parent_map[current]
-        return current
-
-    def path_to_root(bucket_id: int) -> list[int]:
-        path = [bucket_id]
-        current = bucket_id
-        while parent_map.get(current):
-            current = parent_map[current]
-            path.append(current)
-        return path
-
-    selected_bucket = None
-    if bucket_id is not None:
-        selected_bucket = bucket_by_id.get(bucket_id)
-
-    level_buckets = bucket_children.get(None, [])
-    if selected_bucket is not None:
-        level_buckets = bucket_children.get(selected_bucket.id, [])
-
-    bucket_totals: dict[int | str, int] = defaultdict(int)
-    unassigned_items: list[dict[str, object]] = []
-    ignored_items: list[dict[str, object]] = []
-    leaf_items: list[dict[str, object]] = []
-    direct_items: list[dict[str, object]] = []
-
-    for item_id, item in user_items.items():
-        seconds = item_durations.get(item_id, 0)
-        assignment = assignments.get(item_id)
-        if assignment and assignment.is_ignored:
-            ignored_items.append(
-                {
-                    "item": item,
-                    "seconds": seconds,
-                    "duration_display": format_seconds(seconds),
-                }
-            )
-            continue
-
-        if assignment and assignment.bucket_id:
-            assigned_bucket_id = assignment.bucket_id
-            if selected_bucket is None:
-                bucket_totals[top_bucket_id(assigned_bucket_id)] += seconds
-            else:
-                path = path_to_root(assigned_bucket_id)
-                if selected_bucket.id in path:
-                    if level_buckets:
-                        if assigned_bucket_id == selected_bucket.id:
-                            direct_items.append(
-                                {
-                                    "item": item,
-                                    "seconds": seconds,
-                                    "duration_display": format_seconds(seconds),
-                                }
-                            )
-                        else:
-                            idx = path.index(selected_bucket.id)
-                            if idx > 0:
-                                child_id = path[idx - 1]
-                                bucket_totals[child_id] += seconds
-                    else:
-                        leaf_items.append(
-                            {
-                                "item": item,
-                                "seconds": seconds,
-                                "duration_display": format_seconds(seconds),
-                            }
-                        )
-            continue
-
-        if selected_bucket is None and seconds > 0:
-            unassigned_items.append(
-                {
-                    "item": item,
-                    "seconds": seconds,
-                    "duration_display": format_seconds(seconds),
-                }
-            )
-
-    bucket_entries = []
-    for bucket in level_buckets:
-        bucket_entries.append(
-            {
-                "label": bucket.name,
-                "seconds": bucket_totals.get(bucket.id, 0),
-                "kind": "bucket",
-                "bucket_id": bucket.id,
-            }
-        )
-    bucket_entries = sorted(bucket_entries, key=lambda x: x["seconds"], reverse=True)
-
-    item_entries = []
-    if selected_bucket is None:
-        for row in unassigned_items:
-            item_entries.append(
-                {
-                    "label": row["item"].display_title,
-                    "seconds": row["seconds"],
-                    "kind": "item",
-                    "item_id": row["item"].id,
-                }
-            )
-        item_entries = sorted(item_entries, key=lambda x: x["seconds"], reverse=True)
-    elif selected_bucket is not None and not level_buckets:
-        for row in leaf_items:
-            item_entries.append(
-                {
-                    "label": row["item"].display_title,
-                    "seconds": row["seconds"],
-                    "kind": "item",
-                    "item_id": row["item"].id,
-                }
-            )
-        item_entries = sorted(item_entries, key=lambda x: x["seconds"], reverse=True)
-    elif selected_bucket is not None and level_buckets:
-        for row in direct_items:
-            item_entries.append(
-                {
-                    "label": row["item"].display_title,
-                    "seconds": row["seconds"],
-                    "kind": "item",
-                    "item_id": row["item"].id,
-                }
-            )
-        item_entries = sorted(item_entries, key=lambda x: x["seconds"], reverse=True)
-
-    selected = bucket_entries[:top_n]
-    remaining_slots = max(0, top_n - len(selected))
-    selected_items = item_entries[:remaining_slots]
-
-    overflow_seconds = sum(x["seconds"] for x in bucket_entries[top_n:])
-    overflow_seconds += sum(x["seconds"] for x in item_entries[remaining_slots:])
-
-    entries = selected + selected_items
-    if overflow_seconds > 0:
-        entries.append(
-            {
-                "label": "Others",
-                "seconds": overflow_seconds,
-                "kind": "overflow",
-            }
-        )
-
-    max_seconds = max((entry["seconds"] for entry in entries), default=0)
-    for entry in entries:
-        if max_seconds > 0:
-            entry["percent"] = round(entry["seconds"] / max_seconds * 100, 2)
-        else:
-            entry["percent"] = 0
-        entry["duration_display"] = format_seconds(entry["seconds"])
-
-    ignored_items = sorted(ignored_items, key=lambda x: x["seconds"], reverse=True)
-    unassigned_items = sorted(unassigned_items, key=lambda x: x["seconds"], reverse=True)
-
-    return {
-        "entries": entries,
-        "total_seconds": sum(item_durations.values()),
-        "total_display": format_seconds(sum(item_durations.values())),
-        "unassigned_items": unassigned_items,
-        "ignored_items": ignored_items,
-        "selected_bucket": selected_bucket,
-    }
 
 
 @require_POST
@@ -1054,13 +820,16 @@ def time_dashboard(request):
     bucket_options = []
     if layout:
         bucket_options = build_bucket_option_list(buckets)
+
     bucket_by_id = {bucket.id: bucket for bucket in buckets}
     selected_bucket = bucket_by_id.get(bucket_id) if bucket_id else None
     breadcrumb_buckets: list[TimeBucket] = []
     if selected_bucket is not None:
         bucket_paths = build_bucket_paths(buckets)
         path_ids = list(reversed(bucket_paths.get(selected_bucket.id, [])))
-        breadcrumb_buckets = [bucket_by_id[b_id] for b_id in path_ids if b_id in bucket_by_id]
+        breadcrumb_buckets = [
+            bucket_by_id[b_id] for b_id in path_ids if b_id in bucket_by_id
+        ]
 
     return render(
         request,
@@ -1081,45 +850,200 @@ def time_dashboard(request):
     )
 
 
-def build_bucket_option_list(buckets: list[TimeBucket]) -> list[dict[str, object]]:
-    bucket_children: dict[int | None, list[TimeBucket]] = defaultdict(list)
-    for bucket in buckets:
-        bucket_children[bucket.parent_id].append(bucket)
-    for child_list in bucket_children.values():
-        child_list.sort(key=lambda b: (b.order, b.name.lower()))
+@login_required
+def time_settings(request):
+    layouts = list(
+        TimeLayout.objects.filter(user=request.user).order_by("order", "name")
+    )
+    layout = None
+    if layouts:
+        layout_id = request.GET.get("layout")
+        if layout_id:
+            layout = next((l for l in layouts if str(l.id) == layout_id), None)
+        layout = layout or layouts[0]
 
-    options: list[dict[str, object]] = []
+    buckets: list[TimeBucket] = []
+    if layout:
+        buckets = list(
+            TimeBucket.objects.filter(layout=layout).select_related("parent")
+        )
 
-    def walk(parent_id: int | None, depth: int):
-        for bucket in bucket_children.get(parent_id, []):
-            prefix = "--" * depth
-            label = f"{prefix} {bucket.name}".strip()
-            options.append({"id": bucket.id, "label": label})
-            walk(bucket.id, depth + 1)
+    bucket_options = []
+    bucket_management: list[dict[str, object]] = []
+    if layout:
+        bucket_options = build_bucket_option_list(buckets)
+        bucket_children = build_bucket_children_map(buckets)
+        bucket_descendants = build_bucket_descendants(buckets)
 
-    walk(None, 0)
-    return options
+        def build_bucket_management(parent_id: int | None, depth: int) -> None:
+            for bucket in bucket_children.get(parent_id, []):
+                exclude_ids = {bucket.id} | bucket_descendants.get(bucket.id, set())
+                bucket_management.append(
+                    {
+                        "bucket": bucket,
+                        "depth": depth,
+                        "has_children": bool(bucket_children.get(bucket.id)),
+                        "parent_options": build_bucket_option_list(
+                            buckets, exclude_ids=exclude_ids
+                        ),
+                    }
+                )
+                build_bucket_management(bucket.id, depth + 1)
+
+        build_bucket_management(None, 0)
+
+    return render(
+        request,
+        "tracker/time_settings.html",
+        {
+            "layouts": layouts,
+            "layout": layout,
+            "buckets": buckets,
+            "bucket_options": bucket_options,
+            "bucket_management": bucket_management,
+        },
+    )
+
+
 
 
 @require_POST
 @login_required
 def time_layout_create(request):
+    next_url = request.POST.get("next")
     name = (request.POST.get("layout_name") or "").strip()
     description = (request.POST.get("layout_description") or "").strip()
     if not name:
+        messages.error(request, "Layout name is required.")
         return redirect("time_dashboard")
 
-    TimeLayout.objects.create(user=request.user, name=name, description=description)
+    try:
+        layout = TimeLayout.objects.create(
+            user=request.user, name=name, description=description
+        )
+    except IntegrityError:
+        messages.error(request, "Layout name already exists.")
+        if next_url and url_has_allowed_host_and_scheme(
+            next_url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ):
+            return redirect(next_url)
+        return redirect("time_dashboard")
+
+    messages.success(request, "Layout created.")
+    if next_url and url_has_allowed_host_and_scheme(
+        next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return redirect(f"{reverse('time_settings')}?layout={layout.id}")
+    return redirect(f"{reverse('time_dashboard')}?layout={layout.id}")
+
+
+@require_POST
+@login_required
+def time_layout_update(request):
+    next_url = request.POST.get("next")
+    layout_id = request.POST.get("layout_id")
+    name = (request.POST.get("layout_name") or "").strip()
+    description = (request.POST.get("layout_description") or "").strip()
+    if not layout_id:
+        messages.error(request, "Layout not found.")
+        if next_url and url_has_allowed_host_and_scheme(
+            next_url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ):
+            return redirect(next_url)
+        return redirect("time_dashboard")
+
+    layout = get_object_or_404(TimeLayout, id=layout_id, user=request.user)
+    if not name:
+        messages.error(request, "Layout name is required.")
+        if next_url and url_has_allowed_host_and_scheme(
+            next_url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ):
+            return redirect(next_url)
+        return redirect(f"{reverse('time_dashboard')}?layout={layout.id}")
+
+    layout.name = name
+    layout.description = description
+    try:
+        layout.save(update_fields=["name", "description"])
+    except IntegrityError:
+        messages.error(request, "Layout name already exists.")
+        if next_url and url_has_allowed_host_and_scheme(
+            next_url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ):
+            return redirect(next_url)
+        return redirect(f"{reverse('time_dashboard')}?layout={layout.id}")
+
+    messages.success(request, "Layout updated.")
+    if next_url and url_has_allowed_host_and_scheme(
+        next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return redirect(next_url)
+    return redirect(f"{reverse('time_dashboard')}?layout={layout.id}")
+
+
+@require_POST
+@login_required
+def time_layout_delete(request):
+    next_url = request.POST.get("next")
+    layout_id = request.POST.get("layout_id")
+    if not layout_id:
+        messages.error(request, "Layout not found.")
+        if next_url and url_has_allowed_host_and_scheme(
+            next_url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ):
+            return redirect(next_url)
+        return redirect("time_dashboard")
+
+    layout = get_object_or_404(TimeLayout, id=layout_id, user=request.user)
+    layout.delete()
+    messages.success(request, "Layout deleted.")
+    if next_url and url_has_allowed_host_and_scheme(
+        next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return redirect(next_url)
     return redirect("time_dashboard")
 
 
 @require_POST
 @login_required
 def time_bucket_create(request):
+    next_url = request.POST.get("next")
     layout_id = request.POST.get("layout_id")
     name = (request.POST.get("bucket_name") or "").strip()
     parent_id = request.POST.get("parent_id") or None
-    if not layout_id or not name:
+    if not layout_id:
+        messages.error(request, "Layout not found.")
+        if next_url and url_has_allowed_host_and_scheme(
+            next_url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ):
+            return redirect(next_url)
+        return redirect("time_dashboard")
+    if not name:
+        messages.error(request, "Bucket name is required.")
+        if next_url and url_has_allowed_host_and_scheme(
+            next_url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ):
+            return redirect(next_url)
         return redirect("time_dashboard")
 
     layout = get_object_or_404(TimeLayout, id=layout_id, user=request.user)
@@ -1127,7 +1051,162 @@ def time_bucket_create(request):
     if parent_id:
         parent = get_object_or_404(TimeBucket, id=parent_id, layout=layout)
 
-    TimeBucket.objects.create(layout=layout, name=name, parent=parent)
+    try:
+        TimeBucket.objects.create(layout=layout, name=name, parent=parent)
+    except IntegrityError:
+        messages.error(request, "Bucket name already exists under that parent.")
+        if next_url and url_has_allowed_host_and_scheme(
+            next_url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ):
+            return redirect(next_url)
+        return redirect(f"{reverse('time_dashboard')}?layout={layout.id}")
+
+    messages.success(request, "Bucket created.")
+    if next_url and url_has_allowed_host_and_scheme(
+        next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return redirect(next_url)
+    return redirect(f"{reverse('time_dashboard')}?layout={layout.id}")
+
+
+@require_POST
+@login_required
+def time_bucket_update(request):
+    next_url = request.POST.get("next")
+    layout_id = request.POST.get("layout_id")
+    bucket_id = request.POST.get("bucket_id")
+    name = (request.POST.get("bucket_name") or "").strip()
+    parent_id = request.POST.get("parent_id") or None
+    if not layout_id or not bucket_id:
+        messages.error(request, "Bucket not found.")
+        if next_url and url_has_allowed_host_and_scheme(
+            next_url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ):
+            return redirect(next_url)
+        return redirect("time_dashboard")
+
+    layout = get_object_or_404(TimeLayout, id=layout_id, user=request.user)
+    bucket = get_object_or_404(TimeBucket, id=bucket_id, layout=layout)
+    if not name:
+        messages.error(request, "Bucket name is required.")
+        if next_url and url_has_allowed_host_and_scheme(
+            next_url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ):
+            return redirect(next_url)
+        return redirect(f"{reverse('time_dashboard')}?layout={layout.id}")
+
+    parent = None
+    if parent_id:
+        parent = get_object_or_404(TimeBucket, id=parent_id, layout=layout)
+
+    if parent is not None and parent.id == bucket.id:
+        messages.error(request, "Bucket cannot be its own parent.")
+        if next_url and url_has_allowed_host_and_scheme(
+            next_url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ):
+            return redirect(next_url)
+        return redirect(f"{reverse('time_dashboard')}?layout={layout.id}")
+
+    buckets = list(TimeBucket.objects.filter(layout=layout).select_related("parent"))
+    descendants = build_bucket_descendants(buckets)
+    if parent is not None and parent.id in descendants.get(bucket.id, set()):
+        messages.error(request, "Bucket cannot be moved under its descendant.")
+        if next_url and url_has_allowed_host_and_scheme(
+            next_url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ):
+            return redirect(next_url)
+        return redirect(f"{reverse('time_dashboard')}?layout={layout.id}")
+
+    bucket.name = name
+    bucket.parent = parent
+    try:
+        bucket.save(update_fields=["name", "parent"])
+    except IntegrityError:
+        messages.error(request, "Bucket name already exists under that parent.")
+        if next_url and url_has_allowed_host_and_scheme(
+            next_url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ):
+            return redirect(next_url)
+        return redirect(f"{reverse('time_dashboard')}?layout={layout.id}")
+
+    messages.success(request, "Bucket updated.")
+    if next_url and url_has_allowed_host_and_scheme(
+        next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return redirect(next_url)
+    return redirect(f"{reverse('time_dashboard')}?layout={layout.id}")
+
+
+@require_POST
+@login_required
+def time_bucket_delete(request):
+    next_url = request.POST.get("next")
+    layout_id = request.POST.get("layout_id")
+    bucket_id = request.POST.get("bucket_id")
+    delete_mode = request.POST.get("delete_mode") or "promote"
+    if not layout_id or not bucket_id:
+        messages.error(request, "Bucket not found.")
+        if next_url and url_has_allowed_host_and_scheme(
+            next_url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ):
+            return redirect(next_url)
+        return redirect("time_dashboard")
+
+    layout = get_object_or_404(TimeLayout, id=layout_id, user=request.user)
+    bucket = get_object_or_404(TimeBucket, id=bucket_id, layout=layout)
+
+    if delete_mode not in {"promote", "cascade"}:
+        messages.error(request, "Delete mode is invalid.")
+        if next_url and url_has_allowed_host_and_scheme(
+            next_url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ):
+            return redirect(next_url)
+        return redirect(f"{reverse('time_dashboard')}?layout={layout.id}")
+
+    if delete_mode == "cascade":
+        bucket.delete()
+        messages.success(request, "Bucket and its children deleted.")
+        if next_url and url_has_allowed_host_and_scheme(
+            next_url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ):
+            return redirect(next_url)
+        return redirect(f"{reverse('time_dashboard')}?layout={layout.id}")
+
+    with transaction.atomic():
+        TimeBucket.objects.filter(layout=layout, parent=bucket).update(
+            parent=bucket.parent
+        )
+        bucket.delete()
+
+    messages.success(request, "Bucket deleted and children promoted.")
+    if next_url and url_has_allowed_host_and_scheme(
+        next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return redirect(next_url)
     return redirect(f"{reverse('time_dashboard')}?layout={layout.id}")
 
 

@@ -35,14 +35,10 @@
           <button type="submit" class="btn">Add bucket</button>
         </form>
       {% endif %}
+      <div class="ml-auto">
+        <a class="icon-btn" href="{% url 'time_settings' %}" title="Time settings">⚙️</a>
+      </div>
     </div>
-
-    <form method="post" action="{% url 'time_layout_add' %}" class="flex flex-wrap items-center gap-2">
-      {% csrf_token %}
-      <input type="text" name="layout_name" class="control" placeholder="New layout">
-      <input type="text" name="layout_description" class="control" placeholder="Description (optional)">
-      <button type="submit" class="btn">Create layout</button>
-    </form>
   </div>
 
   {% if not layout %}

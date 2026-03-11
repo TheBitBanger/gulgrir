@@ -1,10 +1,10 @@
 from typing import Any
 
 from django.db.models import QuerySet
-from django.http import HttpRequest, QueryDict
+from django.http import HttpRequest
 
-from .forms import UserItemFilterForm
-from .models import SavedFilter, UserItem
+from ..forms import UserItemFilterForm
+from ..models import SavedFilter, UserItem
 
 
 def build_useritem_queryset(request: HttpRequest) -> QuerySet[UserItem]:
@@ -15,9 +15,6 @@ def build_useritem_queryset(request: HttpRequest) -> QuerySet[UserItem]:
     # Always treat URL as the dataset state, but allow POST to carry/override it for actions
     data = request.GET.copy()
     if request.method == "POST":
-        # replaced with the snippet below
-        # data.update(request.POST)
-
         for key in request.POST.keys():
             values = request.POST.getlist(key)
             if not values:

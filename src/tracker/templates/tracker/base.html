@@ -215,6 +215,32 @@
       color: var(--muted);
     }
 
+    .alert {
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.875rem;
+      background: var(--surface);
+    }
+
+    .alert-success {
+      background: color-mix(in oklab, var(--success) 18%, transparent);
+      border: 1px solid color-mix(in oklab, var(--success) 55%, var(--border));
+      color: var(--text);
+    }
+
+    .alert-error {
+      background: color-mix(in oklab, var(--danger) 18%, transparent);
+      border: 1px solid color-mix(in oklab, var(--danger) 55%, var(--border));
+      color: var(--text);
+    }
+
+    .alert-info {
+      background: color-mix(in oklab, var(--accent) 18%, transparent);
+      border: 1px solid color-mix(in oklab, var(--accent) 55%, var(--border));
+      color: var(--text);
+    }
+
     .alert-warning {
       background: color-mix(in oklab, var(--warn) 22%, transparent);
       border: 1px solid color-mix(in oklab, var(--warn) 55%, var(--border));
@@ -491,6 +517,7 @@
       box-shadow: 0 0 0 1px color-mix(in oklab, var(--warn) 45%, transparent);
     }
 
+
     .history-list {
       display: grid;
       gap: 0.5rem;
@@ -524,7 +551,16 @@
       <a href="{% url 'tag_list' %}">My tags</a>
       <a href="{% url 'saved_filter_list' %}">Saved filters</a>
       <a href="{% url 'item_list' %}">Global library</a>
-      <a href="{% url 'preferences' %}">Settings</a>
+      <div x-data="{ open: false }" class="relative">
+        <button type="button" class="flex items-center gap-1" @click="open = !open" @click.outside="open = false">
+          Settings
+          <span class="text-xs">▾</span>
+        </button>
+        <div x-show="open" x-cloak class="dropdown-panel absolute right-0 mt-2 w-52 rounded-lg border p-2 shadow-lg">
+          <a class="block px-2 py-1 rounded hover:underline" href="{% url 'preferences' %}">Global settings</a>
+          <a class="block px-2 py-1 rounded hover:underline" href="{% url 'time_settings' %}">Time tracking settings</a>
+        </div>
+      </div>
     </div>
     <div class="flex items-center gap-3">
       {% if request.user.is_authenticated %}
@@ -536,6 +572,15 @@
       {% endif %}
     </div>
   </nav>
+  {% if messages %}
+    <div class="space-y-2 mb-4">
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'info' }}">
+          {{ message }}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
   {% include "tracker/partials/active_timers.html" %}
   {% block content %}{% endblock %}
   {% if is_paginated %}

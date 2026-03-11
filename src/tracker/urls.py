@@ -55,8 +55,29 @@ urlpatterns = [
     path("my/tags/", include((tag_patterns))),
     path("my/filters/", include((saved_filter_patterns))),
     path("my/time/", views.time_dashboard, name="time_dashboard"),
+    path("my/time/settings/", views.time_settings, name="time_settings"),
     path("my/time/layouts/add/", views.time_layout_create, name="time_layout_add"),
+    path(
+        "my/time/layouts/update/",
+        views.time_layout_update,
+        name="time_layout_update",
+    ),
+    path(
+        "my/time/layouts/delete/",
+        views.time_layout_delete,
+        name="time_layout_delete",
+    ),
     path("my/time/buckets/add/", views.time_bucket_create, name="time_bucket_add"),
+    path(
+        "my/time/buckets/update/",
+        views.time_bucket_update,
+        name="time_bucket_update",
+    ),
+    path(
+        "my/time/buckets/delete/",
+        views.time_bucket_delete,
+        name="time_bucket_delete",
+    ),
     path("my/time/assign/", views.time_assignment_update, name="time_assignment_update"),
     # preferences
     path("settings/preferences/", views.preference_view, name="preferences"),

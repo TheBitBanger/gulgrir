@@ -1,0 +1,119 @@
+{% extends "tracker/base.html" %}
+{% block content %}
+<div class="space-y-6">
+  <div class="flex items-start justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-semibold">Time tracking settings</h1>
+      <div class="panel-subtitle">Manage layouts and bucket hierarchy for time tracking.</div>
+    </div>
+    <a class="btn" href="{% url 'time_dashboard' %}">Back to dashboard</a>
+  </div>
+
+  <div class="panel space-y-4">
+    <div class="flex flex-wrap items-center gap-4">
+      <form method="get" class="flex items-center gap-2">
+        <label class="text-sm">Layout</label>
+        <select name="layout" class="control" onchange="this.form.submit()">
+          {% for l in layouts %}
+            <option value="{{ l.id }}" {% if layout and l.id == layout.id %}selected{% endif %}>
+              {{ l.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </form>
+
+      {% if layout %}
+        <form method="post" action="{% url 'time_bucket_add' %}" class="flex items-center gap-2">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{% url 'time_settings' %}?layout={{ layout.id }}">
+          <input type="hidden" name="layout_id" value="{{ layout.id }}">
+          <input type="text" name="bucket_name" class="control" placeholder="New bucket">
+          <select name="parent_id" class="control">
+            <option value="">Top level</option>
+            {% for opt in bucket_options %}
+              <option value="{{ opt.id }}">{{ opt.label }}</option>
+            {% endfor %}
+          </select>
+          <button type="submit" class="btn">Add bucket</button>
+        </form>
+      {% endif %}
+    </div>
+
+    <form method="post" action="{% url 'time_layout_add' %}" class="flex flex-wrap items-center gap-2">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{% url 'time_settings' %}">
+      <input type="text" name="layout_name" class="control" placeholder="New layout">
+      <input type="text" name="layout_description" class="control" placeholder="Description (optional)">
+      <button type="submit" class="btn">Create layout</button>
+    </form>
+  </div>
+
+  {% if layout %}
+    <div class="panel space-y-4">
+      <div class="panel-title">Layout settings</div>
+      <div class="flex flex-wrap items-center gap-3">
+        <form method="post" action="{% url 'time_layout_update' %}" class="flex flex-wrap items-center gap-2">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{% url 'time_settings' %}?layout={{ layout.id }}">
+          <input type="hidden" name="layout_id" value="{{ layout.id }}">
+          <input type="text" name="layout_name" class="control" value="{{ layout.name }}">
+          <input type="text" name="layout_description" class="control" value="{{ layout.description }}" placeholder="Description (optional)">
+          <button type="submit" class="btn">Save layout</button>
+        </form>
+        <form method="post" action="{% url 'time_layout_delete' %}" class="inline">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{% url 'time_settings' %}">
+          <input type="hidden" name="layout_id" value="{{ layout.id }}">
+          <button type="submit" class="btn btn-danger">Delete layout</button>
+        </form>
+      </div>
+
+      {% if bucket_management %}
+        <div class="border-t pt-4 space-y-3 overflow-x-auto">
+          <div class="panel-title">Manage buckets</div>
+          {% for row in bucket_management %}
+            <div class="grid items-center gap-2 min-w-[720px]" style="grid-template-columns: minmax(240px, 360px) minmax(200px, 260px) minmax(320px, 360px); background: color-mix(in oklab, var(--surface-2) {{ row.depth|add:1 }}0%, transparent); border-radius: 0.5rem; padding-top: 0.3rem; padding-bottom: 0.3rem;">
+              <form id="bucket-update-{{ row.bucket.id }}" method="post" action="{% url 'time_bucket_update' %}" class="contents">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{% url 'time_settings' %}?layout={{ layout.id }}">
+                <input type="hidden" name="layout_id" value="{{ layout.id }}">
+                <input type="hidden" name="bucket_id" value="{{ row.bucket.id }}">
+                <div class="flex items-center gap-2 min-w-0" style="padding-left: calc({{ row.depth }} * 2.25rem);">
+                  {% if row.depth > 0 %}
+                    <span class="text-xs text-muted">└─</span>
+                  {% endif %}
+                  <input type="text" name="bucket_name" class="control min-w-0 w-full" value="{{ row.bucket.name }}">
+                </div>
+                <select name="parent_id" class="control min-w-0 w-full">
+                  <option value="" {% if not row.bucket.parent_id %}selected{% endif %}>Top level</option>
+                  {% for opt in row.parent_options %}
+                    <option value="{{ opt.id }}" {% if row.bucket.parent_id == opt.id %}selected{% endif %}>
+                      {{ opt.label }}
+                    </option>
+                  {% endfor %}
+                </select>
+              </form>
+              <div class="flex items-center gap-2 justify-start">
+                <button type="submit" form="bucket-update-{{ row.bucket.id }}" class="btn">Save</button>
+                <form method="post" action="{% url 'time_bucket_delete' %}" class="flex items-center gap-2">
+                  {% csrf_token %}
+                  <input type="hidden" name="next" value="{% url 'time_settings' %}?layout={{ layout.id }}">
+                  <input type="hidden" name="layout_id" value="{{ layout.id }}">
+                  <input type="hidden" name="bucket_id" value="{{ row.bucket.id }}">
+                  {% if row.has_children %}
+                    <select name="delete_mode" class="control min-w-[160px]">
+                      <option value="promote" selected>Promote children</option>
+                      <option value="cascade">Delete children</option>
+                    </select>
+                  {% endif %}
+                  <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

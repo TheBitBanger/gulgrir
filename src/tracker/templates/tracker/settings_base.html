@@ -1,0 +1,22 @@
+{% extends "tracker/base.html" %}
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-6">
+  <aside class="panel h-fit lg:sticky lg:top-24">
+    <div class="panel-title">Settings</div>
+    <nav class="space-y-1 text-sm">
+      {% url 'preferences' as preferences_url %}
+      {% url 'time_settings' as time_settings_url %}
+      <a class="block px-2 py-1 rounded {% if request.path == preferences_url %}bg-[var(--surface-2)]{% endif %}" href="{{ preferences_url }}">Global settings</a>
+      <a class="block px-2 py-1 rounded {% if request.path == time_settings_url %}bg-[var(--surface-2)]{% endif %}" href="{{ time_settings_url }}">Time tracking settings</a>
+    </nav>
+  </aside>
+
+  <section class="space-y-4">
+    <div>
+      <h1 class="text-2xl font-semibold">{% block settings_title %}Settings{% endblock %}</h1>
+      {% block settings_subtitle %}{% endblock %}
+    </div>
+    {% block settings_content %}{% endblock %}
+  </section>
+</div>
+{% endblock %}

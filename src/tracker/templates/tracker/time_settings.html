@@ -1,14 +1,10 @@
-{% extends "tracker/base.html" %}
-{% block content %}
+{% extends "tracker/settings_base.html" %}
+{% block settings_title %}Time tracking settings{% endblock %}
+{% block settings_subtitle %}
+  <div class="panel-subtitle">Manage layouts and bucket hierarchy for time tracking.</div>
+{% endblock %}
+{% block settings_content %}
 <div class="space-y-6">
-  <div class="flex items-start justify-between gap-4">
-    <div>
-      <h1 class="text-2xl font-semibold">Time tracking settings</h1>
-      <div class="panel-subtitle">Manage layouts and bucket hierarchy for time tracking.</div>
-    </div>
-    <a class="btn" href="{% url 'time_dashboard' %}">Back to dashboard</a>
-  </div>
-
   <div class="panel space-y-4">
     <div class="flex flex-wrap items-center gap-4">
       <form method="get" class="flex items-center gap-2">

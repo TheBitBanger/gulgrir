@@ -59,7 +59,7 @@ def active_timers(request):
 
     current_id = None
     match = getattr(request, "resolver_match", None)
-    if match and match.kwargs.get("pk"):
+    if match and match.url_name == "useritem_detail" and match.kwargs.get("pk"):
         try:
             current_id = int(match.kwargs["pk"])
         except (TypeError, ValueError):

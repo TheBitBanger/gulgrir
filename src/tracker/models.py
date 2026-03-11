@@ -120,6 +120,7 @@ class UserItem(models.Model):
     )
     tags = models.ManyToManyField("Tag", blank=True, related_name="user_items")
     timer_started_at = models.DateTimeField(null=True, blank=True)
+    is_pinned = models.BooleanField(default=False)
 
     @property
     def display_title(self) -> str:

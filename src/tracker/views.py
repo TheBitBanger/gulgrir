@@ -637,6 +637,26 @@ def useritem_timer_start(request, pk: int):
 
 @require_POST
 @login_required
+def useritem_pin(request, pk: int):
+    user_item = get_object_or_404(UserItem, pk=pk, user=request.user)
+    if not user_item.is_pinned:
+        user_item.is_pinned = True
+        user_item.save(update_fields=["is_pinned"])
+    return JsonResponse({"ok": True})
+
+
+@require_POST
+@login_required
+def useritem_unpin(request, pk: int):
+    user_item = get_object_or_404(UserItem, pk=pk, user=request.user)
+    if user_item.is_pinned:
+        user_item.is_pinned = False
+        user_item.save(update_fields=["is_pinned"])
+    return JsonResponse({"ok": True})
+
+
+@require_POST
+@login_required
 def useritem_timer_stop(request, pk: int):
     with transaction.atomic():
         user_item = get_object_or_404(

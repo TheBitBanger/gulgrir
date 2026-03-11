@@ -85,6 +85,8 @@ TEMPLATES = [
     },
 ]
 
+TEST_RUNNER = "tracker.test_runner.ProjectDiscoverRunner"
+
 WSGI_APPLICATION = "gulgrir.wsgi.application"
 
 

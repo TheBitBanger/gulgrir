@@ -1,4 +1,7 @@
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Value
+from django.db.models.functions import Coalesce
+from django.urls import reverse
 
 from .models import Profile, UserItem
 
@@ -46,7 +49,13 @@ def theme_preference(request):
 
 def active_timers(request):
     if not request.user.is_authenticated:
-        return {"active_timers": [], "active_timer_current_id": None}
+        return {
+            "active_timers": [],
+            "active_timer_current_id": None,
+            "pinned_items": [],
+            "pinned_more_count": 0,
+            "current_item": None,
+        }
 
     current_id = None
     match = getattr(request, "resolver_match", None)
@@ -69,5 +78,56 @@ def active_timers(request):
         }
         for timer in timers
     ]
+    active_ids = {timer.pk for timer in timers}
 
-    return {"active_timers": active, "active_timer_current_id": current_id}
+    pinned_qs = (
+        UserItem.objects.filter(
+            user=request.user,
+            is_pinned=True,
+            timer_started_at__isnull=True,
+        )
+        .exclude(pk__in=active_ids)
+        .exclude(pk=current_id or 0)
+        .select_related("item")
+        .annotate(sort_title=Coalesce("title_override", "item__title", Value("")))
+        .order_by("sort_title", "pk")
+    )
+    pinned = list(pinned_qs[:10])
+    pinned_more_count = max(0, pinned_qs.count() - len(pinned))
+
+    pinned_items = [
+        {
+            "id": item.pk,
+            "title": item.display_title,
+            "detail_url": reverse("useritem_detail", args=[item.pk]),
+            "start_url": reverse("useritem_timer_start", args=[item.pk]),
+        }
+        for item in pinned
+    ]
+
+    current_item = None
+    if current_id:
+        current = (
+            UserItem.objects.filter(user=request.user, pk=current_id)
+            .select_related("item")
+            .first()
+        )
+        if current:
+            current_item = {
+                "id": current.pk,
+                "title": current.display_title,
+                "detail_url": reverse("useritem_detail", args=[current.pk]),
+                "is_pinned": current.is_pinned,
+                "timer_started_at": current.timer_started_at,
+                "start_url": reverse("useritem_timer_start", args=[current.pk]),
+                "pin_url": reverse("useritem_pin", args=[current.pk]),
+                "unpin_url": reverse("useritem_unpin", args=[current.pk]),
+            }
+
+    return {
+        "active_timers": active,
+        "active_timer_current_id": current_id,
+        "pinned_items": pinned_items,
+        "pinned_more_count": pinned_more_count,
+        "current_item": current_item,
+    }

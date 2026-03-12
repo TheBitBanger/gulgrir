@@ -74,6 +74,17 @@
             </select>
             <button type="submit" class="btn">Pick</button>
           </form>
+          <form method="get" class="flex items-center gap-2">
+            <input type="hidden" name="layout" value="{{ layout.id }}">
+            {% if selected_bucket %}
+              <input type="hidden" name="bucket" value="{{ selected_bucket.id }}">
+            {% endif %}
+            <label class="flex items-center gap-2 text-xs text-muted">
+              <input type="checkbox" name="show_zero" value="1" {% if show_zero_time %}checked{% endif %}>
+              Show zero-time entries
+            </label>
+            <button type="submit" class="btn btn-compact">Apply</button>
+          </form>
         </div>
         {% if selected_bucket %}
           <div class="mt-4">
@@ -126,9 +137,16 @@
               <div class="space-y-2">
                 {% for entry in chart.entries %}
                   <div class="flex items-center gap-3 text-sm">
-                    <div class="w-36 truncate">
+                    <div class="w-36 truncate flex items-center gap-2">
+                      {% if entry.kind == "bucket" %}
+                        <span class="text-[10px] uppercase text-muted" style="border: 1px solid var(--border); border-radius: 0.35rem; padding: 0 0.3rem;">B</span>
+                      {% elif entry.kind == "item" %}
+                        <span class="text-[10px] uppercase text-muted" style="border: 1px solid var(--border); border-radius: 0.35rem; padding: 0 0.3rem;">I</span>
+                      {% endif %}
                       {% if entry.kind == "bucket" and entry.bucket_id %}
                         <a class="link" href="{% url 'time_dashboard' %}?layout={{ layout.id }}&bucket={{ entry.bucket_id }}">{{ entry.label }}</a>
+                      {% elif entry.kind == "item" and entry.item_id %}
+                        <a class="link" href="{% url 'useritem_detail' entry.item_id %}">{{ entry.label }}</a>
                       {% else %}
                         {{ entry.label }}
                       {% endif %}
@@ -158,9 +176,16 @@
               <div class="space-y-2">
                 {% for entry in chart.entries %}
                   <div class="flex items-center gap-3 text-sm">
-                    <div class="w-40 truncate">
+                    <div class="w-40 truncate flex items-center gap-2">
+                      {% if entry.kind == "bucket" %}
+                        <span class="text-[10px] uppercase text-muted" style="border: 1px solid var(--border); border-radius: 0.35rem; padding: 0 0.3rem;">B</span>
+                      {% elif entry.kind == "item" %}
+                        <span class="text-[10px] uppercase text-muted" style="border: 1px solid var(--border); border-radius: 0.35rem; padding: 0 0.3rem;">I</span>
+                      {% endif %}
                       {% if entry.kind == "bucket" and entry.bucket_id %}
                         <a class="link" href="{% url 'time_dashboard' %}?layout={{ layout.id }}&bucket={{ entry.bucket_id }}">{{ entry.label }}</a>
+                      {% elif entry.kind == "item" and entry.item_id %}
+                        <a class="link" href="{% url 'useritem_detail' entry.item_id %}">{{ entry.label }}</a>
                       {% else %}
                         {{ entry.label }}
                       {% endif %}
@@ -188,9 +213,16 @@
           <div class="space-y-2">
             {% for entry in all_time_context.entries %}
               <div class="flex items-center gap-3 text-sm">
-                <div class="w-48 truncate">
+                <div class="w-48 truncate flex items-center gap-2">
+                  {% if entry.kind == "bucket" %}
+                    <span class="text-[10px] uppercase text-muted" style="border: 1px solid var(--border); border-radius: 0.35rem; padding: 0 0.3rem;">B</span>
+                  {% elif entry.kind == "item" %}
+                    <span class="text-[10px] uppercase text-muted" style="border: 1px solid var(--border); border-radius: 0.35rem; padding: 0 0.3rem;">I</span>
+                  {% endif %}
                   {% if entry.kind == "bucket" and entry.bucket_id %}
                     <a class="link" href="{% url 'time_dashboard' %}?layout={{ layout.id }}&bucket={{ entry.bucket_id }}">{{ entry.label }}</a>
+                  {% elif entry.kind == "item" and entry.item_id %}
+                    <a class="link" href="{% url 'useritem_detail' entry.item_id %}">{{ entry.label }}</a>
                   {% else %}
                     {{ entry.label }}
                   {% endif %}

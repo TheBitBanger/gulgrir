@@ -111,7 +111,7 @@ def build_chart_entries(
     item_durations: dict[int, int],
     user_items: dict[int, UserItem],
     bucket_id: int | None,
-    top_n: int,
+    top_n: int | None,
     include_zero_time: bool = False,
 ) -> dict[str, object]:
     bucket_by_id = {bucket.id: bucket for bucket in buckets}
@@ -255,22 +255,25 @@ def build_chart_entries(
             item_entries = [row for row in item_entries if row["seconds"] > 0]
         item_entries = sorted(item_entries, key=lambda x: x["seconds"], reverse=True)
 
-    selected = bucket_entries[:top_n]
-    remaining_slots = max(0, top_n - len(selected))
-    selected_items = item_entries[:remaining_slots]
+    if top_n is None:
+        entries = bucket_entries + item_entries
+    else:
+        selected = bucket_entries[:top_n]
+        remaining_slots = max(0, top_n - len(selected))
+        selected_items = item_entries[:remaining_slots]
 
-    overflow_seconds = sum(x["seconds"] for x in bucket_entries[top_n:])
-    overflow_seconds += sum(x["seconds"] for x in item_entries[remaining_slots:])
+        overflow_seconds = sum(x["seconds"] for x in bucket_entries[top_n:])
+        overflow_seconds += sum(x["seconds"] for x in item_entries[remaining_slots:])
 
-    entries = selected + selected_items
-    if overflow_seconds > 0:
-        entries.append(
-            {
-                "label": "Others",
-                "seconds": overflow_seconds,
-                "kind": "overflow",
-            }
-        )
+        entries = selected + selected_items
+        if overflow_seconds > 0:
+            entries.append(
+                {
+                    "label": "Others",
+                    "seconds": overflow_seconds,
+                    "kind": "overflow",
+                }
+            )
 
     max_seconds = max((entry["seconds"] for entry in entries), default=0)
     for entry in entries:

@@ -827,6 +827,7 @@ def time_dashboard(request):
 
     selected_bucket_id = request.GET.get("bucket")
     bucket_id = int(selected_bucket_id) if selected_bucket_id else None
+    show_zero_time = request.GET.get("show_zero") == "1"
 
     buckets: list[TimeBucket] = []
     assignments: dict[int, TimeBucketAssignment] = {}
@@ -883,7 +884,7 @@ def time_dashboard(request):
                 item_durations=durations,
                 user_items=user_items,
                 bucket_id=bucket_id,
-                top_n=10,
+                top_n=None,
                 include_zero_time=include_zero_time,
             )
             chart["label"] = label
@@ -895,12 +896,12 @@ def time_dashboard(request):
                     window.start,
                     window.end,
                     window.label,
-                    include_zero_time=False,
+                    include_zero_time=show_zero_time,
                 )
             )
 
         for window in rolling_windows:
-            include_zero_time = window.key in {"last_30", "last_365"}
+            include_zero_time = show_zero_time or window.key in {"last_30", "last_365"}
             rolling_contexts.append(
                 period_context(
                     window.start,
@@ -930,7 +931,7 @@ def time_dashboard(request):
             item_durations=all_time_durations,
             user_items=user_items,
             bucket_id=None,
-            top_n=10,
+            top_n=None,
             include_zero_time=True,
         )
 
@@ -994,6 +995,7 @@ def time_dashboard(request):
             "assigned_items_hidden": assigned_items_hidden,
             "assigned_items_total": assigned_items_total,
             "selector_windows": selector_windows,
+            "show_zero_time": show_zero_time,
         },
     )
 

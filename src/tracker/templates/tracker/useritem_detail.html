@@ -16,9 +16,54 @@
         </div>
       <div class="panel-subtitle">Detail view + inline edit</div>
     </div>
-    <div class="text-sm text-muted">
-      ID #{{ object.pk }}
+    <div class="text-sm text-muted text-right">
+      <div>ID #{{ object.pk }}</div>
     </div>
+  </div>
+
+  <div class="panel flex flex-col xl:flex-row gap-3 xl:items-center xl:justify-between" style="padding: 0.75rem;">
+    <div class="flex flex-col lg:flex-row gap-3">
+      <div class="flex flex-wrap items-center gap-2">
+        {% if can_restart_item %}
+          <button type="submit"
+                  form="restart-form"
+                  class="btn">
+            Restart item
+          </button>
+        {% else %}
+          <button type="submit"
+                  form="complete-form"
+                  class="btn">
+            Complete item
+          </button>
+        {% endif %}
+        <a href="{% url 'useritem_delete' object.pk %}"
+           class="btn btn-danger">
+          Delete
+        </a>
+      </div>
+      {% if assignment_layouts %}
+        <form method="post" action="{% url 'time_assignment_update' %}" class="flex flex-wrap items-center gap-2">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{% url 'useritem_detail' object.pk %}">
+          <input type="hidden" name="item_id" value="{{ object.pk }}">
+          <input type="hidden" name="action" value="assign">
+          <select name="layout_id" class="control" id="assign-layout">
+            {% for l in assignment_layouts %}
+              <option value="{{ l.id }}">{{ l.name }}</option>
+            {% endfor %}
+          </select>
+          <select name="bucket_id" class="control" id="assign-bucket"></select>
+          <button type="submit" class="btn">Assign</button>
+        </form>
+      {% else %}
+        <div class="text-sm text-muted">Create a layout to assign buckets.</div>
+      {% endif %}
+    </div>
+    <a href="{% url 'useritem_dashboard' %}"
+       class="btn btn-compact">
+      Back to list
+    </a>
   </div>
 
   <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -198,29 +243,6 @@
                   class="inline-flex items-center justify-center rounded-lg border px-4 py-2 text-sm font-medium shadow-sm hover:opacity-90">
             Save changes
           </button>
-          <div class="flex items-center gap-2">
-            {% if can_restart_item %}
-              <button type="submit"
-                      form="restart-form"
-                      class="btn">
-                Restart item
-              </button>
-            {% else %}
-              <button type="submit"
-                      form="complete-form"
-                      class="btn">
-                Complete item
-              </button>
-            {% endif %}
-          </div>
-          <a href="{% url 'useritem_dashboard' %}"
-             class="text-sm underline underline-offset-4 opacity-80 hover:opacity-100">
-            Back to list
-          </a>
-          <a href="{% url 'useritem_delete' object.pk %}"
-             class="btn btn-danger">
-            Delete
-          </a>
         </div>
       </form>
       <form method="post" action="{% url 'useritem_complete' object.pk %}" id="complete-form">
@@ -229,26 +251,6 @@
       <form method="post" action="{% url 'useritem_restart' object.pk %}" id="restart-form">
         {% csrf_token %}
       </form>
-      <div class="panel space-y-3" style="padding: 0.75rem;">
-        <div class="panel-title">Assign to bucket</div>
-        {% if assignment_layouts %}
-          <form method="post" action="{% url 'time_assignment_update' %}" class="flex flex-wrap items-center gap-2">
-            {% csrf_token %}
-            <input type="hidden" name="next" value="{% url 'useritem_detail' object.pk %}">
-            <input type="hidden" name="item_id" value="{{ object.pk }}">
-            <input type="hidden" name="action" value="assign">
-            <select name="layout_id" class="control" id="assign-layout">
-              {% for l in assignment_layouts %}
-                <option value="{{ l.id }}">{{ l.name }}</option>
-              {% endfor %}
-            </select>
-            <select name="bucket_id" class="control" id="assign-bucket"></select>
-            <button type="submit" class="btn">Assign</button>
-          </form>
-        {% else %}
-          <div class="text-sm text-muted">Create a layout to assign buckets.</div>
-        {% endif %}
-      </div>
     </section>
 
     <section class="space-y-4">

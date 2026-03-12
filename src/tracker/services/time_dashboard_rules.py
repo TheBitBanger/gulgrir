@@ -44,6 +44,8 @@ def build_dashboard_context_for_user(
 
     daily_contexts: list[dict[str, object]] = []
     rolling_contexts: list[dict[str, object]] = []
+    rolling_medium_contexts: list[dict[str, object]] = []
+    rolling_long_contexts: list[dict[str, object]] = []
     all_time_context: dict[str, object] = {"label": "All time", "entries": []}
     all_time_assignments = {
         "unassigned_items": [],
@@ -55,7 +57,21 @@ def build_dashboard_context_for_user(
     if layout:
         time_windows = build_time_windows()
         daily_windows = [w for w in time_windows if w.group == "daily"]
-        rolling_windows = [w for w in time_windows if w.group == "rolling"]
+        rolling_windows = [
+            w
+            for w in time_windows
+            if w.group == "rolling" and w.key in {"last_7", "last_14", "last_21"}
+        ]
+        rolling_medium_windows = [
+            w
+            for w in time_windows
+            if w.group == "rolling" and w.key in {"last_30", "last_60", "last_90"}
+        ]
+        rolling_long_windows = [
+            w
+            for w in time_windows
+            if w.group == "rolling" and w.key in {"last_365"}
+        ]
         all_time_window = next((w for w in time_windows if w.group == "all_time"), None)
         selector_windows = [{"key": w.key, "label": w.label} for w in time_windows]
 
@@ -91,6 +107,26 @@ def build_dashboard_context_for_user(
 
         for window in rolling_windows:
             rolling_contexts.append(
+                period_context(
+                    window.start,
+                    window.end,
+                    window.label,
+                    include_zero_time=show_zero_time,
+                )
+            )
+
+        for window in rolling_medium_windows:
+            rolling_medium_contexts.append(
+                period_context(
+                    window.start,
+                    window.end,
+                    window.label,
+                    include_zero_time=show_zero_time,
+                )
+            )
+
+        for window in rolling_long_windows:
+            rolling_long_contexts.append(
                 period_context(
                     window.start,
                     window.end,
@@ -144,6 +180,8 @@ def build_dashboard_context_for_user(
         "bucket_options": bucket_options,
         "daily_contexts": daily_contexts,
         "rolling_contexts": rolling_contexts,
+        "rolling_medium_contexts": rolling_medium_contexts,
+        "rolling_long_contexts": rolling_long_contexts,
         "all_time_context": all_time_context,
         "unassigned_items": all_time_assignments["unassigned_items"],
         "ignored_items": all_time_assignments["ignored_items"],

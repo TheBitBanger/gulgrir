@@ -7,7 +7,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from tracker.models import TimeBucket, TimeBucketAssignment, TimeLayout, UserItem
-from tracker.views import build_chart_entries
+from tracker.services.time_dashboard import build_chart_entries
 
 
 @override_settings(
@@ -165,7 +165,7 @@ class TimeDashboardAssignmentTests(TestCase):
         response = self.client.get(url)
         self.assertContains(response, "Unassigned item")
 
-    @patch("tracker.views.random.choices")
+    @patch("tracker.services.time_selection.random.choices")
     def test_time_level_select_returns_bucket(self, mock_choices):
         child = TimeBucket.objects.create(
             layout=self.layout,

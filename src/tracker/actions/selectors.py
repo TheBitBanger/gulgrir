@@ -17,8 +17,12 @@ from django.db.models import (
 )
 from django.db.models.functions import Now, Coalesce
 from django.utils import timezone
+from django.urls import reverse
 
 from tracker.models import UserItem, UserItemHistory
+from tracker.services.selection import apply_selector_eligibility
+from tracker.services.time_dashboard import load_item_durations
+from tracker.services.time_windows import find_time_window, time_window_choices
 from . import register, ToastPayload
 
 
@@ -32,6 +36,18 @@ class RandomWeightedForm(forms.Form):
         label="Weight column",
         initial="last_revisited_at",
     )
+
+
+class RandomWeightedTimeForm(forms.Form):
+    time_window = forms.ChoiceField(
+        choices=(),
+        label="Time window",
+        initial="all_time",
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["time_window"].choices = time_window_choices()
 
 
 @register
@@ -55,6 +71,7 @@ class RandomWeightedSelector:
         **params: Any,  # cleaned data from ParamForm
     ) -> ToastPayload:
         field: str = params.get("weight_column", "last_revisited_at")
+        qs = apply_selector_eligibility(qs)
 
         # For non-existent dates choose a very old one
         ancient = timezone.now() - timedelta(days=365 * 20)  # 20 years ago
@@ -94,4 +111,51 @@ class RandomWeightedSelector:
         chosen = random.choices(items, weights=weights, k=1)[0]
 
         # Must match ToastPayload TypedDict (id + title)
-        return {"id": chosen.pk, "title": chosen.display_title}
+        return {
+            "id": chosen.pk,
+            "title": chosen.display_title,
+            "kind": "item",
+            "url": reverse("useritem_detail", kwargs={"pk": chosen.pk}),
+        }
+
+
+@register
+class RandomWeightedTimeSelector:
+    """
+    Pick **one** item from the queryset with probability proportional to time spent.
+
+    Lower time ⇒ larger weight ⇒ more likely to be chosen.
+    """
+
+    slug: ClassVar[str] = "random_weighted_time"
+    label: ClassVar[str] = "Random weighted (time)"
+    group: ClassVar[str] = "selector"
+    ParamForm: ClassVar[type[forms.Form]] = RandomWeightedTimeForm
+
+    def __call__(
+        self,
+        qs: QuerySet[UserItem],
+        **params: Any,
+    ) -> ToastPayload:
+        qs = apply_selector_eligibility(qs)
+        items = list(qs)
+        if not items:
+            raise ValueError("Empty queryset passed to RandomWeightedTimeSelector")
+
+        window = find_time_window(params.get("time_window"))
+        start = window.start if window else None
+        end = window.end if window else None
+        user = params.get("user")
+        if user is None:
+            raise ValueError("User is required for time-weighted selection")
+
+        durations = load_item_durations(user, start, end)
+        weights = [1.0 / (durations.get(item.id, 0) + 1) for item in items]
+        chosen = random.choices(items, weights=weights, k=1)[0]
+
+        return {
+            "id": chosen.pk,
+            "title": chosen.display_title,
+            "kind": "item",
+            "url": reverse("useritem_detail", kwargs={"pk": chosen.pk}),
+        }

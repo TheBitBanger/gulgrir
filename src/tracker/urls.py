@@ -14,6 +14,8 @@ useritem_patterns = [
     path("<int:pk>/", views.UserItemDetail.as_view(), name="useritem_detail"),
     path("<int:pk>/edit/", views.UserItemUpdate.as_view(), name="useritem_edit"),
     path("<int:pk>/delete/", views.UserItemDelete.as_view(), name="useritem_delete"),
+    path("<int:pk>/complete/", views.useritem_complete, name="useritem_complete"),
+    path("<int:pk>/restart/", views.useritem_restart, name="useritem_restart"),
     path(
         "<int:pk>/timer/start/",
         views.useritem_timer_start,
@@ -81,6 +83,7 @@ urlpatterns = [
         name="time_bucket_delete",
     ),
     path("my/time/assign/", views.time_assignment_update, name="time_assignment_update"),
+    path("my/time/select/", views.time_level_select, name="time_level_select"),
     # preferences
     path("settings/preferences/", views.preference_view, name="preferences"),
 ]

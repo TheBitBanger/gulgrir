@@ -1,4 +1,5 @@
 import json
+import random
 import re
 import sys
 from datetime import date, datetime, time, timedelta
@@ -36,15 +37,17 @@ from .models import (
     UserItemHistory,
 )
 from .services import build_useritem_queryset
+from .services.selection import apply_selector_eligibility
 from .services.time_dashboard import (
     build_bucket_children_map,
     build_bucket_descendants,
     build_bucket_option_list,
     build_bucket_paths,
     build_chart_entries,
-    day_range,
+    format_seconds,
     load_item_durations,
 )
+from .services.time_windows import build_time_windows, find_time_window
 
 
 def format_duration(duration) -> str:
@@ -263,6 +266,7 @@ class UserItemCreate(LoginRequiredMixin, CreateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
+        user_item = self.object
 
         ctx["enable_tag_picker"] = True
 
@@ -299,6 +303,7 @@ class UserItemUpdate(OwnObjectsMixin, UpdateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
+        user_item = self.object
 
         ctx["enable_tag_picker"] = True
 
@@ -328,6 +333,7 @@ class UserItemDetail(OwnObjectsMixin, UpdateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
+        user_item = self.object
 
         ctx["enable_tag_picker"] = True
         ctx["all_tags"] = list(
@@ -343,7 +349,29 @@ class UserItemDetail(OwnObjectsMixin, UpdateView):
         else:
             ctx["selected_tag_ids"] = []
 
-        user_item = self.object
+        layouts = list(
+            TimeLayout.objects.filter(user=self.request.user).order_by("order", "name")
+        )
+        if not layouts:
+            layouts = list(
+                TimeLayout.objects.filter(
+                    user=self.request.user,
+                    assignments__user_item=user_item,
+                )
+                .distinct()
+                .order_by("order", "name")
+            )
+        bucket_options_by_layout: dict[str, list[dict[str, object]]] = {}
+        for layout in layouts:
+            buckets = list(
+                TimeBucket.objects.filter(layout=layout).select_related("parent")
+            )
+            bucket_options_by_layout[str(layout.id)] = build_bucket_option_list(
+                buckets
+            )
+        ctx["assignment_layouts"] = layouts
+        ctx["bucket_options_by_layout"] = bucket_options_by_layout
+
         ctx["item"] = user_item.item
         history_entries = []
         for entry in user_item.history.order_by("-happened_at"):
@@ -384,6 +412,9 @@ class UserItemDetail(OwnObjectsMixin, UpdateView):
             "duration": "",
         }
         ctx["retro_errors"] = {}
+        ctx["can_restart_item"] = (
+            ctx["last_completed_at"] is not None and not user_item.is_redoing
+        )
 
         return ctx
 
@@ -395,6 +426,40 @@ class UserItemDelete(OwnObjectsMixin, DeleteView):
     model = UserItem
     success_url = reverse_lazy("useritem_dashboard")
     template_name = "tracker/confirm_delete.html"
+
+
+@require_POST
+@login_required
+def useritem_complete(request, pk: int):
+    user_item = get_object_or_404(UserItem, pk=pk, user=request.user)
+    UserItemHistory.objects.create(
+        user_item=user_item,
+        event_type=UserItemHistory.Event.COMPLETED,
+        happened_at=timezone.now(),
+    )
+    user_item.shelf = UserItem.Shelf.DONE
+    user_item.is_redoing = False
+    user_item.save(update_fields=["shelf", "is_redoing"])
+    messages.success(request, "Item marked as completed.")
+    return redirect("useritem_detail", pk=user_item.pk)
+
+
+@require_POST
+@login_required
+def useritem_restart(request, pk: int):
+    user_item = get_object_or_404(UserItem, pk=pk, user=request.user)
+    has_completed = user_item.history.filter(
+        event_type=UserItemHistory.Event.COMPLETED
+    ).exists()
+    if has_completed and not user_item.is_redoing:
+        user_item.is_redoing = True
+        user_item.shelf = UserItem.Shelf.IN_PROGRESS
+        user_item.save(update_fields=["is_redoing", "shelf"])
+        messages.success(request, "Item marked as redoing.")
+    else:
+        messages.error(request, "Item cannot be restarted yet.")
+
+    return redirect("useritem_detail", pk=user_item.pk)
 
 
 class TagCreate(LoginRequiredMixin, CreateView):
@@ -788,14 +853,28 @@ def time_dashboard(request):
         "ignored_items": [],
         "selected_bucket": None,
     }
+    assigned_items_current: list[dict[str, object]] = []
+    assigned_items_hidden: list[dict[str, object]] = []
+    assigned_items_total = 0
+    selector_windows = []
 
     if layout:
-        now = timezone.now()
-        today = timezone.localdate()
-        day_before = today - timedelta(days=2)
-        yesterday = today - timedelta(days=1)
+        time_windows = build_time_windows()
+        daily_windows = [w for w in time_windows if w.group == "daily"]
+        rolling_windows = [w for w in time_windows if w.group == "rolling"]
+        all_time_window = next(
+            (w for w in time_windows if w.group == "all_time"), None
+        )
+        selector_windows = [
+            {"key": w.key, "label": w.label} for w in time_windows
+        ]
 
-        def period_context(start: datetime | None, end: datetime | None, label: str):
+        def period_context(
+            start: datetime | None,
+            end: datetime | None,
+            label: str,
+            include_zero_time: bool,
+        ):
             durations = load_item_durations(request.user, start, end)
             chart = build_chart_entries(
                 layout=layout,
@@ -805,37 +884,82 @@ def time_dashboard(request):
                 user_items=user_items,
                 bucket_id=bucket_id,
                 top_n=10,
+                include_zero_time=include_zero_time,
             )
             chart["label"] = label
             return chart
 
-        for day, label in [
-            (today, "Today"),
-            (yesterday, "Yesterday"),
-            (day_before, "Day before"),
-        ]:
-            start, end = day_range(day)
-            daily_contexts.append(period_context(start, end, label))
+        for window in daily_windows:
+            daily_contexts.append(
+                period_context(
+                    window.start,
+                    window.end,
+                    window.label,
+                    include_zero_time=False,
+                )
+            )
 
-        for days, label in [
-            (7, "Last 7 days"),
-            (30, "Last 30 days"),
-            (365, "Last 365 days"),
-        ]:
-            start = now - timedelta(days=days)
-            rolling_contexts.append(period_context(start, now, label))
+        for window in rolling_windows:
+            include_zero_time = window.key in {"last_30", "last_365"}
+            rolling_contexts.append(
+                period_context(
+                    window.start,
+                    window.end,
+                    window.label,
+                    include_zero_time=include_zero_time,
+                )
+            )
 
-        all_time_context = period_context(None, None, "All time")
+        if all_time_window is not None:
+            all_time_context = period_context(
+                all_time_window.start,
+                all_time_window.end,
+                all_time_window.label,
+                include_zero_time=True,
+            )
+            all_time_durations = load_item_durations(
+                request.user, all_time_window.start, all_time_window.end
+            )
+        else:
+            all_time_durations = load_item_durations(request.user, None, None)
 
         all_time_assignments = build_chart_entries(
             layout=layout,
             buckets=buckets,
             assignments=assignments,
-            item_durations=load_item_durations(request.user, None, None),
+            item_durations=all_time_durations,
             user_items=user_items,
             bucket_id=None,
             top_n=10,
+            include_zero_time=True,
         )
+
+        if bucket_id is not None:
+            assignment_rows = list(
+                TimeBucketAssignment.objects.filter(
+                    layout=layout,
+                    bucket_id=bucket_id,
+                    is_ignored=False,
+                ).select_related("user_item", "user_item__item")
+            )
+            for assignment in assignment_rows:
+                item = assignment.user_item
+                seconds = all_time_durations.get(item.id, 0)
+                assigned_items_current.append(
+                    {
+                        "item": item,
+                        "seconds": seconds,
+                        "duration_display": format_seconds(seconds),
+                    }
+                )
+            assigned_items_current.sort(
+                key=lambda row: (-row["seconds"], row["item"].display_title.lower())
+            )
+            assigned_items_hidden = assigned_items_current[10:]
+            assigned_items_current = assigned_items_current[:10]
+            assigned_items_total = len(assigned_items_current) + len(
+                assigned_items_hidden
+            )
 
     bucket_options = []
     if layout:
@@ -866,6 +990,10 @@ def time_dashboard(request):
             "ignored_items": all_time_assignments["ignored_items"],
             "selected_bucket": selected_bucket,
             "breadcrumb_buckets": breadcrumb_buckets,
+            "assigned_items_current": assigned_items_current,
+            "assigned_items_hidden": assigned_items_hidden,
+            "assigned_items_total": assigned_items_total,
+            "selector_windows": selector_windows,
         },
     )
 
@@ -940,6 +1068,109 @@ def time_settings(request):
             "bucket_management": bucket_management,
         },
     )
+
+
+@require_POST
+@login_required
+def time_level_select(request):
+    layout_id = request.POST.get("layout_id")
+    window_key = request.POST.get("time_window")
+    bucket_id = request.POST.get("bucket_id")
+    if not layout_id:
+        return HttpResponseBadRequest("Missing layout")
+
+    layout = get_object_or_404(TimeLayout, id=layout_id, user=request.user)
+    current_bucket_id = int(bucket_id) if bucket_id else None
+    if current_bucket_id is not None:
+        get_object_or_404(TimeBucket, id=current_bucket_id, layout=layout)
+
+    buckets = list(TimeBucket.objects.filter(layout=layout).select_related("parent"))
+    bucket_children = build_bucket_children_map(buckets)
+    bucket_paths = build_bucket_paths(buckets)
+
+    window = find_time_window(window_key) or find_time_window("all_time")
+    start = window.start if window else None
+    end = window.end if window else None
+    durations = load_item_durations(request.user, start, end)
+
+    assignments = list(
+        TimeBucketAssignment.objects.filter(
+            layout=layout,
+            bucket__isnull=False,
+            is_ignored=False,
+        ).select_related("bucket", "user_item", "user_item__item")
+    )
+
+    bucket_totals: dict[int, int] = {}
+    for assignment in assignments:
+        if assignment.bucket_id is None:
+            continue
+        duration = durations.get(assignment.user_item_id, 0)
+        for bucket in bucket_paths.get(assignment.bucket_id, []):
+            bucket_totals[bucket] = bucket_totals.get(bucket, 0) + duration
+
+    candidate_buckets = bucket_children.get(current_bucket_id, [])
+    candidate_assignments = [
+        assignment
+        for assignment in assignments
+        if assignment.bucket_id == current_bucket_id
+    ]
+    candidate_item_ids = {a.user_item_id for a in candidate_assignments}
+    eligible_items = {
+        item.id: item
+        for item in apply_selector_eligibility(
+            UserItem.objects.filter(user=request.user, id__in=candidate_item_ids)
+        ).select_related("item")
+    }
+
+    entries: list[dict[str, object]] = []
+    for bucket in candidate_buckets:
+        seconds = bucket_totals.get(bucket.id, 0)
+        entries.append(
+            {
+                "kind": "bucket",
+                "id": bucket.id,
+                "label": bucket.name,
+                "seconds": seconds,
+                "url": f"{reverse('time_dashboard')}?layout={layout.id}&bucket={bucket.id}",
+            }
+        )
+
+    for assignment in candidate_assignments:
+        item = eligible_items.get(assignment.user_item_id)
+        if not item:
+            continue
+        seconds = durations.get(item.id, 0)
+        entries.append(
+            {
+                "kind": "item",
+                "id": item.id,
+                "label": item.display_title,
+                "seconds": seconds,
+                "url": reverse("useritem_detail", kwargs={"pk": item.id}),
+            }
+        )
+
+    if not entries:
+        payload = {
+            "id": 0,
+            "title": "Nothing to select at this level.",
+        }
+        response = JsonResponse(payload)
+        response["HX-Trigger"] = json.dumps({"action-toast": payload})
+        return response
+
+    weights = [1.0 / (entry["seconds"] + 1) for entry in entries]
+    chosen = random.choices(entries, weights=weights, k=1)[0]
+    payload = {
+        "id": int(chosen["id"]),
+        "title": str(chosen["label"]),
+        "kind": str(chosen["kind"]),
+        "url": str(chosen["url"]),
+    }
+    response = JsonResponse(payload)
+    response["HX-Trigger"] = json.dumps({"action-toast": payload})
+    return response
 
 
 
@@ -1351,12 +1582,15 @@ def useritem_execute_action(request):
         qs = build_useritem_queryset(request)
 
     # validate action parameters
-    form = action.ParamForm(request.POST)
+    try:
+        form = action.ParamForm(request.POST, user=request.user)
+    except TypeError:
+        form = action.ParamForm(request.POST)
     if not form.is_valid():
         return HttpResponseBadRequest(form.errors.as_json())
 
     # run action and respond
-    payload = action()(qs, **form.cleaned_data)
+    payload = action()(qs, user=request.user, **form.cleaned_data)
     response = JsonResponse(payload)
     response["HX-Trigger"] = json.dumps({"action-toast": payload})
 
@@ -1389,7 +1623,10 @@ def action_params(request):
         # return a minimal html so it actually replaces whatever is in position
         return HttpResponse("<span></span>")
 
-    form = action.ParamForm(auto_id="id_param_%s")
+    try:
+        form = action.ParamForm(auto_id="id_param_%s", user=request.user)
+    except TypeError:
+        form = action.ParamForm(auto_id="id_param_%s")
 
     return render(
         request,

@@ -23,6 +23,7 @@ class UserItemForm(forms.ModelForm):
         fields = [
             "item",
             "is_project",
+            "is_endless",
             "title_override",
             "shelf",
             "tier",
@@ -42,7 +43,10 @@ class UserItemForm(forms.ModelForm):
         base = "w-full rounded-lg border px-3 py-2 text-sm"
         for name, field in self.fields.items():
             if isinstance(field.widget, forms.CheckboxInput):
-                field.widget.attrs.setdefault("class", "h-4 w-4")
+                if name in {"is_project", "is_endless"}:
+                    field.widget.attrs.setdefault("class", "pill-toggle__input")
+                else:
+                    field.widget.attrs.setdefault("class", "h-4 w-4")
                 continue
             if isinstance(field.widget, (forms.Select, forms.SelectMultiple)):
                 field.widget.attrs.setdefault("class", base)
@@ -52,11 +56,13 @@ class UserItemForm(forms.ModelForm):
     def save(self, commit=True):
         ui = super().save(commit=False)
         if commit:
+            cd = self.cleaned_data
+            if cd["completed_at"]:
+                ui.is_redoing = False
             ui.save()
             self.save_m2m()
 
             # create history rows if the optional dates were supplied
-            cd = self.cleaned_data
             if cd["completed_at"]:
                 UserItemHistory.objects.create(
                     user_item=ui,

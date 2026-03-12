@@ -1,4 +1,5 @@
 from datetime import timedelta
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.contrib.messages import get_messages
@@ -83,6 +84,7 @@ class TimeDashboardAssignmentTests(TestCase):
             user_items=user_items,
             bucket_id=None,
             top_n=10,
+            include_zero_time=True,
         )
 
         labels = [entry["label"] for entry in result["entries"]]
@@ -149,6 +151,46 @@ class TimeDashboardAssignmentTests(TestCase):
         url = f"{reverse('time_settings')}?layout={self.layout.id}"
         response = self.client.get(url)
         self.assertContains(response, "Work item")
+
+    def test_time_dashboard_lists_assigned_items_with_no_time(self):
+        TimeBucketAssignment.objects.create(
+            layout=self.layout,
+            user_item=self.item_unassigned,
+            bucket=self.bucket_work,
+        )
+        self.client.force_login(self.user)
+        url = (
+            f"{reverse('time_dashboard')}?layout={self.layout.id}&bucket={self.bucket_work.id}"
+        )
+        response = self.client.get(url)
+        self.assertContains(response, "Unassigned item")
+
+    @patch("tracker.views.random.choices")
+    def test_time_level_select_returns_bucket(self, mock_choices):
+        child = TimeBucket.objects.create(
+            layout=self.layout,
+            name="Child",
+            parent=self.bucket_work,
+        )
+        TimeBucketAssignment.objects.create(
+            layout=self.layout,
+            user_item=self.item_unassigned,
+            bucket=self.bucket_work,
+        )
+        mock_choices.side_effect = lambda entries, weights, k: [entries[0]]
+
+        self.client.force_login(self.user)
+        url = reverse("time_level_select")
+        payload = {
+            "layout_id": self.layout.id,
+            "bucket_id": self.bucket_work.id,
+            "time_window": "all_time",
+        }
+        response = self.client.post(url, payload, HTTP_HX_REQUEST="true")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["kind"], "bucket")
+        self.assertIn(f"bucket={child.id}", data["url"])
 
     def test_update_layout(self):
         self.client.force_login(self.user)

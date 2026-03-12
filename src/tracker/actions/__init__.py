@@ -1,4 +1,4 @@
-from typing import Protocol, TypeVar, TypedDict, Any, ClassVar
+from typing import Protocol, TypeVar, TypedDict, Any, ClassVar, NotRequired
 from importlib import import_module
 
 from django import forms
@@ -10,6 +10,8 @@ from tracker.models import UserItem
 class ToastPayload(TypedDict):
     id: int
     title: str
+    url: NotRequired[str]
+    kind: NotRequired[str]
 
 
 class Action(Protocol):

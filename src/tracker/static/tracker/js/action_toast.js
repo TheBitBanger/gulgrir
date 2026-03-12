@@ -43,6 +43,11 @@
           toast-in   0.25s ease-out,
           toast-out  0.30s ease-in 3.7s forwards;
       }
+      .toast-container a {
+        color: #fbbf24;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
     `;
     document.head.appendChild(style);
   }
@@ -50,11 +55,24 @@
   /* -------------------------------------------------------- */
   /*  Show toast                                              */
   /* -------------------------------------------------------- */
-  function showToast(msg, duration = 4000) {
+  function showToast(payload, duration = 4000) {
     ensureCSS();
     const div = document.createElement("div");
     div.className = "toast-container";
-    div.textContent = msg;
+    if (payload.url) {
+      const prefix = payload.kind ? `Selected ${payload.kind}: ` : "";
+      if (prefix) {
+        const span = document.createElement("span");
+        span.textContent = prefix;
+        div.appendChild(span);
+      }
+      const link = document.createElement("a");
+      link.href = payload.url;
+      link.textContent = payload.title || "View";
+      div.appendChild(link);
+    } else {
+      div.textContent = payload.title || "Action complete";
+    }
     document.body.appendChild(div);
     setTimeout(() => div.remove(), duration);
   }
@@ -63,7 +81,6 @@
   /*  Hook up to HX-Trigger                                   */
   /* -------------------------------------------------------- */
   htmx.on("action-toast", (e) => {
-    const { title, id } = e.detail;          // payload from Django view
-    showToast(`${title} (id ${id})`);
+    showToast(e.detail);
   });
 })();

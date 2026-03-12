@@ -101,6 +101,8 @@ class UserItem(models.Model):
         Item, null=True, blank=True, on_delete=models.CASCADE
     )  # Null UserItems are actually projects, they won't have an Item entry
     is_project = models.BooleanField(default=False)
+    is_redoing = models.BooleanField(default=False)
+    is_endless = models.BooleanField(default=False)
     title_override = models.CharField(max_length=255, blank=True, null=True)
 
     shelf = models.CharField(

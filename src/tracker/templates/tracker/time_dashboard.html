@@ -55,6 +55,64 @@
             <a class="link" href="{% url 'time_dashboard' %}?layout={{ layout.id }}&bucket={{ bucket.id }}">{{ bucket.name }}</a>
           {% endfor %}
         </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <form
+            hx-post="{% url 'time_level_select' %}"
+            hx-swap="none"
+            class="flex flex-wrap items-center gap-2"
+          >
+            {% csrf_token %}
+            <input type="hidden" name="layout_id" value="{{ layout.id }}">
+            {% if selected_bucket %}
+              <input type="hidden" name="bucket_id" value="{{ selected_bucket.id }}">
+            {% endif %}
+            <label class="text-xs text-muted">Pick from this level</label>
+            <select name="time_window" class="control">
+              {% for window in selector_windows %}
+                <option value="{{ window.key }}">{{ window.label }}</option>
+              {% endfor %}
+            </select>
+            <button type="submit" class="btn">Pick</button>
+          </form>
+        </div>
+        {% if selected_bucket %}
+          <div class="mt-4">
+            <div class="panel-title">Assigned items in {{ selected_bucket.name }}</div>
+            {% if assigned_items_current or assigned_items_hidden %}
+              <details class="mt-2">
+                <summary class="text-xs text-muted cursor-pointer">
+                  Show assigned items ({{ assigned_items_total }})
+                </summary>
+                <div class="mt-2 space-y-2">
+                  {% for row in assigned_items_current %}
+                    <div class="flex items-center gap-3 text-sm">
+                      <div class="flex-1 min-w-[160px]">
+                        <a class="link" href="{% url 'useritem_detail' row.item.id %}">
+                          {{ row.item.display_title }}
+                        </a>
+                      </div>
+                      <div class="text-xs text-muted">{{ row.duration_display }}</div>
+                    </div>
+                  {% endfor %}
+                  {% if assigned_items_hidden %}
+                    {% for row in assigned_items_hidden %}
+                      <div class="flex items-center gap-3 text-sm">
+                        <div class="flex-1 min-w-[160px]">
+                          <a class="link" href="{% url 'useritem_detail' row.item.id %}">
+                            {{ row.item.display_title }}
+                          </a>
+                        </div>
+                        <div class="text-xs text-muted">{{ row.duration_display }}</div>
+                      </div>
+                    {% endfor %}
+                  {% endif %}
+                </div>
+              </details>
+            {% else %}
+              <div class="text-sm text-muted">No assigned items at this level.</div>
+            {% endif %}
+          </div>
+        {% endif %}
       {% endif %}
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">

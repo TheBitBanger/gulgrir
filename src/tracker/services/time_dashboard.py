@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, timedelta
 
 from django.db.models import Sum
 from django.utils import timezone
 
 from ..models import TimeBucket, TimeBucketAssignment, TimeLayout, UserItem, UserItemHistory
+from .time_windows import day_range
 
 
 def format_seconds(total_seconds: int) -> str:
@@ -16,13 +17,6 @@ def format_seconds(total_seconds: int) -> str:
     minutes = (total_seconds % 3600) // 60
     seconds = total_seconds % 60
     return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-
-
-def day_range(day: date) -> tuple[datetime, datetime]:
-    tz = timezone.get_current_timezone()
-    start = timezone.make_aware(datetime.combine(day, time.min), tz)
-    end = start + timedelta(days=1)
-    return start, end
 
 
 def load_item_durations(
@@ -118,6 +112,7 @@ def build_chart_entries(
     user_items: dict[int, UserItem],
     bucket_id: int | None,
     top_n: int,
+    include_zero_time: bool = False,
 ) -> dict[str, object]:
     bucket_by_id = {bucket.id: bucket for bucket in buckets}
     bucket_children = build_bucket_children_map(buckets)
@@ -215,6 +210,8 @@ def build_chart_entries(
                 "bucket_id": bucket.id,
             }
         )
+    if not include_zero_time:
+        bucket_entries = [row for row in bucket_entries if row["seconds"] > 0]
     bucket_entries = sorted(bucket_entries, key=lambda x: x["seconds"], reverse=True)
 
     item_entries = []
@@ -228,6 +225,8 @@ def build_chart_entries(
                     "item_id": row["item"].id,
                 }
             )
+        if not include_zero_time:
+            item_entries = [row for row in item_entries if row["seconds"] > 0]
         item_entries = sorted(item_entries, key=lambda x: x["seconds"], reverse=True)
     elif selected_bucket is not None and not level_buckets:
         for row in leaf_items:
@@ -239,6 +238,8 @@ def build_chart_entries(
                     "item_id": row["item"].id,
                 }
             )
+        if not include_zero_time:
+            item_entries = [row for row in item_entries if row["seconds"] > 0]
         item_entries = sorted(item_entries, key=lambda x: x["seconds"], reverse=True)
     elif selected_bucket is not None and level_buckets:
         for row in direct_items:
@@ -250,6 +251,8 @@ def build_chart_entries(
                     "item_id": row["item"].id,
                 }
             )
+        if not include_zero_time:
+            item_entries = [row for row in item_entries if row["seconds"] > 0]
         item_entries = sorted(item_entries, key=lambda x: x["seconds"], reverse=True)
 
     selected = bucket_entries[:top_n]

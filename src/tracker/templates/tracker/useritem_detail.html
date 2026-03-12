@@ -3,14 +3,17 @@
 <div class="space-y-6">
   <div class="flex items-start justify-between gap-4">
     <div>
-      <div class="flex items-center gap-3">
-        <h1 class="text-2xl font-semibold">{{ object.display_title }}</h1>
-        {% if item %}
-          <span class="badge">{{ item.get_media_type_display }}</span>
-        {% elif object.is_project %}
-          <span class="badge">Project</span>
-        {% endif %}
-      </div>
+        <div class="flex items-center gap-3">
+          <h1 class="text-2xl font-semibold">{{ object.display_title }}</h1>
+          {% if item %}
+            <span class="badge">{{ item.get_media_type_display }}</span>
+          {% elif object.is_project %}
+            <span class="badge">Project</span>
+          {% endif %}
+          {% if object.is_redoing %}
+            <span class="badge">Redoing</span>
+          {% endif %}
+        </div>
       <div class="panel-subtitle">Detail view + inline edit</div>
     </div>
     <div class="text-sm text-muted">
@@ -83,11 +86,10 @@
       </div>
     </section>
 
-    <section>
+    <section class="space-y-4">
       <form method="post" class="panel space-y-6" id="useritem-form">
-        {% csrf_token %}
-
         <div>
+          {% csrf_token %}
           <div class="panel-title">Your details</div>
           <div class="panel-subtitle">Edit your metadata, changes are tracked locally.</div>
         </div>
@@ -159,10 +161,20 @@
             {% else %}
               {% if field.field.widget.input_type == "checkbox" %}
                 <div class="md:col-span-2 field-track" data-field-name="{{ field.name }}">
-                  <label class="flex items-center gap-2 text-sm mt-2">
-                    {{ field }} <span>{{ field.label }}</span>
-                    <span class="dirty-badge">Edited</span>
-                  </label>
+                  {% if field.name == "is_project" or field.name == "is_endless" %}
+                    <label class="pill-toggle text-sm mt-2">
+                      {{ field }}
+                      <span class="pill-toggle__pill">
+                        {% if field.name == "is_project" %}Project{% else %}Endless{% endif %}
+                      </span>
+                      <span class="dirty-badge">Edited</span>
+                    </label>
+                  {% else %}
+                    <label class="flex items-center gap-2 text-sm mt-2">
+                      {{ field }} <span>{{ field.label }}</span>
+                      <span class="dirty-badge">Edited</span>
+                    </label>
+                  {% endif %}
                   {% if field.errors %}<div class="mt-1 text-xs">{{ field.errors }}</div>{% endif %}
                 </div>
               {% else %}
@@ -186,6 +198,21 @@
                   class="inline-flex items-center justify-center rounded-lg border px-4 py-2 text-sm font-medium shadow-sm hover:opacity-90">
             Save changes
           </button>
+          <div class="flex items-center gap-2">
+            {% if can_restart_item %}
+              <button type="submit"
+                      form="restart-form"
+                      class="btn">
+                Restart item
+              </button>
+            {% else %}
+              <button type="submit"
+                      form="complete-form"
+                      class="btn">
+                Complete item
+              </button>
+            {% endif %}
+          </div>
           <a href="{% url 'useritem_dashboard' %}"
              class="text-sm underline underline-offset-4 opacity-80 hover:opacity-100">
             Back to list
@@ -196,6 +223,32 @@
           </a>
         </div>
       </form>
+      <form method="post" action="{% url 'useritem_complete' object.pk %}" id="complete-form">
+        {% csrf_token %}
+      </form>
+      <form method="post" action="{% url 'useritem_restart' object.pk %}" id="restart-form">
+        {% csrf_token %}
+      </form>
+      <div class="panel space-y-3" style="padding: 0.75rem;">
+        <div class="panel-title">Assign to bucket</div>
+        {% if assignment_layouts %}
+          <form method="post" action="{% url 'time_assignment_update' %}" class="flex flex-wrap items-center gap-2">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{% url 'useritem_detail' object.pk %}">
+            <input type="hidden" name="item_id" value="{{ object.pk }}">
+            <input type="hidden" name="action" value="assign">
+            <select name="layout_id" class="control" id="assign-layout">
+              {% for l in assignment_layouts %}
+                <option value="{{ l.id }}">{{ l.name }}</option>
+              {% endfor %}
+            </select>
+            <select name="bucket_id" class="control" id="assign-bucket"></select>
+            <button type="submit" class="btn">Assign</button>
+          </form>
+        {% else %}
+          <div class="text-sm text-muted">Create a layout to assign buckets.</div>
+        {% endif %}
+      </div>
     </section>
 
     <section class="space-y-4">
@@ -344,6 +397,7 @@
 {% if enable_tag_picker %}
   {{ all_tags|json_script:"all-tags-data" }}
   {{ selected_tag_ids|json_script:"selected-tag-ids" }}
+  {{ bucket_options_by_layout|json_script:"bucket-options-data" }}
 
   <script>
     (function () {
@@ -555,6 +609,43 @@
     })();
   </script>
 {% endif %}
+
+<script>
+  (function () {
+    const layoutSelect = document.getElementById("assign-layout");
+    const bucketSelect = document.getElementById("assign-bucket");
+    const bucketOptionsEl = document.getElementById("bucket-options-data");
+    if (!layoutSelect || !bucketSelect || !bucketOptionsEl) return;
+
+    const optionsByLayout = JSON.parse(bucketOptionsEl.textContent || "{}");
+
+    function renderBuckets(layoutId) {
+      const options = optionsByLayout[layoutId] || [];
+      bucketSelect.innerHTML = "";
+      if (!options.length) {
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = "No buckets";
+        bucketSelect.appendChild(opt);
+        bucketSelect.disabled = true;
+        return;
+      }
+      bucketSelect.disabled = false;
+      options.forEach((row) => {
+        const opt = document.createElement("option");
+        opt.value = row.id;
+        opt.textContent = row.label;
+        bucketSelect.appendChild(opt);
+      });
+    }
+
+    layoutSelect.addEventListener("change", (e) => {
+      renderBuckets(e.target.value);
+    });
+
+    renderBuckets(layoutSelect.value);
+  })();
+</script>
 
 <script>
   (function () {

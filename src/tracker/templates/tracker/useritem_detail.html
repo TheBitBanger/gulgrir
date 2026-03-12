@@ -190,6 +190,10 @@
              class="text-sm underline underline-offset-4 opacity-80 hover:opacity-100">
             Back to list
           </a>
+          <a href="{% url 'useritem_delete' object.pk %}"
+             class="btn btn-danger">
+            Delete
+          </a>
         </div>
       </form>
     </section>

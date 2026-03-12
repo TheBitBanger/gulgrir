@@ -127,6 +127,29 @@ class TimeDashboardAssignmentTests(TestCase):
         self.assertFalse(assignment.is_ignored)
         self.assertEqual(assignment.bucket, self.bucket_play)
 
+    def test_unassign_clears_bucket(self):
+        self.client.force_login(self.user)
+        url = reverse("time_assignment_update")
+        payload = {
+            "layout_id": self.layout.id,
+            "item_id": self.item_work.id,
+            "action": "unassign",
+        }
+        response = self.client.post(url, payload)
+        self.assertEqual(response.status_code, 302)
+        assignment = TimeBucketAssignment.objects.get(
+            layout=self.layout,
+            user_item=self.item_work,
+        )
+        self.assertFalse(assignment.is_ignored)
+        self.assertIsNone(assignment.bucket)
+
+    def test_time_settings_shows_assigned_items(self):
+        self.client.force_login(self.user)
+        url = f"{reverse('time_settings')}?layout={self.layout.id}"
+        response = self.client.get(url)
+        self.assertContains(response, "Work item")
+
     def test_update_layout(self):
         self.client.force_login(self.user)
         url = reverse("time_layout_update")

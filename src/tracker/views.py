@@ -890,10 +890,26 @@ def time_settings(request):
 
     bucket_options = []
     bucket_management: list[dict[str, object]] = []
+    assigned_items_by_bucket: dict[int, list[TimeBucketAssignment]] = {}
     if layout:
         bucket_options = build_bucket_option_list(buckets)
         bucket_children = build_bucket_children_map(buckets)
         bucket_descendants = build_bucket_descendants(buckets)
+        assignments = list(
+            TimeBucketAssignment.objects.filter(
+                layout=layout,
+                bucket__isnull=False,
+                is_ignored=False,
+            ).select_related("bucket", "user_item__item")
+        )
+        for assignment in assignments:
+            if assignment.bucket_id is None:
+                continue
+            assigned_items_by_bucket.setdefault(assignment.bucket_id, []).append(
+                assignment
+            )
+        for items in assigned_items_by_bucket.values():
+            items.sort(key=lambda row: row.user_item.display_title.lower())
 
         def build_bucket_management(parent_id: int | None, depth: int) -> None:
             for bucket in bucket_children.get(parent_id, []):
@@ -903,6 +919,7 @@ def time_settings(request):
                         "bucket": bucket,
                         "depth": depth,
                         "has_children": bool(bucket_children.get(bucket.id)),
+                        "items": assigned_items_by_bucket.get(bucket.id, []),
                         "parent_options": build_bucket_option_list(
                             buckets, exclude_ids=exclude_ids
                         ),
@@ -1236,6 +1253,7 @@ def time_assignment_update(request):
     layout_id = request.POST.get("layout_id")
     item_id = request.POST.get("item_id")
     action = request.POST.get("action")
+    next_url = request.POST.get("next")
     if not layout_id or not item_id or not action:
         return redirect("time_dashboard")
 
@@ -1245,29 +1263,44 @@ def time_assignment_update(request):
         layout=layout, user_item=user_item
     )
 
+    def response_redirect():
+        if next_url and url_has_allowed_host_and_scheme(
+            next_url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ):
+            return redirect(next_url)
+        return redirect(f"{reverse('time_dashboard')}?layout={layout.id}")
+
     if action == "ignore":
         assignment.is_ignored = True
         assignment.bucket = None
         assignment.save(update_fields=["is_ignored", "bucket", "updated_at"])
-        return redirect(f"{reverse('time_dashboard')}?layout={layout.id}")
+        return response_redirect()
 
     if action == "unignore":
         assignment.is_ignored = False
         assignment.bucket = None
         assignment.save(update_fields=["is_ignored", "bucket", "updated_at"])
-        return redirect(f"{reverse('time_dashboard')}?layout={layout.id}")
+        return response_redirect()
+
+    if action == "unassign":
+        assignment.is_ignored = False
+        assignment.bucket = None
+        assignment.save(update_fields=["is_ignored", "bucket", "updated_at"])
+        return response_redirect()
 
     if action == "assign":
         bucket_id = request.POST.get("bucket_id")
         if not bucket_id:
-            return redirect(f"{reverse('time_dashboard')}?layout={layout.id}")
+            return response_redirect()
         bucket = get_object_or_404(TimeBucket, id=bucket_id, layout=layout)
         assignment.bucket = bucket
         assignment.is_ignored = False
         assignment.save(update_fields=["bucket", "is_ignored", "updated_at"])
-        return redirect(f"{reverse('time_dashboard')}?layout={layout.id}")
+        return response_redirect()
 
-    return redirect(f"{reverse('time_dashboard')}?layout={layout.id}")
+    return response_redirect()
 
 
 # unified executor for all actions

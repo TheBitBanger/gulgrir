@@ -854,9 +854,6 @@ def time_dashboard(request):
         "ignored_items": [],
         "selected_bucket": None,
     }
-    assigned_items_current: list[dict[str, object]] = []
-    assigned_items_hidden: list[dict[str, object]] = []
-    assigned_items_total = 0
     selector_windows = []
 
     if layout:
@@ -935,32 +932,6 @@ def time_dashboard(request):
             include_zero_time=show_zero_time,
         )
 
-        if bucket_id is not None:
-            assignment_rows = list(
-                TimeBucketAssignment.objects.filter(
-                    layout=layout,
-                    bucket_id=bucket_id,
-                    is_ignored=False,
-                ).select_related("user_item", "user_item__item")
-            )
-            for assignment in assignment_rows:
-                item = assignment.user_item
-                seconds = all_time_durations.get(item.id, 0)
-                assigned_items_current.append(
-                    {
-                        "item": item,
-                        "seconds": seconds,
-                        "duration_display": format_seconds(seconds),
-                    }
-                )
-            assigned_items_current.sort(
-                key=lambda row: (-row["seconds"], row["item"].display_title.lower())
-            )
-            assigned_items_hidden = assigned_items_current[10:]
-            assigned_items_current = assigned_items_current[:10]
-            assigned_items_total = len(assigned_items_current) + len(
-                assigned_items_hidden
-            )
 
     bucket_options = []
     if layout:
@@ -991,9 +962,6 @@ def time_dashboard(request):
             "ignored_items": all_time_assignments["ignored_items"],
             "selected_bucket": selected_bucket,
             "breadcrumb_buckets": breadcrumb_buckets,
-            "assigned_items_current": assigned_items_current,
-            "assigned_items_hidden": assigned_items_hidden,
-            "assigned_items_total": assigned_items_total,
             "selector_windows": selector_windows,
             "show_zero_time": show_zero_time,
         },

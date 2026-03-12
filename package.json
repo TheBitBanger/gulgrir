@@ -1,0 +1,11 @@
+{
+  "name": "gulgrir",
+  "private": true,
+  "devDependencies": {
+    "tailwindcss": "^3.4.13"
+  },
+  "scripts": {
+    "build:css": "tailwindcss -i src/tracker/static/tracker/css/tailwind.css -o src/tracker/static/tracker/css/app.css --minify",
+    "watch:css": "tailwindcss -i src/tracker/static/tracker/css/tailwind.css -o src/tracker/static/tracker/css/app.css --watch"
+  }
+}

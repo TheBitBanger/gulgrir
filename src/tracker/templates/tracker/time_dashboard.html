@@ -74,17 +74,22 @@
             </select>
             <button type="submit" class="btn">Pick</button>
           </form>
-          <form method="get" class="flex items-center gap-2">
-            <input type="hidden" name="layout" value="{{ layout.id }}">
-            {% if selected_bucket %}
-              <input type="hidden" name="bucket" value="{{ selected_bucket.id }}">
-            {% endif %}
-            <label class="flex items-center gap-2 text-xs text-muted">
-              <input type="checkbox" name="show_zero" value="1" {% if show_zero_time %}checked{% endif %}>
-              Show zero-time entries
-            </label>
-            <button type="submit" class="btn btn-compact">Apply</button>
-          </form>
+          {% if show_zero_time %}
+            <a
+              class="btn btn-compact"
+              href="{% url 'time_dashboard' %}?layout={{ layout.id }}{% if selected_bucket %}&bucket={{ selected_bucket.id }}{% endif %}"
+            >
+              <span aria-hidden="true">✓</span>
+              Zero-time shown
+            </a>
+          {% else %}
+            <a
+              class="btn btn-compact"
+              href="{% url 'time_dashboard' %}?layout={{ layout.id }}&show_zero=1{% if selected_bucket %}&bucket={{ selected_bucket.id }}{% endif %}"
+            >
+              Zero-time hidden
+            </a>
+          {% endif %}
         </div>
         {% if selected_bucket %}
           <div class="mt-4">

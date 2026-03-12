@@ -169,3 +169,11 @@ Suggested type-check command (if mypy is installed):
 
 - Update this file with new commands and style rules.
 - If you add formatters/linters, include single-file and single-test examples.
+
+## Testing expectations for agents
+
+- Add tests when coverage is missing for the change.
+- Run tests after every change:
+  - Use scoped tests for small, localized changes.
+  - Use the full test suite for changes that involve multiple modules.
+  - When in doubt, run the full test suite.

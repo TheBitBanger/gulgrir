@@ -901,7 +901,7 @@ def time_dashboard(request):
             )
 
         for window in rolling_windows:
-            include_zero_time = show_zero_time or window.key in {"last_30", "last_365"}
+            include_zero_time = show_zero_time
             rolling_contexts.append(
                 period_context(
                     window.start,
@@ -916,7 +916,7 @@ def time_dashboard(request):
                 all_time_window.start,
                 all_time_window.end,
                 all_time_window.label,
-                include_zero_time=True,
+                include_zero_time=show_zero_time,
             )
             all_time_durations = load_item_durations(
                 request.user, all_time_window.start, all_time_window.end
@@ -932,7 +932,7 @@ def time_dashboard(request):
             user_items=user_items,
             bucket_id=None,
             top_n=None,
-            include_zero_time=True,
+            include_zero_time=show_zero_time,
         )
 
         if bucket_id is not None:

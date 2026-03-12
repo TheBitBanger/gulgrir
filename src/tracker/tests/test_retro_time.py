@@ -6,7 +6,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from tracker.models import UserItem, UserItemHistory
-from tracker.views import parse_retro_duration
+from tracker.views.useritems import parse_retro_duration
 
 
 class RetroDurationParserTests(TestCase):

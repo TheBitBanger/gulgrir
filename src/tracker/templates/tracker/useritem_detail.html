@@ -6,12 +6,12 @@
         <div class="flex items-center gap-3">
           <h1 class="text-2xl font-semibold">{{ object.display_title }}</h1>
           {% if item %}
-            <span class="badge">{{ item.get_media_type_display }}</span>
+            <span class="badge badge--loud">{{ item.get_media_type_display }}</span>
           {% elif object.is_project %}
-            <span class="badge">Project</span>
+            <span class="badge badge--loud">Project</span>
           {% endif %}
           {% if object.is_redoing %}
-            <span class="badge">Redoing</span>
+            <span class="badge badge--loud">Redoing</span>
           {% endif %}
         </div>
       <div class="panel-subtitle">Detail view + inline edit</div>

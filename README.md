@@ -17,7 +17,7 @@
 
 Create a `compose.yml` file with the following content. You can use `dev`,
 `latest`, or a pinned version tag like `v0.1.0` for the image. The `backup`
-service is optional; remove it if you do not want scheduled backups.
+service is optional; remove it if you do not want a backup container.
 
 ```yaml
 name: gulgrir
@@ -41,7 +41,7 @@ services:
       - pgdata:/var/lib/postgresql/data
 
   backup:
-    image: ghcr.io/thebitbanger/kethuroth:v0.1.0
+    image: ghcr.io/thebitbanger/kethuroth:v0.1.1
     restart: unless-stopped
     env_file: .env
     depends_on:
@@ -93,6 +93,7 @@ Notes:
 - `DJANGO_ALLOWED_HOSTS` should include any hostnames or IPs you use to access the app.
 - `DJANGO_CSRF_TRUSTED_ORIGINS` must include the full scheme + host (and port if used).
 - `DJANGO_SECURE_PROXY_SSL_HEADER` should be `true` only when running behind a reverse proxy.
+- `BACKUP_SCHEDULE` only matters if the backup service is running.
 
 ## If using a reverse proxy
 
@@ -180,3 +181,16 @@ docker compose run --rm backup restore /backups/<dump file>.dump
 ```
 docker compose start app
 ```
+
+# Development
+
+For local development, use `compose/dev.yml`. The `backup` service is available
+for on-demand use and does not run on a schedule unless you opt into it.
+
+To run scheduled backups in dev, start the backup profile:
+
+```
+docker compose --profile backup up -d
+```
+
+For on-demand backups and restores, see `# Backups` and `# Restores` above.

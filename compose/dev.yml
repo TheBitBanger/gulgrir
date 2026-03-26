@@ -24,7 +24,9 @@ services:
       - pgdata:/var/lib/postgresql/data
 
   backup:
-    image: ghcr.io/thebitbanger/kethuroth:v0.1.0
+    image: ghcr.io/thebitbanger/kethuroth:v0.1.1
+    profiles:
+      - backup
     env_file: ../.env
     restart: unless-stopped
     container_name: gulgrir_backup

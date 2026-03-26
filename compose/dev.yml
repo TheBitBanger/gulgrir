@@ -24,10 +24,7 @@ services:
       - pgdata:/var/lib/postgresql/data
 
   backup:
-    build:
-      context: ..
-      dockerfile: docker/backup/Dockerfile
-    image: kethuroth:dev
+    image: ghcr.io/thebitbanger/kethuroth:v0.1.0
     env_file: ../.env
     restart: unless-stopped
     container_name: gulgrir_backup

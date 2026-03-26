@@ -41,7 +41,7 @@ services:
       - pgdata:/var/lib/postgresql/data
 
   backup:
-    image: ghcr.io/thebitbanger/kethuroth:dev
+    image: ghcr.io/thebitbanger/kethuroth:v0.1.0
     restart: unless-stopped
     env_file: .env
     depends_on:
@@ -144,40 +144,12 @@ the first stable milestone is ready.
 
 # Backups
 
-The `backup` service creates `./backups` automatically, but pre-creating the
-directory (and setting `BACKUP_UID` / `BACKUP_GID`) avoids root-owned files.
+The `backup` service uses the standalone kethuroth image. Full docs and
+configuration options live at `https://github.com/TheBitBanger/kethuroth`.
 
-## Scheduled backups
-
-The `backup` service runs backups on a schedule. Configure it with:
-
-- `BACKUP_SCHEDULE` (cron format, default `0 5 * * *`)
-- `BACKUP_RETENTION_DAYS` (default `7`)
-- `BACKUP_RETENTION_COUNT` (default `30`)
-- `BACKUP_UID` / `BACKUP_GID` (optional, set to your host user/group to avoid root-owned files)
-- `TZ` (optional, set to your local timezone for schedule timing)
-
-The `backup` service includes a healthcheck that uses `pg_isready` to verify
-database connectivity. Check it with:
-
-```
-docker compose ps
-```
-
-To find your UID/GID:
-
-```
-id -u
-id -g
-```
-
-## Docs for your version
-
-If you are running a tagged release, use the GitHub branch switcher to select
-your tag so the README matches your image version.
-
-Note: GHCR package pages show the README from the default branch, which may not
-match your pinned tag.
+Database backups are written to `./backups` on the host by the optional `backup`
+service. The service creates the directory automatically, but pre-creating it
+(and setting `BACKUP_UID` / `BACKUP_GID`) avoids root-owned files.
 
 ## On-demand backup
 

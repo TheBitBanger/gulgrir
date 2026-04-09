@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 
 from ..models import TimeBucket, TimeBucketAssignment, TimeLayout, UserItem
 from .time_dashboard import (
@@ -9,7 +9,7 @@ from .time_dashboard import (
     build_chart_entries,
     load_item_durations,
 )
-from .time_windows import build_time_windows
+from .time_windows import build_picker_windows, build_time_windows, day_range
 
 
 def build_dashboard_context_for_user(
@@ -18,6 +18,10 @@ def build_dashboard_context_for_user(
     layout_id: str | None,
     bucket_id: int | None,
     show_zero_time: bool,
+    selected_window_key: str | None = None,
+    selected_range_start: date | None = None,
+    selected_range_end: date | None = None,
+    selected_label: str | None = None,
 ) -> dict[str, object]:
     layouts = list(TimeLayout.objects.filter(user=user).order_by("order", "name"))
     layout = None
@@ -42,11 +46,9 @@ def build_dashboard_context_for_user(
             )
         }
 
-    daily_contexts: list[dict[str, object]] = []
-    rolling_contexts: list[dict[str, object]] = []
-    rolling_medium_contexts: list[dict[str, object]] = []
-    rolling_long_contexts: list[dict[str, object]] = []
-    all_time_context: dict[str, object] = {"label": "All time", "entries": []}
+    today_context: dict[str, object] = {"label": "Today", "entries": []}
+    yesterday_context: dict[str, object] = {"label": "Yesterday", "entries": []}
+    selected_context: dict[str, object] = {"label": "All time", "entries": []}
     all_time_assignments = {
         "unassigned_items": [],
         "ignored_items": [],
@@ -56,24 +58,12 @@ def build_dashboard_context_for_user(
 
     if layout:
         time_windows = build_time_windows()
-        daily_windows = [w for w in time_windows if w.group == "daily"]
-        rolling_windows = [
-            w
-            for w in time_windows
-            if w.group == "rolling" and w.key in {"last_7", "last_14", "last_21"}
-        ]
-        rolling_medium_windows = [
-            w
-            for w in time_windows
-            if w.group == "rolling" and w.key in {"last_30", "last_60", "last_90"}
-        ]
-        rolling_long_windows = [
-            w
-            for w in time_windows
-            if w.group == "rolling" and w.key in {"last_365"}
-        ]
+        today_window = next((w for w in time_windows if w.key == "today"), None)
+        yesterday_window = next((w for w in time_windows if w.key == "yesterday"), None)
         all_time_window = next((w for w in time_windows if w.group == "all_time"), None)
-        selector_windows = [{"key": w.key, "label": w.label} for w in time_windows]
+        selector_windows = [
+            {"key": w.key, "label": w.label} for w in build_picker_windows()
+        ]
 
         def period_context(
             start: datetime | None,
@@ -95,58 +85,59 @@ def build_dashboard_context_for_user(
             chart["label"] = label
             return chart
 
-        for window in daily_windows:
-            daily_contexts.append(
-                period_context(
-                    window.start,
-                    window.end,
-                    window.label,
-                    include_zero_time=show_zero_time,
-                )
+        if today_window is not None:
+            today_context = period_context(
+                today_window.start,
+                today_window.end,
+                today_window.label,
+                include_zero_time=show_zero_time,
             )
 
-        for window in rolling_windows:
-            rolling_contexts.append(
-                period_context(
-                    window.start,
-                    window.end,
-                    window.label,
-                    include_zero_time=show_zero_time,
-                )
-            )
-
-        for window in rolling_medium_windows:
-            rolling_medium_contexts.append(
-                period_context(
-                    window.start,
-                    window.end,
-                    window.label,
-                    include_zero_time=show_zero_time,
-                )
-            )
-
-        for window in rolling_long_windows:
-            rolling_long_contexts.append(
-                period_context(
-                    window.start,
-                    window.end,
-                    window.label,
-                    include_zero_time=show_zero_time,
-                )
+        if yesterday_window is not None:
+            yesterday_context = period_context(
+                yesterday_window.start,
+                yesterday_window.end,
+                yesterday_window.label,
+                include_zero_time=show_zero_time,
             )
 
         if all_time_window is not None:
-            all_time_context = period_context(
-                all_time_window.start,
-                all_time_window.end,
-                all_time_window.label,
-                include_zero_time=show_zero_time,
-            )
             all_time_durations = load_item_durations(
                 user, all_time_window.start, all_time_window.end
             )
         else:
             all_time_durations = load_item_durations(user, None, None)
+
+        def resolve_selected_window() -> tuple[datetime | None, datetime | None, str]:
+            if selected_range_start and selected_range_end:
+                start, _ = day_range(selected_range_start)
+                _, end = day_range(selected_range_end)
+                label = selected_label or "Selected range"
+                return start, end, label
+
+            if selected_window_key:
+                match = next(
+                    (w for w in time_windows if w.key == selected_window_key), None
+                )
+                if match is not None:
+                    return match.start, match.end, selected_label or match.label
+
+            if all_time_window is not None:
+                return (
+                    all_time_window.start,
+                    all_time_window.end,
+                    selected_label or all_time_window.label,
+                )
+
+            return None, None, selected_label or "All time"
+
+        selected_start, selected_end, selected_label_value = resolve_selected_window()
+        selected_context = period_context(
+            selected_start,
+            selected_end,
+            selected_label_value,
+            include_zero_time=show_zero_time,
+        )
 
         all_time_assignments = build_chart_entries(
             layout=layout,
@@ -178,11 +169,9 @@ def build_dashboard_context_for_user(
         "layout": layout,
         "buckets": buckets,
         "bucket_options": bucket_options,
-        "daily_contexts": daily_contexts,
-        "rolling_contexts": rolling_contexts,
-        "rolling_medium_contexts": rolling_medium_contexts,
-        "rolling_long_contexts": rolling_long_contexts,
-        "all_time_context": all_time_context,
+        "today_context": today_context,
+        "yesterday_context": yesterday_context,
+        "selected_context": selected_context,
         "unassigned_items": all_time_assignments["unassigned_items"],
         "ignored_items": all_time_assignments["ignored_items"],
         "selected_bucket": selected_bucket,

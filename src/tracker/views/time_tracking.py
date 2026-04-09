@@ -1,4 +1,5 @@
 import json
+from datetime import date
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -9,7 +10,7 @@ from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
-from ..models import TimeBucket, TimeBucketAssignment, TimeLayout, UserItem
+from ..models import Profile, TimeBucket, TimeBucketAssignment, TimeLayout, UserItem
 from ..services.time_assignments import assign_item, ignore_item, unassign_item, unignore_item
 from ..services.time_dashboard import (
     build_bucket_children_map,
@@ -26,12 +27,90 @@ def time_dashboard(request):
     selected_bucket_id = request.GET.get("bucket")
     bucket_id = int(selected_bucket_id) if selected_bucket_id else None
     show_zero_time = request.GET.get("show_zero") == "1"
+    mode = request.GET.get("mode")
+    window_key = request.GET.get("window")
+    range_start_raw = request.GET.get("range_start")
+    range_end_raw = request.GET.get("range_end")
+
+    def parse_date(value: str | None) -> date | None:
+        if not value:
+            return None
+        try:
+            return date.fromisoformat(value)
+        except ValueError:
+            return None
+
+    range_start = parse_date(range_start_raw)
+    range_end = parse_date(range_end_raw)
+    if range_start and range_end and range_start > range_end:
+        range_start, range_end = range_end, range_start
+
+    profile = None
+    if request.user.is_authenticated:
+        profile, _ = Profile.objects.get_or_create(user=request.user)
+
+    has_time_params = any(
+        [mode, window_key, range_start_raw, range_end_raw]
+    )
+
+    if not has_time_params and profile:
+        mode = profile.time_dashboard_mode or "last"
+        window_key = profile.time_dashboard_window_key or "all_time"
+        range_start = profile.time_dashboard_range_start
+        range_end = profile.time_dashboard_range_end
+
+    resolved_mode = mode if mode in {"last", "range"} else "last"
+    resolved_window = window_key or "all_time"
+    resolved_range_start = range_start
+    resolved_range_end = range_end
+    if resolved_mode == "last":
+        resolved_range_start = None
+        resolved_range_end = None
+    elif resolved_mode == "range":
+        resolved_window = ""
+
+    if request.GET.get("save_pref") == "1" and profile:
+        profile.time_dashboard_mode = resolved_mode
+        profile.time_dashboard_window_key = (
+            resolved_window if resolved_mode == "last" else ""
+        )
+        profile.time_dashboard_range_start = (
+            resolved_range_start if resolved_mode == "range" else None
+        )
+        profile.time_dashboard_range_end = (
+            resolved_range_end if resolved_mode == "range" else None
+        )
+        profile.save(
+            update_fields=[
+                "time_dashboard_mode",
+                "time_dashboard_window_key",
+                "time_dashboard_range_start",
+                "time_dashboard_range_end",
+            ]
+        )
+
+    selected_window_key = None
+    selected_range_start = None
+    selected_range_end = None
+    if resolved_mode == "range":
+        selected_range_start = resolved_range_start
+        selected_range_end = resolved_range_end
+    elif resolved_mode == "last":
+        selected_window_key = resolved_window
+
     context = build_dashboard_context_for_user(
         user=request.user,
         layout_id=layout_id,
         bucket_id=bucket_id,
         show_zero_time=show_zero_time,
+        selected_window_key=selected_window_key,
+        selected_range_start=selected_range_start,
+        selected_range_end=selected_range_end,
     )
+    context["time_mode"] = resolved_mode
+    context["time_window"] = resolved_window
+    context["range_start"] = resolved_range_start
+    context["range_end"] = resolved_range_end
     return render(request, "tracker/time_dashboard.html", context)
 
 
@@ -110,6 +189,9 @@ def time_settings(request):
 def time_level_select(request):
     layout_id = request.POST.get("layout_id")
     window_key = request.POST.get("time_window")
+    mode = request.POST.get("mode")
+    range_start_raw = request.POST.get("range_start")
+    range_end_raw = request.POST.get("range_end")
     bucket_id = request.POST.get("bucket_id")
     if not layout_id:
         return HttpResponseBadRequest("Missing layout")
@@ -119,12 +201,33 @@ def time_level_select(request):
         return HttpResponseBadRequest("Invalid layout")
     current_bucket_id = int(bucket_id) if bucket_id else None
 
+    def parse_date(value: str | None) -> date | None:
+        if not value:
+            return None
+        try:
+            return date.fromisoformat(value)
+        except ValueError:
+            return None
+
+    range_start = parse_date(range_start_raw)
+    range_end = parse_date(range_end_raw)
+    if range_start and range_end and range_start > range_end:
+        range_start, range_end = range_end, range_start
+
+    selected_range_start = None
+    selected_range_end = None
+    if mode == "range":
+        selected_range_start = range_start
+        selected_range_end = range_end
+
     try:
         payload = select_from_level_for_user(
             user=request.user,
             layout_id=layout_id_int,
             bucket_id=current_bucket_id,
             time_window_key=window_key,
+            range_start=selected_range_start,
+            range_end=selected_range_end,
         )
     except ValueError as exc:
         return HttpResponseBadRequest(str(exc))

@@ -209,6 +209,18 @@ class Profile(models.Model):
         default="America/Mexico_City",
         choices=[(z, z) for z in common_timezones],
     )
+    time_dashboard_mode = models.CharField(
+        max_length=16,
+        default="",
+        blank=True,
+    )
+    time_dashboard_window_key = models.CharField(
+        max_length=32,
+        default="",
+        blank=True,
+    )
+    time_dashboard_range_start = models.DateField(null=True, blank=True)
+    time_dashboard_range_end = models.DateField(null=True, blank=True)
 
     def flatpickr_format(self):
         # convert a few common strftime tokens to flatpickr

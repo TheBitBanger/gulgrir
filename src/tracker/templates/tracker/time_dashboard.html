@@ -4,7 +4,7 @@
   <div class="flex items-start justify-between gap-4">
     <div>
       <h1 class="text-2xl font-semibold">Time tracking dashboard</h1>
-      <div class="panel-subtitle">Balance-focused breakdowns across your layouts.</div>
+      <div class="panel-subtitle">Focus on today, yesterday, and a timeframe you choose.</div>
     </div>
   </div>
 
@@ -48,197 +48,173 @@
   {% else %}
     <div class="panel space-y-4">
       {% if layout %}
-        <div class="text-sm flex flex-wrap items-center gap-2">
-          <a class="link" href="{% url 'time_dashboard' %}?layout={{ layout.id }}">{{ layout.name }}</a>
-          {% for bucket in breadcrumb_buckets %}
-            <span class="text-muted">/</span>
-            <a class="link" href="{% url 'time_dashboard' %}?layout={{ layout.id }}&bucket={{ bucket.id }}">{{ bucket.name }}</a>
-          {% endfor %}
-        </div>
-        <div class="flex flex-wrap items-center gap-2">
-          <form
-            hx-post="{% url 'time_level_select' %}"
-            hx-swap="none"
-            class="flex flex-wrap items-center gap-2"
-          >
-            {% csrf_token %}
-            <input type="hidden" name="layout_id" value="{{ layout.id }}">
-            {% if selected_bucket %}
-              <input type="hidden" name="bucket_id" value="{{ selected_bucket.id }}">
+        {% with mode=time_mode|default:"last" window=time_window rs=range_start re=range_end %}
+          <div class="text-sm flex flex-wrap items-center gap-2">
+            <a class="link" href="{% url 'time_dashboard' %}?layout={{ layout.id }}{% if mode %}&mode={{ mode }}{% endif %}{% if window %}&window={{ window }}{% endif %}{% if rs %}&range_start={{ rs|date:'Y-m-d' }}{% endif %}{% if re %}&range_end={{ re|date:'Y-m-d' }}{% endif %}">{{ layout.name }}</a>
+            {% for bucket in breadcrumb_buckets %}
+              <span class="text-muted">/</span>
+              <a class="link" href="{% url 'time_dashboard' %}?layout={{ layout.id }}&bucket={{ bucket.id }}{% if mode %}&mode={{ mode }}{% endif %}{% if window %}&window={{ window }}{% endif %}{% if rs %}&range_start={{ rs|date:'Y-m-d' }}{% endif %}{% if re %}&range_end={{ re|date:'Y-m-d' }}{% endif %}">{{ bucket.name }}</a>
+            {% endfor %}
+          </div>
+          <div class="flex flex-wrap items-center gap-2" x-data="{ mode: '{{ mode }}' }">
+            <form method="get" class="flex flex-wrap items-center gap-2">
+              <input type="hidden" name="layout" value="{{ layout.id }}">
+              {% if selected_bucket %}
+                <input type="hidden" name="bucket" value="{{ selected_bucket.id }}">
+              {% endif %}
+              {% if show_zero_time %}
+                <input type="hidden" name="show_zero" value="1">
+              {% endif %}
+              <div class="pill-toggle">
+                <label>
+                  <input
+                    class="pill-toggle__input"
+                    type="radio"
+                    name="mode"
+                    value="last"
+                    x-model="mode"
+                    {% if mode != "range" %}checked{% endif %}
+                  >
+                  <span class="pill-toggle__pill">Last X days</span>
+                </label>
+                <label>
+                  <input
+                    class="pill-toggle__input"
+                    type="radio"
+                    name="mode"
+                    value="range"
+                    x-model="mode"
+                    {% if mode == "range" %}checked{% endif %}
+                  >
+                  <span class="pill-toggle__pill">Time range</span>
+                </label>
+              </div>
+              <div class="flex flex-wrap items-center gap-2" x-show="mode === 'last'">
+                <label class="text-xs text-muted">Window</label>
+                <select name="window" class="control">
+                  {% for window in selector_windows %}
+                    <option
+                      value="{{ window.key }}"
+                      {% if time_window %}
+                        {% if window.key == time_window %}selected{% endif %}
+                      {% else %}
+                        {% if window.key == "all_time" %}selected{% endif %}
+                      {% endif %}
+                    >
+                      {{ window.label }}
+                    </option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="flex flex-wrap items-center gap-2" x-show="mode === 'range'">
+                <label class="text-xs text-muted">From</label>
+                <input
+                  type="text"
+                  name="range_start"
+                  class="control js-date"
+                  value="{% if rs %}{{ rs|date:'Y-m-d' }}{% endif %}"
+                  placeholder="YYYY-MM-DD"
+                >
+                <label class="text-xs text-muted">To</label>
+                <input
+                  type="text"
+                  name="range_end"
+                  class="control js-date"
+                  value="{% if re %}{{ re|date:'Y-m-d' }}{% endif %}"
+                  placeholder="YYYY-MM-DD"
+                >
+              </div>
+              <button type="submit" class="btn">Apply</button>
+              <button type="submit" name="save_pref" value="1" class="btn btn-compact">Set as default</button>
+            </form>
+            <form
+              hx-post="{% url 'time_level_select' %}"
+              hx-swap="none"
+              class="flex flex-wrap items-center gap-2"
+            >
+              {% csrf_token %}
+              <input type="hidden" name="layout_id" value="{{ layout.id }}">
+              {% if selected_bucket %}
+                <input type="hidden" name="bucket_id" value="{{ selected_bucket.id }}">
+              {% endif %}
+              <input type="hidden" name="mode" value="{{ time_mode|default:'last' }}">
+              {% if range_start %}
+                <input type="hidden" name="range_start" value="{{ range_start|date:'Y-m-d' }}">
+              {% endif %}
+              {% if range_end %}
+                <input type="hidden" name="range_end" value="{{ range_end|date:'Y-m-d' }}">
+              {% endif %}
+              <label class="text-xs text-muted">Pick from this level</label>
+              {% if time_mode == "range" %}
+                <input type="hidden" name="time_window" value="all_time">
+                <span class="text-xs text-muted">Using selected range</span>
+              {% else %}
+                <select name="time_window" class="control">
+                  {% for window in selector_windows %}
+                    <option
+                      value="{{ window.key }}"
+                      {% if time_window %}
+                        {% if window.key == time_window %}selected{% endif %}
+                      {% else %}
+                        {% if window.key == "all_time" %}selected{% endif %}
+                      {% endif %}
+                    >
+                      {{ window.label }}
+                    </option>
+                  {% endfor %}
+                </select>
+              {% endif %}
+              <button type="submit" class="btn">Pick</button>
+            </form>
+            {% if show_zero_time %}
+              <a
+                class="btn btn-compact"
+                href="{% url 'time_dashboard' %}?layout={{ layout.id }}{% if selected_bucket %}&bucket={{ selected_bucket.id }}{% endif %}{% if mode %}&mode={{ mode }}{% endif %}{% if window %}&window={{ window }}{% endif %}{% if rs %}&range_start={{ rs|date:'Y-m-d' }}{% endif %}{% if re %}&range_end={{ re|date:'Y-m-d' }}{% endif %}"
+              >
+                <span aria-hidden="true">✓</span>
+                Zero-time shown
+              </a>
+            {% else %}
+              <a
+                class="btn btn-compact"
+                href="{% url 'time_dashboard' %}?layout={{ layout.id }}&show_zero=1{% if selected_bucket %}&bucket={{ selected_bucket.id }}{% endif %}{% if mode %}&mode={{ mode }}{% endif %}{% if window %}&window={{ window }}{% endif %}{% if rs %}&range_start={{ rs|date:'Y-m-d' }}{% endif %}{% if re %}&range_end={{ re|date:'Y-m-d' }}{% endif %}"
+              >
+                Zero-time hidden
+              </a>
             {% endif %}
-            <label class="text-xs text-muted">Pick from this level</label>
-            <select name="time_window" class="control">
-              {% for window in selector_windows %}
-                <option value="{{ window.key }}">{{ window.label }}</option>
-              {% endfor %}
-            </select>
-            <button type="submit" class="btn">Pick</button>
-          </form>
-          {% if show_zero_time %}
-            <a
-              class="btn btn-compact"
-              href="{% url 'time_dashboard' %}?layout={{ layout.id }}{% if selected_bucket %}&bucket={{ selected_bucket.id }}{% endif %}"
-            >
-              <span aria-hidden="true">✓</span>
-              Zero-time shown
-            </a>
-          {% else %}
-            <a
-              class="btn btn-compact"
-              href="{% url 'time_dashboard' %}?layout={{ layout.id }}&show_zero=1{% if selected_bucket %}&bucket={{ selected_bucket.id }}{% endif %}"
-            >
-              Zero-time hidden
-            </a>
-          {% endif %}
-        </div>
+          </div>
+        {% endwith %}
       {% endif %}
 
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {% for chart in daily_contexts %}
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {% with chart=today_context %}
           <div class="panel" style="padding: 0.75rem;">
             <div class="flex items-center justify-between">
               <div class="panel-title">{{ chart.label }}</div>
               <div class="text-xs text-muted">{{ chart.total_display }}</div>
             </div>
             {% if chart.entries %}
-              <div class="space-y-2">
+              <div class="chart-grid text-sm">
                 {% for entry in chart.entries %}
-                  <div class="flex items-center gap-3 text-sm">
-                    <div class="w-36 truncate flex items-center gap-2">
+                  <div class="chart-row">
+                    <div class="chart-label truncate flex items-center gap-2">
                       {% if entry.kind == "bucket" %}
                         <span class="text-[10px] uppercase text-muted" style="border: 1px solid var(--border); border-radius: 0.35rem; padding: 0 0.3rem;">B</span>
                       {% elif entry.kind == "item" %}
                         <span class="text-[10px] uppercase text-muted" style="border: 1px solid var(--border); border-radius: 0.35rem; padding: 0 0.3rem;">I</span>
                       {% endif %}
                       {% if entry.kind == "bucket" and entry.bucket_id %}
-                        <a class="link" href="{% url 'time_dashboard' %}?layout={{ layout.id }}&bucket={{ entry.bucket_id }}">{{ entry.label }}</a>
+                        <a class="link" href="{% url 'time_dashboard' %}?layout={{ layout.id }}&bucket={{ entry.bucket_id }}{% if time_mode %}&mode={{ time_mode }}{% endif %}{% if time_window %}&window={{ time_window }}{% endif %}{% if range_start %}&range_start={{ range_start|date:'Y-m-d' }}{% endif %}{% if range_end %}&range_end={{ range_end|date:'Y-m-d' }}{% endif %}">{{ entry.label }}</a>
                       {% elif entry.kind == "item" and entry.item_id %}
                         <a class="link" href="{% url 'useritem_detail' entry.item_id %}">{{ entry.label }}</a>
                       {% else %}
                         {{ entry.label }}
                       {% endif %}
                     </div>
-                    <div class="flex-1 h-2 rounded" style="background: var(--surface-2);">
+                    <div class="chart-bar h-2 rounded" style="background: var(--surface-2);">
                       <div class="h-2 rounded" style="width: {{ entry.percent }}%; background: {% if entry.kind == 'bucket' %}var(--accent){% elif entry.kind == 'item' %}var(--success){% else %}var(--warn){% endif %};"></div>
                     </div>
-                    <div class="text-xs text-muted">{{ entry.duration_display }}</div>
-                  </div>
-                {% endfor %}
-              </div>
-            {% else %}
-              <div class="text-sm text-muted">No time tracked yet.</div>
-            {% endif %}
-          </div>
-        {% endfor %}
-      </div>
-
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {% for chart in rolling_contexts %}
-          <div class="panel" style="padding: 0.75rem;">
-            <div class="flex items-center justify-between">
-              <div class="panel-title">{{ chart.label }}</div>
-              <div class="text-xs text-muted">{{ chart.total_display }}</div>
-            </div>
-            {% if chart.entries %}
-              <div class="space-y-2">
-                {% for entry in chart.entries %}
-                  <div class="flex items-center gap-3 text-sm">
-                    <div class="w-40 truncate flex items-center gap-2">
-                      {% if entry.kind == "bucket" %}
-                        <span class="text-[10px] uppercase text-muted" style="border: 1px solid var(--border); border-radius: 0.35rem; padding: 0 0.3rem;">B</span>
-                      {% elif entry.kind == "item" %}
-                        <span class="text-[10px] uppercase text-muted" style="border: 1px solid var(--border); border-radius: 0.35rem; padding: 0 0.3rem;">I</span>
-                      {% endif %}
-                      {% if entry.kind == "bucket" and entry.bucket_id %}
-                        <a class="link" href="{% url 'time_dashboard' %}?layout={{ layout.id }}&bucket={{ entry.bucket_id }}">{{ entry.label }}</a>
-                      {% elif entry.kind == "item" and entry.item_id %}
-                        <a class="link" href="{% url 'useritem_detail' entry.item_id %}">{{ entry.label }}</a>
-                      {% else %}
-                        {{ entry.label }}
-                      {% endif %}
-                    </div>
-                    <div class="flex-1 h-2 rounded" style="background: var(--surface-2);">
-                      <div class="h-2 rounded" style="width: {{ entry.percent }}%; background: {% if entry.kind == 'bucket' %}var(--accent){% elif entry.kind == 'item' %}var(--success){% else %}var(--warn){% endif %};"></div>
-                    </div>
-                    <div class="text-xs text-muted">{{ entry.duration_display }}</div>
-                  </div>
-                {% endfor %}
-              </div>
-            {% else %}
-              <div class="text-sm text-muted">No time tracked yet.</div>
-            {% endif %}
-          </div>
-        {% endfor %}
-      </div>
-
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {% for chart in rolling_medium_contexts %}
-          <div class="panel" style="padding: 0.75rem;">
-            <div class="flex items-center justify-between">
-              <div class="panel-title">{{ chart.label }}</div>
-              <div class="text-xs text-muted">{{ chart.total_display }}</div>
-            </div>
-            {% if chart.entries %}
-              <div class="space-y-2">
-                {% for entry in chart.entries %}
-                  <div class="flex items-center gap-3 text-sm">
-                    <div class="w-40 truncate flex items-center gap-2">
-                      {% if entry.kind == "bucket" %}
-                        <span class="text-[10px] uppercase text-muted" style="border: 1px solid var(--border); border-radius: 0.35rem; padding: 0 0.3rem;">B</span>
-                      {% elif entry.kind == "item" %}
-                        <span class="text-[10px] uppercase text-muted" style="border: 1px solid var(--border); border-radius: 0.35rem; padding: 0 0.3rem;">I</span>
-                      {% endif %}
-                      {% if entry.kind == "bucket" and entry.bucket_id %}
-                        <a class="link" href="{% url 'time_dashboard' %}?layout={{ layout.id }}&bucket={{ entry.bucket_id }}">{{ entry.label }}</a>
-                      {% elif entry.kind == "item" and entry.item_id %}
-                        <a class="link" href="{% url 'useritem_detail' entry.item_id %}">{{ entry.label }}</a>
-                      {% else %}
-                        {{ entry.label }}
-                      {% endif %}
-                    </div>
-                    <div class="flex-1 h-2 rounded" style="background: var(--surface-2);">
-                      <div class="h-2 rounded" style="width: {{ entry.percent }}%; background: {% if entry.kind == 'bucket' %}var(--accent){% elif entry.kind == 'item' %}var(--success){% else %}var(--warn){% endif %};"></div>
-                    </div>
-                    <div class="text-xs text-muted">{{ entry.duration_display }}</div>
-                  </div>
-                {% endfor %}
-              </div>
-            {% else %}
-              <div class="text-sm text-muted">No time tracked yet.</div>
-            {% endif %}
-          </div>
-        {% endfor %}
-      </div>
-
-      <div class="grid gap-4" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));">
-        {% with chart=rolling_long_contexts.0 %}
-          <div class="panel" style="padding: 0.75rem;">
-            <div class="flex items-center justify-between">
-              <div class="panel-title">{{ chart.label }}</div>
-              <div class="text-xs text-muted">{{ chart.total_display }}</div>
-            </div>
-            {% if chart and chart.entries %}
-              <div class="space-y-2">
-                {% for entry in chart.entries %}
-                  <div class="flex items-center gap-3 text-sm">
-                    <div class="w-48 truncate flex items-center gap-2">
-                      {% if entry.kind == "bucket" %}
-                        <span class="text-[10px] uppercase text-muted" style="border: 1px solid var(--border); border-radius: 0.35rem; padding: 0 0.3rem;">B</span>
-                      {% elif entry.kind == "item" %}
-                        <span class="text-[10px] uppercase text-muted" style="border: 1px solid var(--border); border-radius: 0.35rem; padding: 0 0.3rem;">I</span>
-                      {% endif %}
-                      {% if entry.kind == "bucket" and entry.bucket_id %}
-                        <a class="link" href="{% url 'time_dashboard' %}?layout={{ layout.id }}&bucket={{ entry.bucket_id }}">{{ entry.label }}</a>
-                      {% elif entry.kind == "item" and entry.item_id %}
-                        <a class="link" href="{% url 'useritem_detail' entry.item_id %}">{{ entry.label }}</a>
-                      {% else %}
-                        {{ entry.label }}
-                      {% endif %}
-                    </div>
-                    <div class="flex-1 h-2 rounded" style="background: var(--surface-2);">
-                      <div class="h-2 rounded" style="width: {{ entry.percent }}%; background: {% if entry.kind == 'bucket' %}var(--accent){% elif entry.kind == 'item' %}var(--success){% else %}var(--warn){% endif %};"></div>
-                    </div>
-                    <div class="text-xs text-muted">{{ entry.duration_display }}</div>
+                    <div class="chart-duration text-xs text-muted">{{ entry.duration_display }}</div>
                   </div>
                 {% endfor %}
               </div>
@@ -247,46 +223,87 @@
             {% endif %}
           </div>
         {% endwith %}
-        <div class="panel" style="padding: 0.75rem;">
-          <div class="flex items-center justify-between">
-            <div class="panel-title">{{ all_time_context.label }}</div>
-            <div class="text-xs text-muted">{{ all_time_context.total_display }}</div>
-          </div>
-          {% if all_time_context.entries %}
-            <div class="space-y-2">
-              {% for entry in all_time_context.entries %}
-                <div class="flex items-center gap-3 text-sm">
-                  <div class="w-48 truncate flex items-center gap-2">
-                    {% if entry.kind == "bucket" %}
-                      <span class="text-[10px] uppercase text-muted" style="border: 1px solid var(--border); border-radius: 0.35rem; padding: 0 0.3rem;">B</span>
-                    {% elif entry.kind == "item" %}
-                      <span class="text-[10px] uppercase text-muted" style="border: 1px solid var(--border); border-radius: 0.35rem; padding: 0 0.3rem;">I</span>
-                    {% endif %}
-                    {% if entry.kind == "bucket" and entry.bucket_id %}
-                      <a class="link" href="{% url 'time_dashboard' %}?layout={{ layout.id }}&bucket={{ entry.bucket_id }}">{{ entry.label }}</a>
-                    {% elif entry.kind == "item" and entry.item_id %}
-                      <a class="link" href="{% url 'useritem_detail' entry.item_id %}">{{ entry.label }}</a>
-                    {% else %}
-                      {{ entry.label }}
-                    {% endif %}
-                  </div>
-                  <div class="flex-1 h-2 rounded" style="background: var(--surface-2);">
-                    <div class="h-2 rounded" style="width: {{ entry.percent }}%; background: {% if entry.kind == 'bucket' %}var(--accent){% elif entry.kind == 'item' %}var(--success){% else %}var(--warn){% endif %};"></div>
-                  </div>
-                  <div class="text-xs text-muted">{{ entry.duration_display }}</div>
-                </div>
-              {% endfor %}
+        {% with chart=yesterday_context %}
+          <div class="panel" style="padding: 0.75rem;">
+            <div class="flex items-center justify-between">
+              <div class="panel-title">{{ chart.label }}</div>
+              <div class="text-xs text-muted">{{ chart.total_display }}</div>
             </div>
-          {% else %}
-            <div class="text-sm text-muted">No time tracked yet.</div>
-          {% endif %}
-        </div>
+            {% if chart.entries %}
+              <div class="chart-grid text-sm">
+                {% for entry in chart.entries %}
+                  <div class="chart-row">
+                    <div class="chart-label truncate flex items-center gap-2">
+                      {% if entry.kind == "bucket" %}
+                        <span class="text-[10px] uppercase text-muted" style="border: 1px solid var(--border); border-radius: 0.35rem; padding: 0 0.3rem;">B</span>
+                      {% elif entry.kind == "item" %}
+                        <span class="text-[10px] uppercase text-muted" style="border: 1px solid var(--border); border-radius: 0.35rem; padding: 0 0.3rem;">I</span>
+                      {% endif %}
+                      {% if entry.kind == "bucket" and entry.bucket_id %}
+                        <a class="link" href="{% url 'time_dashboard' %}?layout={{ layout.id }}&bucket={{ entry.bucket_id }}{% if time_mode %}&mode={{ time_mode }}{% endif %}{% if time_window %}&window={{ time_window }}{% endif %}{% if range_start %}&range_start={{ range_start|date:'Y-m-d' }}{% endif %}{% if range_end %}&range_end={{ range_end|date:'Y-m-d' }}{% endif %}">{{ entry.label }}</a>
+                      {% elif entry.kind == "item" and entry.item_id %}
+                        <a class="link" href="{% url 'useritem_detail' entry.item_id %}">{{ entry.label }}</a>
+                      {% else %}
+                        {{ entry.label }}
+                      {% endif %}
+                    </div>
+                    <div class="chart-bar h-2 rounded" style="background: var(--surface-2);">
+                      <div class="h-2 rounded" style="width: {{ entry.percent }}%; background: {% if entry.kind == 'bucket' %}var(--accent){% elif entry.kind == 'item' %}var(--success){% else %}var(--warn){% endif %};"></div>
+                    </div>
+                    <div class="chart-duration text-xs text-muted">{{ entry.duration_display }}</div>
+                  </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="text-sm text-muted">No time tracked yet.</div>
+            {% endif %}
+          </div>
+        {% endwith %}
+      </div>
+
+      <div class="grid grid-cols-1 gap-4">
+        {% with chart=selected_context %}
+          <div class="panel" style="padding: 0.75rem;">
+            <div class="flex items-center justify-between">
+              <div class="panel-title">{{ chart.label }}</div>
+              <div class="text-xs text-muted">{{ chart.total_display }}</div>
+            </div>
+            {% if chart.entries %}
+              <div class="chart-grid text-sm">
+                {% for entry in chart.entries %}
+                  <div class="chart-row">
+                    <div class="chart-label truncate flex items-center gap-2">
+                      {% if entry.kind == "bucket" %}
+                        <span class="text-[10px] uppercase text-muted" style="border: 1px solid var(--border); border-radius: 0.35rem; padding: 0 0.3rem;">B</span>
+                      {% elif entry.kind == "item" %}
+                        <span class="text-[10px] uppercase text-muted" style="border: 1px solid var(--border); border-radius: 0.35rem; padding: 0 0.3rem;">I</span>
+                      {% endif %}
+                      {% if entry.kind == "bucket" and entry.bucket_id %}
+                        <a class="link" href="{% url 'time_dashboard' %}?layout={{ layout.id }}&bucket={{ entry.bucket_id }}{% if time_mode %}&mode={{ time_mode }}{% endif %}{% if time_window %}&window={{ time_window }}{% endif %}{% if range_start %}&range_start={{ range_start|date:'Y-m-d' }}{% endif %}{% if range_end %}&range_end={{ range_end|date:'Y-m-d' }}{% endif %}">{{ entry.label }}</a>
+                      {% elif entry.kind == "item" and entry.item_id %}
+                        <a class="link" href="{% url 'useritem_detail' entry.item_id %}">{{ entry.label }}</a>
+                      {% else %}
+                        {{ entry.label }}
+                      {% endif %}
+                    </div>
+                    <div class="chart-bar h-2 rounded" style="background: var(--surface-2);">
+                      <div class="h-2 rounded" style="width: {{ entry.percent }}%; background: {% if entry.kind == 'bucket' %}var(--accent){% elif entry.kind == 'item' %}var(--success){% else %}var(--warn){% endif %};"></div>
+                    </div>
+                    <div class="chart-duration text-xs text-muted">{{ entry.duration_display }}</div>
+                  </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="text-sm text-muted">No time tracked yet.</div>
+            {% endif %}
+          </div>
+        {% endwith %}
       </div>
     </div>
 
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
       <div class="panel" style="padding: 0.75rem;">
-        <div class="panel-title">Unassigned items</div>
+        <div class="panel-title">Unassigned items <span class="text-xs text-muted">- All time</span></div>
         {% if unassigned_items %}
           <div class="space-y-3">
             {% for row in unassigned_items %}
@@ -321,7 +338,7 @@
       </div>
 
       <div class="panel" style="padding: 0.75rem;">
-        <div class="panel-title">Ignored items</div>
+        <div class="panel-title">Ignored items <span class="text-xs text-muted">- All time</span></div>
         {% if ignored_items %}
           <div class="space-y-3">
             {% for row in ignored_items %}

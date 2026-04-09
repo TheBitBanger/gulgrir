@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import random
+from datetime import date
 from typing import TypedDict
 
 from django.urls import reverse
@@ -8,7 +9,7 @@ from django.urls import reverse
 from ..models import TimeBucket, TimeBucketAssignment, TimeLayout, UserItem
 from .selection import apply_selector_eligibility
 from .time_dashboard import build_bucket_children_map, build_bucket_paths, load_item_durations
-from .time_windows import find_time_window
+from .time_windows import day_range, find_time_window
 
 
 class SelectionResult(TypedDict):
@@ -24,6 +25,8 @@ def select_from_level_for_user(
     layout_id: int,
     bucket_id: int | None,
     time_window_key: str | None,
+    range_start: date | None = None,
+    range_end: date | None = None,
 ) -> SelectionResult | None:
     layout = TimeLayout.objects.filter(user=user, id=layout_id).first()
     if layout is None:
@@ -40,9 +43,13 @@ def select_from_level_for_user(
     bucket_children = build_bucket_children_map(buckets)
     bucket_paths = build_bucket_paths(buckets)
 
-    window = find_time_window(time_window_key) or find_time_window("all_time")
-    start = window.start if window else None
-    end = window.end if window else None
+    if range_start and range_end:
+        start, _ = day_range(range_start)
+        _, end = day_range(range_end)
+    else:
+        window = find_time_window(time_window_key) or find_time_window("all_time")
+        start = window.start if window else None
+        end = window.end if window else None
     durations = load_item_durations(user, start, end)
 
     assignments = list(

@@ -5,9 +5,11 @@ from django.contrib.auth import get_user_model
 from django.contrib.messages import get_messages
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
 from tracker.models import TimeBucket, TimeBucketAssignment, TimeLayout, UserItem
 from tracker.services.time_dashboard import build_chart_entries
+from tracker.services.time_windows import build_time_windows, day_range
 
 
 @override_settings(
@@ -303,3 +305,38 @@ class TimeDashboardAssignmentTests(TestCase):
         self.assertFalse(TimeBucket.objects.filter(id=child.id).exists())
         messages = [m.message for m in get_messages(response.wsgi_request)]
         self.assertIn("Bucket and its children deleted.", messages)
+
+
+class TimeWindowCalendarTests(TestCase):
+    def test_last_7_days_uses_calendar_bounds(self):
+        tz = timezone.get_current_timezone()
+        now = timezone.make_aware(
+            timezone.datetime(2025, 5, 19, 15, 30, 0),
+            tz,
+        )
+        windows = build_time_windows(now=now)
+        last_7 = next(w for w in windows if w.key == "last_7")
+        today = timezone.localdate(now)
+        expected_start, _ = day_range(today - timedelta(days=6))
+        _, expected_end = day_range(today)
+        self.assertEqual(last_7.start, expected_start)
+        self.assertEqual(last_7.end, expected_end)
+
+    def test_today_and_yesterday_windows(self):
+        tz = timezone.get_current_timezone()
+        now = timezone.make_aware(
+            timezone.datetime(2025, 5, 19, 9, 0, 0),
+            tz,
+        )
+        windows = build_time_windows(now=now)
+        today_window = next(w for w in windows if w.key == "today")
+        yesterday_window = next(w for w in windows if w.key == "yesterday")
+        today = timezone.localdate(now)
+        expected_today_start, expected_today_end = day_range(today)
+        expected_yesterday_start, expected_yesterday_end = day_range(
+            today - timedelta(days=1)
+        )
+        self.assertEqual(today_window.start, expected_today_start)
+        self.assertEqual(today_window.end, expected_today_end)
+        self.assertEqual(yesterday_window.start, expected_yesterday_start)
+        self.assertEqual(yesterday_window.end, expected_yesterday_end)

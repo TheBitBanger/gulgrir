@@ -85,16 +85,169 @@ class TimeDashboardAssignmentTests(TestCase):
             item_durations=durations,
             user_items=user_items,
             bucket_id=None,
-            top_n=10,
             include_zero_time=True,
         )
 
-        labels = [entry["label"] for entry in result["entries"]]
-        self.assertIn("Work", labels)
-        self.assertIn("Play", labels)
-        self.assertIn("Unassigned item", labels)
+        def collect_names(nodes: list[dict[str, object]]) -> list[str]:
+            names: list[str] = []
+            for node in nodes:
+                names.append(str(node["name"]))
+                names.extend(collect_names(node.get("children", [])))
+            return names
+
+        bucket_names = collect_names(result["bucket_tree"])
+        self.assertIn("Work", bucket_names)
+        self.assertIn("Play", bucket_names)
         self.assertEqual(len(result["ignored_items"]), 1)
         self.assertEqual(len(result["unassigned_items"]), 1)
+
+    def test_build_chart_entries_tree_rollup_and_items(self):
+        bucket_projects = TimeBucket.objects.create(
+            layout=self.layout,
+            name="Projects",
+            parent=self.bucket_work,
+        )
+        bucket_coding = TimeBucket.objects.create(
+            layout=self.layout,
+            name="Coding",
+            parent=bucket_projects,
+        )
+        item_deep = UserItem.objects.create(
+            user=self.user,
+            is_project=True,
+            title_override="Deep item",
+        )
+        item_zero = UserItem.objects.create(
+            user=self.user,
+            is_project=True,
+            title_override="Zero item",
+        )
+        item_play = UserItem.objects.create(
+            user=self.user,
+            is_project=True,
+            title_override="Play item",
+        )
+        TimeBucketAssignment.objects.create(
+            layout=self.layout,
+            user_item=item_deep,
+            bucket=bucket_coding,
+        )
+        TimeBucketAssignment.objects.create(
+            layout=self.layout,
+            user_item=item_zero,
+            bucket=bucket_projects,
+        )
+        TimeBucketAssignment.objects.create(
+            layout=self.layout,
+            user_item=item_play,
+            bucket=self.bucket_play,
+        )
+        durations = {
+            item_deep.id: int(timedelta(hours=2).total_seconds()),
+            item_zero.id: 0,
+            item_play.id: int(timedelta(minutes=45).total_seconds()),
+        }
+        user_items = {
+            item_deep.id: item_deep,
+            item_zero.id: item_zero,
+            item_play.id: item_play,
+        }
+        assignments = {
+            a.user_item_id: a
+            for a in TimeBucketAssignment.objects.filter(layout=self.layout)
+        }
+        buckets = list(TimeBucket.objects.filter(layout=self.layout))
+
+        def find_node(nodes: list[dict[str, object]], name: str) -> dict[str, object] | None:
+            for node in nodes:
+                if node["name"] == name:
+                    return node
+                child = find_node(node.get("children", []), name)
+                if child is not None:
+                    return child
+            return None
+
+        result = build_chart_entries(
+            layout=self.layout,
+            buckets=buckets,
+            assignments=assignments,
+            item_durations=durations,
+            user_items=user_items,
+            bucket_id=None,
+            include_zero_time=False,
+        )
+        work_node = find_node(result["bucket_tree"], "Work")
+        projects_node = find_node(result["bucket_tree"], "Projects")
+        coding_node = find_node(result["bucket_tree"], "Coding")
+        play_node = find_node(result["bucket_tree"], "Play")
+
+        self.assertIsNotNone(work_node)
+        self.assertIsNotNone(projects_node)
+        self.assertIsNotNone(coding_node)
+        self.assertIsNotNone(play_node)
+        self.assertEqual(work_node["seconds"], durations[item_deep.id])
+        self.assertEqual(projects_node["seconds"], durations[item_deep.id])
+        self.assertEqual(coding_node["seconds"], durations[item_deep.id])
+        self.assertEqual(play_node["seconds"], durations[item_play.id])
+        self.assertEqual(len(coding_node["items"]), 1)
+        self.assertEqual(coding_node["items"][0]["item_id"], item_deep.id)
+        self.assertEqual(len(projects_node["items"]), 0)
+
+        result_with_zero = build_chart_entries(
+            layout=self.layout,
+            buckets=buckets,
+            assignments=assignments,
+            item_durations=durations,
+            user_items=user_items,
+            bucket_id=None,
+            include_zero_time=True,
+        )
+        projects_node = find_node(result_with_zero["bucket_tree"], "Projects")
+        self.assertIsNotNone(projects_node)
+        self.assertEqual(len(projects_node["items"]), 1)
+        self.assertEqual(projects_node["items"][0]["item_id"], item_zero.id)
+
+    def test_build_chart_entries_selected_bucket_tree(self):
+        bucket_projects = TimeBucket.objects.create(
+            layout=self.layout,
+            name="Projects",
+            parent=self.bucket_work,
+        )
+        bucket_coding = TimeBucket.objects.create(
+            layout=self.layout,
+            name="Coding",
+            parent=bucket_projects,
+        )
+        item_deep = UserItem.objects.create(
+            user=self.user,
+            is_project=True,
+            title_override="Deep item",
+        )
+        TimeBucketAssignment.objects.create(
+            layout=self.layout,
+            user_item=item_deep,
+            bucket=bucket_coding,
+        )
+        durations = {item_deep.id: int(timedelta(hours=1).total_seconds())}
+        user_items = {item_deep.id: item_deep}
+        assignments = {
+            a.user_item_id: a
+            for a in TimeBucketAssignment.objects.filter(layout=self.layout)
+        }
+        buckets = list(TimeBucket.objects.filter(layout=self.layout))
+
+        result = build_chart_entries(
+            layout=self.layout,
+            buckets=buckets,
+            assignments=assignments,
+            item_durations=durations,
+            user_items=user_items,
+            bucket_id=bucket_projects.id,
+            include_zero_time=False,
+        )
+
+        self.assertEqual(len(result["bucket_tree"]), 1)
+        self.assertEqual(result["bucket_tree"][0]["name"], "Projects")
 
     def test_ignore_assignment_clears_bucket(self):
         self.client.force_login(self.user)
@@ -162,7 +315,7 @@ class TimeDashboardAssignmentTests(TestCase):
         )
         self.client.force_login(self.user)
         url = (
-            f"{reverse('time_dashboard')}?layout={self.layout.id}&bucket={self.bucket_work.id}"
+            f"{reverse('time_dashboard')}?layout={self.layout.id}&bucket={self.bucket_work.id}&show_zero=1"
         )
         response = self.client.get(url)
         self.assertContains(response, "Unassigned item")

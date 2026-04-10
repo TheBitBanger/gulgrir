@@ -22,6 +22,7 @@ def build_dashboard_context_for_user(
     selected_range_start: date | None = None,
     selected_range_end: date | None = None,
     selected_label: str | None = None,
+    expand_depth: int = 3,
 ) -> dict[str, object]:
     layouts = list(TimeLayout.objects.filter(user=user).order_by("order", "name"))
     layout = None
@@ -79,8 +80,8 @@ def build_dashboard_context_for_user(
                 item_durations=durations,
                 user_items=user_items,
                 bucket_id=bucket_id,
-                top_n=None,
                 include_zero_time=include_zero_time,
+                expand_depth=expand_depth,
             )
             chart["label"] = label
             return chart
@@ -146,8 +147,8 @@ def build_dashboard_context_for_user(
             item_durations=all_time_durations,
             user_items=user_items,
             bucket_id=None,
-            top_n=None,
             include_zero_time=show_zero_time,
+            expand_depth=expand_depth,
         )
 
     bucket_options = []
@@ -178,4 +179,5 @@ def build_dashboard_context_for_user(
         "breadcrumb_buckets": breadcrumb_buckets,
         "selector_windows": selector_windows,
         "show_zero_time": show_zero_time,
+        "expand_depth": expand_depth,
     }

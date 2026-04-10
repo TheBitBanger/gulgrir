@@ -111,19 +111,13 @@ def build_chart_entries(
     item_durations: dict[int, int],
     user_items: dict[int, UserItem],
     bucket_id: int | None,
-    top_n: int | None,
     include_zero_time: bool = False,
+    expand_depth: int = 3,
 ) -> dict[str, object]:
     bucket_by_id = {bucket.id: bucket for bucket in buckets}
     bucket_children = build_bucket_children_map(buckets)
 
     parent_map = {bucket.id: bucket.parent_id for bucket in buckets}
-
-    def top_bucket_id(bucket_id: int) -> int:
-        current = bucket_id
-        while parent_map.get(current):
-            current = parent_map[current]
-        return current
 
     def path_to_root(bucket_id: int) -> list[int]:
         path = [bucket_id]
@@ -137,15 +131,21 @@ def build_chart_entries(
     if bucket_id is not None:
         selected_bucket = bucket_by_id.get(bucket_id)
 
-    level_buckets = bucket_children.get(None, [])
-    if selected_bucket is not None:
-        level_buckets = bucket_children.get(selected_bucket.id, [])
+    default_expand_depth = max(1, expand_depth)
 
-    bucket_totals: dict[int | str, int] = defaultdict(int)
+    allowed_bucket_ids: set[int] = {
+        bucket.id for bucket in buckets if bucket.id is not None
+    }
+    if selected_bucket is not None:
+        descendants = build_bucket_descendants(buckets)
+        allowed_bucket_ids = {selected_bucket.id} | descendants.get(
+            selected_bucket.id, set()
+        )
+
+    bucket_seconds: dict[int, int] = defaultdict(int)
+    bucket_items: dict[int, list[dict[str, object]]] = defaultdict(list)
     unassigned_items: list[dict[str, object]] = []
     ignored_items: list[dict[str, object]] = []
-    leaf_items: list[dict[str, object]] = []
-    direct_items: list[dict[str, object]] = []
 
     for item_id, item in user_items.items():
         seconds = item_durations.get(item_id, 0)
@@ -162,33 +162,26 @@ def build_chart_entries(
 
         if assignment and assignment.bucket_id:
             assigned_bucket_id = assignment.bucket_id
-            if selected_bucket is None:
-                bucket_totals[top_bucket_id(assigned_bucket_id)] += seconds
-            else:
+            if assigned_bucket_id not in allowed_bucket_ids:
+                continue
+            if include_zero_time or seconds > 0:
+                bucket_items[assigned_bucket_id].append(
+                    {
+                        "item_id": item.id,
+                        "title": item.display_title,
+                        "seconds": seconds,
+                        "duration_display": format_seconds(seconds),
+                    }
+                )
+            if seconds > 0:
                 path = path_to_root(assigned_bucket_id)
-                if selected_bucket.id in path:
-                    if level_buckets:
-                        if assigned_bucket_id == selected_bucket.id:
-                            direct_items.append(
-                                {
-                                    "item": item,
-                                    "seconds": seconds,
-                                    "duration_display": format_seconds(seconds),
-                                }
-                            )
-                        else:
-                            idx = path.index(selected_bucket.id)
-                            if idx > 0:
-                                child_id = path[idx - 1]
-                                bucket_totals[child_id] += seconds
-                    else:
-                        leaf_items.append(
-                            {
-                                "item": item,
-                                "seconds": seconds,
-                                "duration_display": format_seconds(seconds),
-                            }
-                        )
+                if selected_bucket is not None:
+                    if selected_bucket.id not in path:
+                        continue
+                    path = path[: path.index(selected_bucket.id) + 1]
+                for bucket_id in path:
+                    if bucket_id in allowed_bucket_ids:
+                        bucket_seconds[bucket_id] += seconds
             continue
 
         if selected_bucket is None and seconds > 0:
@@ -200,94 +193,72 @@ def build_chart_entries(
                 }
             )
 
-    bucket_entries = []
-    for bucket in level_buckets:
-        bucket_entries.append(
-            {
-                "label": bucket.name,
-                "seconds": bucket_totals.get(bucket.id, 0),
-                "kind": "bucket",
-                "bucket_id": bucket.id,
-            }
-        )
-    if not include_zero_time:
-        bucket_entries = [row for row in bucket_entries if row["seconds"] > 0]
-    bucket_entries = sorted(bucket_entries, key=lambda x: x["seconds"], reverse=True)
+    def build_node(bucket: TimeBucket, depth: int) -> dict[str, object] | None:
+        if bucket.id is None or bucket.id not in allowed_bucket_ids:
+            return None
+        child_nodes: list[dict[str, object]] = []
+        for child in bucket_children.get(bucket.id, []):
+            node = build_node(child, depth + 1)
+            if node is not None:
+                child_nodes.append(node)
+        items = bucket_items.get(bucket.id, [])
+        items = sorted(items, key=lambda x: x["seconds"], reverse=True)
+        seconds = bucket_seconds.get(bucket.id, 0)
+        node = {
+            "id": bucket.id,
+            "name": bucket.name,
+            "depth": depth,
+            "indent_px": depth * 16,
+            "seconds": seconds,
+            "duration_display": format_seconds(seconds),
+            "items": items,
+            "children": child_nodes,
+            "is_expanded": depth < default_expand_depth,
+        }
+        if include_zero_time or seconds > 0 or items or child_nodes:
+            return node
+        return None
 
-    item_entries = []
-    if selected_bucket is None:
-        for row in unassigned_items:
-            item_entries.append(
-                {
-                    "label": row["item"].display_title,
-                    "seconds": row["seconds"],
-                    "kind": "item",
-                    "item_id": row["item"].id,
-                }
-            )
-        if not include_zero_time:
-            item_entries = [row for row in item_entries if row["seconds"] > 0]
-        item_entries = sorted(item_entries, key=lambda x: x["seconds"], reverse=True)
-    elif selected_bucket is not None and not level_buckets:
-        for row in leaf_items:
-            item_entries.append(
-                {
-                    "label": row["item"].display_title,
-                    "seconds": row["seconds"],
-                    "kind": "item",
-                    "item_id": row["item"].id,
-                }
-            )
-        if not include_zero_time:
-            item_entries = [row for row in item_entries if row["seconds"] > 0]
-        item_entries = sorted(item_entries, key=lambda x: x["seconds"], reverse=True)
-    elif selected_bucket is not None and level_buckets:
-        for row in direct_items:
-            item_entries.append(
-                {
-                    "label": row["item"].display_title,
-                    "seconds": row["seconds"],
-                    "kind": "item",
-                    "item_id": row["item"].id,
-                }
-            )
-        if not include_zero_time:
-            item_entries = [row for row in item_entries if row["seconds"] > 0]
-        item_entries = sorted(item_entries, key=lambda x: x["seconds"], reverse=True)
+    root_buckets = bucket_children.get(None, [])
+    if selected_bucket is not None:
+        root_buckets = [selected_bucket]
 
-    if top_n is None:
-        entries = bucket_entries + item_entries
-    else:
-        selected = bucket_entries[:top_n]
-        remaining_slots = max(0, top_n - len(selected))
-        selected_items = item_entries[:remaining_slots]
+    bucket_tree = [
+        node
+        for bucket in root_buckets
+        if (node := build_node(bucket, 0)) is not None
+    ]
 
-        overflow_seconds = sum(x["seconds"] for x in bucket_entries[top_n:])
-        overflow_seconds += sum(x["seconds"] for x in item_entries[remaining_slots:])
+    def collect_max(nodes: list[dict[str, object]]) -> int:
+        max_value = 0
+        for node in nodes:
+            max_value = max(max_value, int(node["seconds"]))
+            for item in node["items"]:
+                max_value = max(max_value, int(item["seconds"]))
+            max_value = max(max_value, collect_max(node["children"]))
+        return max_value
 
-        entries = selected + selected_items
-        if overflow_seconds > 0:
-            entries.append(
-                {
-                    "label": "Others",
-                    "seconds": overflow_seconds,
-                    "kind": "overflow",
-                }
-            )
+    def apply_percent(nodes: list[dict[str, object]], max_value: int) -> None:
+        for node in nodes:
+            if max_value > 0:
+                node["percent"] = round(node["seconds"] / max_value * 100, 2)
+            else:
+                node["percent"] = 0
+            for item in node["items"]:
+                if max_value > 0:
+                    item["percent"] = round(item["seconds"] / max_value * 100, 2)
+                else:
+                    item["percent"] = 0
+            apply_percent(node["children"], max_value)
 
-    max_seconds = max((entry["seconds"] for entry in entries), default=0)
-    for entry in entries:
-        if max_seconds > 0:
-            entry["percent"] = round(entry["seconds"] / max_seconds * 100, 2)
-        else:
-            entry["percent"] = 0
-        entry["duration_display"] = format_seconds(entry["seconds"])
+    max_seconds = collect_max(bucket_tree)
+    apply_percent(bucket_tree, max_seconds)
 
     ignored_items = sorted(ignored_items, key=lambda x: x["seconds"], reverse=True)
     unassigned_items = sorted(unassigned_items, key=lambda x: x["seconds"], reverse=True)
 
     return {
-        "entries": entries,
+        "bucket_tree": bucket_tree,
         "total_seconds": sum(item_durations.values()),
         "total_display": format_seconds(sum(item_durations.values())),
         "unassigned_items": unassigned_items,

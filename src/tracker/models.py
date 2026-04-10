@@ -221,6 +221,7 @@ class Profile(models.Model):
     )
     time_dashboard_range_start = models.DateField(null=True, blank=True)
     time_dashboard_range_end = models.DateField(null=True, blank=True)
+    time_dashboard_expand_depth = models.PositiveSmallIntegerField(default=3)
 
     def flatpickr_format(self):
         # convert a few common strftime tokens to flatpickr

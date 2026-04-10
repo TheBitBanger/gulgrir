@@ -48,15 +48,15 @@
   {% else %}
     <div class="panel space-y-4">
       {% if layout %}
-        {% with mode=time_mode|default:"last" window=time_window rs=range_start re=range_end %}
-          <div class="text-sm flex flex-wrap items-center gap-2">
-            <a class="link" href="{% url 'time_dashboard' %}?layout={{ layout.id }}{% if mode %}&mode={{ mode }}{% endif %}{% if window %}&window={{ window }}{% endif %}{% if rs %}&range_start={{ rs|date:'Y-m-d' }}{% endif %}{% if re %}&range_end={{ re|date:'Y-m-d' }}{% endif %}">{{ layout.name }}</a>
-            {% for bucket in breadcrumb_buckets %}
-              <span class="text-muted">/</span>
-              <a class="link" href="{% url 'time_dashboard' %}?layout={{ layout.id }}&bucket={{ bucket.id }}{% if mode %}&mode={{ mode }}{% endif %}{% if window %}&window={{ window }}{% endif %}{% if rs %}&range_start={{ rs|date:'Y-m-d' }}{% endif %}{% if re %}&range_end={{ re|date:'Y-m-d' }}{% endif %}">{{ bucket.name }}</a>
-            {% endfor %}
-          </div>
-          <div class="flex flex-wrap items-center gap-2" x-data="{ mode: '{{ mode }}' }">
+          {% with mode=time_mode|default:"last" window=time_window rs=range_start re=range_end ed=expand_depth %}
+            <div class="text-sm flex flex-wrap items-center gap-2">
+              <a class="link" href="{% url 'time_dashboard' %}?layout={{ layout.id }}{% if mode %}&mode={{ mode }}{% endif %}{% if window %}&window={{ window }}{% endif %}{% if rs %}&range_start={{ rs|date:'Y-m-d' }}{% endif %}{% if re %}&range_end={{ re|date:'Y-m-d' }}{% endif %}{% if ed %}&expand_depth={{ ed }}{% endif %}">{{ layout.name }}</a>
+              {% for bucket in breadcrumb_buckets %}
+                <span class="text-muted">/</span>
+                <a class="link" href="{% url 'time_dashboard' %}?layout={{ layout.id }}&bucket={{ bucket.id }}{% if mode %}&mode={{ mode }}{% endif %}{% if window %}&window={{ window }}{% endif %}{% if rs %}&range_start={{ rs|date:'Y-m-d' }}{% endif %}{% if re %}&range_end={{ re|date:'Y-m-d' }}{% endif %}{% if ed %}&expand_depth={{ ed }}{% endif %}">{{ bucket.name }}</a>
+              {% endfor %}
+            </div>
+            <div class="flex flex-wrap items-center gap-2" x-data="{ mode: '{{ mode }}' }">
             <form method="get" class="flex flex-wrap items-center gap-2">
               <input type="hidden" name="layout" value="{{ layout.id }}">
               {% if selected_bucket %}
@@ -124,6 +124,14 @@
                   placeholder="YYYY-MM-DD"
                 >
               </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <label class="text-xs text-muted">Expand levels</label>
+                <select name="expand_depth" class="control">
+                  {% for depth in "12345"|make_list %}
+                    <option value="{{ depth }}" {% if expand_depth|stringformat:'s' == depth %}selected{% endif %}>{{ depth }}</option>
+                  {% endfor %}
+                </select>
+              </div>
               <button type="submit" class="btn">Apply</button>
               <button type="submit" name="save_pref" value="1" class="btn btn-compact">Set as default</button>
             </form>
@@ -169,7 +177,7 @@
             {% if show_zero_time %}
               <a
                 class="btn btn-compact"
-                href="{% url 'time_dashboard' %}?layout={{ layout.id }}{% if selected_bucket %}&bucket={{ selected_bucket.id }}{% endif %}{% if mode %}&mode={{ mode }}{% endif %}{% if window %}&window={{ window }}{% endif %}{% if rs %}&range_start={{ rs|date:'Y-m-d' }}{% endif %}{% if re %}&range_end={{ re|date:'Y-m-d' }}{% endif %}"
+                href="{% url 'time_dashboard' %}?layout={{ layout.id }}{% if selected_bucket %}&bucket={{ selected_bucket.id }}{% endif %}{% if mode %}&mode={{ mode }}{% endif %}{% if window %}&window={{ window }}{% endif %}{% if rs %}&range_start={{ rs|date:'Y-m-d' }}{% endif %}{% if re %}&range_end={{ re|date:'Y-m-d' }}{% endif %}{% if ed %}&expand_depth={{ ed }}{% endif %}"
               >
                 <span aria-hidden="true">✓</span>
                 Zero-time shown
@@ -177,7 +185,7 @@
             {% else %}
               <a
                 class="btn btn-compact"
-                href="{% url 'time_dashboard' %}?layout={{ layout.id }}&show_zero=1{% if selected_bucket %}&bucket={{ selected_bucket.id }}{% endif %}{% if mode %}&mode={{ mode }}{% endif %}{% if window %}&window={{ window }}{% endif %}{% if rs %}&range_start={{ rs|date:'Y-m-d' }}{% endif %}{% if re %}&range_end={{ re|date:'Y-m-d' }}{% endif %}"
+                href="{% url 'time_dashboard' %}?layout={{ layout.id }}&show_zero=1{% if selected_bucket %}&bucket={{ selected_bucket.id }}{% endif %}{% if mode %}&mode={{ mode }}{% endif %}{% if window %}&window={{ window }}{% endif %}{% if rs %}&range_start={{ rs|date:'Y-m-d' }}{% endif %}{% if re %}&range_end={{ re|date:'Y-m-d' }}{% endif %}{% if ed %}&expand_depth={{ ed }}{% endif %}"
               >
                 Zero-time hidden
               </a>
@@ -193,30 +201,9 @@
               <div class="panel-title">{{ chart.label }}</div>
               <div class="text-xs text-muted">{{ chart.total_display }}</div>
             </div>
-            {% if chart.entries %}
-              <div class="chart-grid text-sm">
-                {% for entry in chart.entries %}
-                  <div class="chart-row">
-                    <div class="chart-label truncate flex items-center gap-2">
-                      {% if entry.kind == "bucket" %}
-                        <span class="text-[10px] uppercase text-muted" style="border: 1px solid var(--border); border-radius: 0.35rem; padding: 0 0.3rem;">B</span>
-                      {% elif entry.kind == "item" %}
-                        <span class="text-[10px] uppercase text-muted" style="border: 1px solid var(--border); border-radius: 0.35rem; padding: 0 0.3rem;">I</span>
-                      {% endif %}
-                      {% if entry.kind == "bucket" and entry.bucket_id %}
-                        <a class="link" href="{% url 'time_dashboard' %}?layout={{ layout.id }}&bucket={{ entry.bucket_id }}{% if time_mode %}&mode={{ time_mode }}{% endif %}{% if time_window %}&window={{ time_window }}{% endif %}{% if range_start %}&range_start={{ range_start|date:'Y-m-d' }}{% endif %}{% if range_end %}&range_end={{ range_end|date:'Y-m-d' }}{% endif %}">{{ entry.label }}</a>
-                      {% elif entry.kind == "item" and entry.item_id %}
-                        <a class="link" href="{% url 'useritem_detail' entry.item_id %}">{{ entry.label }}</a>
-                      {% else %}
-                        {{ entry.label }}
-                      {% endif %}
-                    </div>
-                    <div class="chart-bar h-2 rounded" style="background: var(--surface-2);">
-                      <div class="h-2 rounded" style="width: {{ entry.percent }}%; background: {% if entry.kind == 'bucket' %}var(--accent){% elif entry.kind == 'item' %}var(--success){% else %}var(--warn){% endif %};"></div>
-                    </div>
-                    <div class="chart-duration text-xs text-muted">{{ entry.duration_display }}</div>
-                  </div>
-                {% endfor %}
+            {% if chart.bucket_tree %}
+              <div class="space-y-2">
+                {% include "tracker/partials/time_bucket_tree.html" with nodes=chart.bucket_tree %}
               </div>
             {% else %}
               <div class="text-sm text-muted">No time tracked yet.</div>
@@ -229,30 +216,9 @@
               <div class="panel-title">{{ chart.label }}</div>
               <div class="text-xs text-muted">{{ chart.total_display }}</div>
             </div>
-            {% if chart.entries %}
-              <div class="chart-grid text-sm">
-                {% for entry in chart.entries %}
-                  <div class="chart-row">
-                    <div class="chart-label truncate flex items-center gap-2">
-                      {% if entry.kind == "bucket" %}
-                        <span class="text-[10px] uppercase text-muted" style="border: 1px solid var(--border); border-radius: 0.35rem; padding: 0 0.3rem;">B</span>
-                      {% elif entry.kind == "item" %}
-                        <span class="text-[10px] uppercase text-muted" style="border: 1px solid var(--border); border-radius: 0.35rem; padding: 0 0.3rem;">I</span>
-                      {% endif %}
-                      {% if entry.kind == "bucket" and entry.bucket_id %}
-                        <a class="link" href="{% url 'time_dashboard' %}?layout={{ layout.id }}&bucket={{ entry.bucket_id }}{% if time_mode %}&mode={{ time_mode }}{% endif %}{% if time_window %}&window={{ time_window }}{% endif %}{% if range_start %}&range_start={{ range_start|date:'Y-m-d' }}{% endif %}{% if range_end %}&range_end={{ range_end|date:'Y-m-d' }}{% endif %}">{{ entry.label }}</a>
-                      {% elif entry.kind == "item" and entry.item_id %}
-                        <a class="link" href="{% url 'useritem_detail' entry.item_id %}">{{ entry.label }}</a>
-                      {% else %}
-                        {{ entry.label }}
-                      {% endif %}
-                    </div>
-                    <div class="chart-bar h-2 rounded" style="background: var(--surface-2);">
-                      <div class="h-2 rounded" style="width: {{ entry.percent }}%; background: {% if entry.kind == 'bucket' %}var(--accent){% elif entry.kind == 'item' %}var(--success){% else %}var(--warn){% endif %};"></div>
-                    </div>
-                    <div class="chart-duration text-xs text-muted">{{ entry.duration_display }}</div>
-                  </div>
-                {% endfor %}
+            {% if chart.bucket_tree %}
+              <div class="space-y-2">
+                {% include "tracker/partials/time_bucket_tree.html" with nodes=chart.bucket_tree %}
               </div>
             {% else %}
               <div class="text-sm text-muted">No time tracked yet.</div>
@@ -268,30 +234,9 @@
               <div class="panel-title">{{ chart.label }}</div>
               <div class="text-xs text-muted">{{ chart.total_display }}</div>
             </div>
-            {% if chart.entries %}
-              <div class="chart-grid text-sm">
-                {% for entry in chart.entries %}
-                  <div class="chart-row">
-                    <div class="chart-label truncate flex items-center gap-2">
-                      {% if entry.kind == "bucket" %}
-                        <span class="text-[10px] uppercase text-muted" style="border: 1px solid var(--border); border-radius: 0.35rem; padding: 0 0.3rem;">B</span>
-                      {% elif entry.kind == "item" %}
-                        <span class="text-[10px] uppercase text-muted" style="border: 1px solid var(--border); border-radius: 0.35rem; padding: 0 0.3rem;">I</span>
-                      {% endif %}
-                      {% if entry.kind == "bucket" and entry.bucket_id %}
-                        <a class="link" href="{% url 'time_dashboard' %}?layout={{ layout.id }}&bucket={{ entry.bucket_id }}{% if time_mode %}&mode={{ time_mode }}{% endif %}{% if time_window %}&window={{ time_window }}{% endif %}{% if range_start %}&range_start={{ range_start|date:'Y-m-d' }}{% endif %}{% if range_end %}&range_end={{ range_end|date:'Y-m-d' }}{% endif %}">{{ entry.label }}</a>
-                      {% elif entry.kind == "item" and entry.item_id %}
-                        <a class="link" href="{% url 'useritem_detail' entry.item_id %}">{{ entry.label }}</a>
-                      {% else %}
-                        {{ entry.label }}
-                      {% endif %}
-                    </div>
-                    <div class="chart-bar h-2 rounded" style="background: var(--surface-2);">
-                      <div class="h-2 rounded" style="width: {{ entry.percent }}%; background: {% if entry.kind == 'bucket' %}var(--accent){% elif entry.kind == 'item' %}var(--success){% else %}var(--warn){% endif %};"></div>
-                    </div>
-                    <div class="chart-duration text-xs text-muted">{{ entry.duration_display }}</div>
-                  </div>
-                {% endfor %}
+            {% if chart.bucket_tree %}
+              <div class="space-y-2">
+                {% include "tracker/partials/time_bucket_tree.html" with nodes=chart.bucket_tree %}
               </div>
             {% else %}
               <div class="text-sm text-muted">No time tracked yet.</div>

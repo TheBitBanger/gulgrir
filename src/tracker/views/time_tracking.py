@@ -31,6 +31,7 @@ def time_dashboard(request):
     window_key = request.GET.get("window")
     range_start_raw = request.GET.get("range_start")
     range_end_raw = request.GET.get("range_end")
+    expand_depth_raw = request.GET.get("expand_depth")
 
     def parse_date(value: str | None) -> date | None:
         if not value:
@@ -40,8 +41,20 @@ def time_dashboard(request):
         except ValueError:
             return None
 
+    def parse_expand_depth(value: str | None) -> int | None:
+        if not value:
+            return None
+        try:
+            depth = int(value)
+        except ValueError:
+            return None
+        if depth < 1:
+            return None
+        return depth
+
     range_start = parse_date(range_start_raw)
     range_end = parse_date(range_end_raw)
+    expand_depth = parse_expand_depth(expand_depth_raw)
     if range_start and range_end and range_start > range_end:
         range_start, range_end = range_end, range_start
 
@@ -50,7 +63,7 @@ def time_dashboard(request):
         profile, _ = Profile.objects.get_or_create(user=request.user)
 
     has_time_params = any(
-        [mode, window_key, range_start_raw, range_end_raw]
+        [mode, window_key, range_start_raw, range_end_raw, expand_depth_raw]
     )
 
     if not has_time_params and profile:
@@ -58,6 +71,10 @@ def time_dashboard(request):
         window_key = profile.time_dashboard_window_key or "all_time"
         range_start = profile.time_dashboard_range_start
         range_end = profile.time_dashboard_range_end
+        expand_depth = profile.time_dashboard_expand_depth or 3
+
+    if expand_depth is None:
+        expand_depth = 3
 
     resolved_mode = mode if mode in {"last", "range"} else "last"
     resolved_window = window_key or "all_time"
@@ -80,12 +97,14 @@ def time_dashboard(request):
         profile.time_dashboard_range_end = (
             resolved_range_end if resolved_mode == "range" else None
         )
+        profile.time_dashboard_expand_depth = expand_depth
         profile.save(
             update_fields=[
                 "time_dashboard_mode",
                 "time_dashboard_window_key",
                 "time_dashboard_range_start",
                 "time_dashboard_range_end",
+                "time_dashboard_expand_depth",
             ]
         )
 
@@ -106,11 +125,13 @@ def time_dashboard(request):
         selected_window_key=selected_window_key,
         selected_range_start=selected_range_start,
         selected_range_end=selected_range_end,
+        expand_depth=expand_depth,
     )
     context["time_mode"] = resolved_mode
     context["time_window"] = resolved_window
     context["range_start"] = resolved_range_start
     context["range_end"] = resolved_range_end
+    context["expand_depth"] = expand_depth
     return render(request, "tracker/time_dashboard.html", context)
 
 

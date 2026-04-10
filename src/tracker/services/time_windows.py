@@ -15,35 +15,44 @@ class TimeWindow:
     group: str
 
 
-def day_range(day: date) -> tuple[datetime, datetime]:
+def day_range(day: date, cutoff_time: time | None = None) -> tuple[datetime, datetime]:
     tz = timezone.get_current_timezone()
-    start = timezone.make_aware(datetime.combine(day, time.min), tz)
+    cutoff = cutoff_time or time.min
+    start = timezone.make_aware(datetime.combine(day, cutoff), tz)
     end = start + timedelta(days=1)
     return start, end
 
 
-def _calendar_window(today: date, *, days: int) -> tuple[datetime, datetime]:
+def _calendar_window(
+    today: date, *, days: int, cutoff_time: time | None = None
+) -> tuple[datetime, datetime]:
     start_day = today - timedelta(days=days - 1)
-    start, _ = day_range(start_day)
-    _, end = day_range(today)
+    start, _ = day_range(start_day, cutoff_time)
+    _, end = day_range(today, cutoff_time)
     return start, end
 
 
-def build_time_windows(now: datetime | None = None) -> list[TimeWindow]:
+def build_time_windows(
+    now: datetime | None = None, cutoff_time: time | None = None
+) -> list[TimeWindow]:
     now = now or timezone.now()
-    today = timezone.localdate(now)
+    local_now = timezone.localtime(now)
+    cutoff = cutoff_time or time.min
+    today = local_now.date()
+    if local_now.timetz().replace(tzinfo=None) < cutoff:
+        today = today - timedelta(days=1)
     yesterday = today - timedelta(days=1)
 
-    today_start, today_end = day_range(today)
-    yesterday_start, yesterday_end = day_range(yesterday)
+    today_start, today_end = day_range(today, cutoff)
+    yesterday_start, yesterday_end = day_range(yesterday, cutoff)
 
-    last_7_start, last_7_end = _calendar_window(today, days=7)
-    last_14_start, last_14_end = _calendar_window(today, days=14)
-    last_21_start, last_21_end = _calendar_window(today, days=21)
-    last_30_start, last_30_end = _calendar_window(today, days=30)
-    last_60_start, last_60_end = _calendar_window(today, days=60)
-    last_90_start, last_90_end = _calendar_window(today, days=90)
-    last_365_start, last_365_end = _calendar_window(today, days=365)
+    last_7_start, last_7_end = _calendar_window(today, days=7, cutoff_time=cutoff)
+    last_14_start, last_14_end = _calendar_window(today, days=14, cutoff_time=cutoff)
+    last_21_start, last_21_end = _calendar_window(today, days=21, cutoff_time=cutoff)
+    last_30_start, last_30_end = _calendar_window(today, days=30, cutoff_time=cutoff)
+    last_60_start, last_60_end = _calendar_window(today, days=60, cutoff_time=cutoff)
+    last_90_start, last_90_end = _calendar_window(today, days=90, cutoff_time=cutoff)
+    last_365_start, last_365_end = _calendar_window(today, days=365, cutoff_time=cutoff)
 
     return [
         TimeWindow(
@@ -119,10 +128,10 @@ def build_time_windows(now: datetime | None = None) -> list[TimeWindow]:
     ]
 
 
-def build_picker_windows() -> list[TimeWindow]:
+def build_picker_windows(cutoff_time: time | None = None) -> list[TimeWindow]:
     return [
         window
-        for window in build_time_windows()
+        for window in build_time_windows(cutoff_time=cutoff_time)
         if window.key in {
             "last_7",
             "last_14",
@@ -136,14 +145,19 @@ def build_picker_windows() -> list[TimeWindow]:
     ]
 
 
-def time_window_choices() -> list[tuple[str, str]]:
-    return [(window.key, window.label) for window in build_time_windows()]
+def time_window_choices(cutoff_time: time | None = None) -> list[tuple[str, str]]:
+    return [
+        (window.key, window.label)
+        for window in build_time_windows(cutoff_time=cutoff_time)
+    ]
 
 
-def find_time_window(key: str | None) -> TimeWindow | None:
+def find_time_window(
+    key: str | None, cutoff_time: time | None = None
+) -> TimeWindow | None:
     if not key:
         return None
-    for window in build_time_windows():
+    for window in build_time_windows(cutoff_time=cutoff_time):
         if window.key == key:
             return window
     return None

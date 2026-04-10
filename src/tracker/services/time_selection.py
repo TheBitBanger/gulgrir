@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import random
-from datetime import date
+from datetime import date, time
 from typing import TypedDict
 
 from django.urls import reverse
@@ -27,6 +27,7 @@ def select_from_level_for_user(
     time_window_key: str | None,
     range_start: date | None = None,
     range_end: date | None = None,
+    day_cutoff: time | None = None,
 ) -> SelectionResult | None:
     layout = TimeLayout.objects.filter(user=user, id=layout_id).first()
     if layout is None:
@@ -44,10 +45,12 @@ def select_from_level_for_user(
     bucket_paths = build_bucket_paths(buckets)
 
     if range_start and range_end:
-        start, _ = day_range(range_start)
-        _, end = day_range(range_end)
+        start, _ = day_range(range_start, day_cutoff)
+        _, end = day_range(range_end, day_cutoff)
     else:
-        window = find_time_window(time_window_key) or find_time_window("all_time")
+        window = find_time_window(time_window_key, day_cutoff) or find_time_window(
+            "all_time", day_cutoff
+        )
         start = window.start if window else None
         end = window.end if window else None
     durations = load_item_durations(user, start, end)

@@ -73,6 +73,11 @@ urlpatterns = [
     path("my/time/", time_tracking.time_dashboard, name="time_dashboard"),
     path("my/time/settings/", time_tracking.time_settings, name="time_settings"),
     path(
+        "my/time/settings/dashboard/",
+        time_tracking.time_dashboard_preferences_update,
+        name="time_dashboard_preferences_update",
+    ),
+    path(
         "my/time/layouts/add/",
         time_tracking.time_layout_create,
         name="time_layout_add",

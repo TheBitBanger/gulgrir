@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, time
 
 from ..models import TimeBucket, TimeBucketAssignment, TimeLayout, UserItem
 from .time_dashboard import (
@@ -24,6 +24,7 @@ def build_dashboard_context_for_user(
     selected_label: str | None = None,
     expand_depth: int = 3,
     sort_dir: str = "desc",
+    day_cutoff: time | None = None,
 ) -> dict[str, object]:
     layouts = list(TimeLayout.objects.filter(user=user).order_by("order", "name"))
     layout = None
@@ -59,12 +60,13 @@ def build_dashboard_context_for_user(
     selector_windows = []
 
     if layout:
-        time_windows = build_time_windows()
+        time_windows = build_time_windows(cutoff_time=day_cutoff)
         today_window = next((w for w in time_windows if w.key == "today"), None)
         yesterday_window = next((w for w in time_windows if w.key == "yesterday"), None)
         all_time_window = next((w for w in time_windows if w.group == "all_time"), None)
         selector_windows = [
-            {"key": w.key, "label": w.label} for w in build_picker_windows()
+            {"key": w.key, "label": w.label}
+            for w in build_picker_windows(cutoff_time=day_cutoff)
         ]
 
         def period_context(
@@ -113,8 +115,8 @@ def build_dashboard_context_for_user(
 
         def resolve_selected_window() -> tuple[datetime | None, datetime | None, str]:
             if selected_range_start and selected_range_end:
-                start, _ = day_range(selected_range_start)
-                _, end = day_range(selected_range_end)
+                start, _ = day_range(selected_range_start, day_cutoff)
+                _, end = day_range(selected_range_end, day_cutoff)
                 label = selected_label or "Selected range"
                 return start, end, label
 

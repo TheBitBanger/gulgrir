@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import time, timedelta
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -566,6 +566,14 @@ class TimeDashboardAssignmentTests(TestCase):
 
 
 class TimeWindowCalendarTests(TestCase):
+    def test_day_range_respects_cutoff(self):
+        tz = timezone.get_current_timezone()
+        cutoff = time(4, 0)
+        start, end = day_range(timezone.localdate(), cutoff)
+        self.assertEqual(start.tzinfo, tz)
+        self.assertEqual(start.time(), cutoff)
+        self.assertEqual(end - start, timedelta(days=1))
+
     def test_last_7_days_uses_calendar_bounds(self):
         tz = timezone.get_current_timezone()
         now = timezone.make_aware(
@@ -593,6 +601,29 @@ class TimeWindowCalendarTests(TestCase):
         expected_today_start, expected_today_end = day_range(today)
         expected_yesterday_start, expected_yesterday_end = day_range(
             today - timedelta(days=1)
+        )
+        self.assertEqual(today_window.start, expected_today_start)
+        self.assertEqual(today_window.end, expected_today_end)
+        self.assertEqual(yesterday_window.start, expected_yesterday_start)
+        self.assertEqual(yesterday_window.end, expected_yesterday_end)
+
+    def test_cutoff_shifts_today_window(self):
+        tz = timezone.get_current_timezone()
+        cutoff = time(4, 0)
+        now = timezone.make_aware(
+            timezone.datetime(2025, 5, 19, 2, 0, 0),
+            tz,
+        )
+        windows = build_time_windows(now=now, cutoff_time=cutoff)
+        today_window = next(w for w in windows if w.key == "today")
+        yesterday_window = next(w for w in windows if w.key == "yesterday")
+        expected_today_start, expected_today_end = day_range(
+            timezone.localdate(now) - timedelta(days=1),
+            cutoff,
+        )
+        expected_yesterday_start, expected_yesterday_end = day_range(
+            timezone.localdate(now) - timedelta(days=2),
+            cutoff,
         )
         self.assertEqual(today_window.start, expected_today_start)
         self.assertEqual(today_window.end, expected_today_end)

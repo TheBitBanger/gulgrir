@@ -1,5 +1,5 @@
 import json
-from datetime import date
+from datetime import date, time
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -19,6 +19,7 @@ from ..services.time_dashboard import (
 )
 from ..services.time_dashboard_rules import build_dashboard_context_for_user
 from ..services.time_selection import select_from_level_for_user
+from ..services.time_windows import build_picker_windows
 
 
 @login_required
@@ -82,11 +83,16 @@ def time_dashboard(request):
         range_end = profile.time_dashboard_range_end
         expand_depth = profile.time_dashboard_expand_depth or 3
         sort_dir = profile.time_dashboard_sort_dir or "desc"
+        day_cutoff = profile.time_dashboard_day_cutoff
+    else:
+        day_cutoff = profile.time_dashboard_day_cutoff if profile else time(0, 0)
 
     if expand_depth is None:
         expand_depth = 3
     if sort_dir is None:
         sort_dir = "desc"
+    if day_cutoff is None:
+        day_cutoff = time(0, 0)
 
     resolved_mode = mode if mode in {"last", "range"} else "last"
     resolved_window = window_key or "all_time"
@@ -111,6 +117,7 @@ def time_dashboard(request):
         )
         profile.time_dashboard_expand_depth = expand_depth
         profile.time_dashboard_sort_dir = sort_dir
+        profile.time_dashboard_day_cutoff = day_cutoff
         profile.save(
             update_fields=[
                 "time_dashboard_mode",
@@ -119,6 +126,7 @@ def time_dashboard(request):
                 "time_dashboard_range_end",
                 "time_dashboard_expand_depth",
                 "time_dashboard_sort_dir",
+                "time_dashboard_day_cutoff",
             ]
         )
 
@@ -141,6 +149,7 @@ def time_dashboard(request):
         selected_range_end=selected_range_end,
         expand_depth=expand_depth,
         sort_dir=sort_dir,
+        day_cutoff=day_cutoff,
     )
     context["time_mode"] = resolved_mode
     context["time_window"] = resolved_window
@@ -148,11 +157,15 @@ def time_dashboard(request):
     context["range_end"] = resolved_range_end
     context["expand_depth"] = expand_depth
     context["sort_dir"] = sort_dir
+    context["day_cutoff"] = day_cutoff
     return render(request, "tracker/time_dashboard.html", context)
 
 
 @login_required
 def time_settings(request):
+    profile = None
+    if request.user.is_authenticated:
+        profile, _ = Profile.objects.get_or_create(user=request.user)
     layouts = list(
         TimeLayout.objects.filter(user=request.user).order_by("order", "name")
     )
@@ -217,8 +230,95 @@ def time_settings(request):
             "buckets": buckets,
             "bucket_options": bucket_options,
             "bucket_management": bucket_management,
+            "selector_windows": [
+                {"key": w.key, "label": w.label}
+                for w in build_picker_windows(
+                    cutoff_time=profile.time_dashboard_day_cutoff if profile else None
+                )
+            ],
+            "profile": profile,
         },
     )
+
+
+@require_POST
+@login_required
+def time_dashboard_preferences_update(request):
+    next_url = request.POST.get("next")
+    mode = request.POST.get("mode")
+    window_key = request.POST.get("window")
+    range_start_raw = request.POST.get("range_start")
+    range_end_raw = request.POST.get("range_end")
+    expand_depth_raw = request.POST.get("expand_depth")
+    sort_dir_raw = request.POST.get("sort_dir")
+    day_cutoff_raw = request.POST.get("day_cutoff")
+
+    def parse_date(value: str | None) -> date | None:
+        if not value:
+            return None
+        try:
+            return date.fromisoformat(value)
+        except ValueError:
+            return None
+
+    def parse_expand_depth(value: str | None) -> int:
+        if not value:
+            return 3
+        try:
+            depth = int(value)
+        except ValueError:
+            return 3
+        return depth if depth > 0 else 3
+
+    def parse_sort_dir(value: str | None) -> str:
+        return value if value in {"asc", "desc"} else "desc"
+
+    def parse_day_cutoff(value: str | None) -> time:
+        if not value:
+            return time(0, 0)
+        try:
+            return time.fromisoformat(value)
+        except ValueError:
+            return time(0, 0)
+
+    range_start = parse_date(range_start_raw)
+    range_end = parse_date(range_end_raw)
+    if range_start and range_end and range_start > range_end:
+        range_start, range_end = range_end, range_start
+
+    profile, _ = Profile.objects.get_or_create(user=request.user)
+    profile.time_dashboard_mode = mode if mode in {"last", "range"} else "last"
+    profile.time_dashboard_window_key = (
+        window_key if profile.time_dashboard_mode == "last" else ""
+    )
+    profile.time_dashboard_range_start = (
+        range_start if profile.time_dashboard_mode == "range" else None
+    )
+    profile.time_dashboard_range_end = (
+        range_end if profile.time_dashboard_mode == "range" else None
+    )
+    profile.time_dashboard_expand_depth = parse_expand_depth(expand_depth_raw)
+    profile.time_dashboard_sort_dir = parse_sort_dir(sort_dir_raw)
+    profile.time_dashboard_day_cutoff = parse_day_cutoff(day_cutoff_raw)
+    profile.save(
+        update_fields=[
+            "time_dashboard_mode",
+            "time_dashboard_window_key",
+            "time_dashboard_range_start",
+            "time_dashboard_range_end",
+            "time_dashboard_expand_depth",
+            "time_dashboard_sort_dir",
+            "time_dashboard_day_cutoff",
+        ]
+    )
+
+    if next_url and url_has_allowed_host_and_scheme(
+        next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return redirect(next_url)
+    return redirect("time_settings")
 
 
 @require_POST
@@ -258,6 +358,7 @@ def time_level_select(request):
         selected_range_end = range_end
 
     try:
+        profile, _ = Profile.objects.get_or_create(user=request.user)
         payload = select_from_level_for_user(
             user=request.user,
             layout_id=layout_id_int,
@@ -265,6 +366,7 @@ def time_level_select(request):
             time_window_key=window_key,
             range_start=selected_range_start,
             range_end=selected_range_end,
+            day_cutoff=profile.time_dashboard_day_cutoff,
         )
     except ValueError as exc:
         return HttpResponseBadRequest(str(exc))

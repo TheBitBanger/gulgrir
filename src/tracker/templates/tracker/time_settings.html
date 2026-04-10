@@ -44,6 +44,85 @@
     </form>
   </div>
 
+  <div class="panel space-y-4">
+    <div class="panel-title">Dashboard preferences</div>
+    <form method="post" action="{% url 'time_dashboard_preferences_update' %}" class="space-y-4">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{% url 'time_settings' %}{% if layout %}?layout={{ layout.id }}{% endif %}">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm mb-1">Day cutoff</label>
+          <input
+            type="time"
+            name="day_cutoff"
+            class="control"
+            value="{% if profile and profile.time_dashboard_day_cutoff %}{{ profile.time_dashboard_day_cutoff|time:'H:i' }}{% else %}00:00{% endif %}"
+          >
+        </div>
+        <div>
+          <label class="block text-sm mb-1">Sort direction</label>
+          <select name="sort_dir" class="control">
+            <option value="desc" {% if profile and profile.time_dashboard_sort_dir == "desc" %}selected{% endif %}>Desc</option>
+            <option value="asc" {% if profile and profile.time_dashboard_sort_dir == "asc" %}selected{% endif %}>Asc</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm mb-1">Default mode</label>
+          <select name="mode" class="control">
+            <option value="last" {% if not profile or profile.time_dashboard_mode != "range" %}selected{% endif %}>Last X days</option>
+            <option value="range" {% if profile and profile.time_dashboard_mode == "range" %}selected{% endif %}>Time range</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm mb-1">Default window</label>
+          <select name="window" class="control">
+            {% for window in selector_windows %}
+              <option
+                value="{{ window.key }}"
+                {% if profile and profile.time_dashboard_window_key %}
+                  {% if window.key == profile.time_dashboard_window_key %}selected{% endif %}
+                {% else %}
+                  {% if window.key == "all_time" %}selected{% endif %}
+                {% endif %}
+              >
+                {{ window.label }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm mb-1">Default range start</label>
+          <input
+            type="text"
+            name="range_start"
+            class="control js-date"
+            value="{% if profile and profile.time_dashboard_range_start %}{{ profile.time_dashboard_range_start|date:'Y-m-d' }}{% endif %}"
+            placeholder="YYYY-MM-DD"
+          >
+        </div>
+        <div>
+          <label class="block text-sm mb-1">Default range end</label>
+          <input
+            type="text"
+            name="range_end"
+            class="control js-date"
+            value="{% if profile and profile.time_dashboard_range_end %}{{ profile.time_dashboard_range_end|date:'Y-m-d' }}{% endif %}"
+            placeholder="YYYY-MM-DD"
+          >
+        </div>
+        <div>
+          <label class="block text-sm mb-1">Expand levels</label>
+          <select name="expand_depth" class="control">
+            {% for depth in "12345"|make_list %}
+              <option value="{{ depth }}" {% if profile and profile.time_dashboard_expand_depth|stringformat:'s' == depth %}selected{% endif %}>{{ depth }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <button type="submit" class="btn">Save dashboard preferences</button>
+    </form>
+  </div>
+
   {% if layout %}
     <div class="panel space-y-4">
       <div class="panel-title">Layout settings</div>

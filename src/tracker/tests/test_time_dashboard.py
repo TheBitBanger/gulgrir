@@ -254,6 +254,106 @@ class TimeDashboardAssignmentTests(TestCase):
         self.assertEqual(result["bucket_tree"][0]["name"], "Projects")
         self.assertEqual(result["bucket_tree"][0]["bucket_share_percent"], 100)
 
+    def test_build_chart_entries_sorting(self):
+        item_play = UserItem.objects.create(
+            user=self.user,
+            is_project=True,
+            title_override="Play item",
+        )
+        item_alpha = UserItem.objects.create(
+            user=self.user,
+            is_project=True,
+            title_override="Alpha task",
+        )
+        item_beta = UserItem.objects.create(
+            user=self.user,
+            is_project=True,
+            title_override="Beta task",
+        )
+        TimeBucketAssignment.objects.create(
+            layout=self.layout,
+            user_item=item_play,
+            bucket=self.bucket_play,
+        )
+        TimeBucketAssignment.objects.create(
+            layout=self.layout,
+            user_item=item_alpha,
+            bucket=self.bucket_work,
+        )
+        TimeBucketAssignment.objects.create(
+            layout=self.layout,
+            user_item=item_beta,
+            bucket=self.bucket_work,
+        )
+        durations = {
+            self.item_work.id: int(timedelta(minutes=40).total_seconds()),
+            item_play.id: int(timedelta(minutes=20).total_seconds()),
+            item_alpha.id: int(timedelta(minutes=10).total_seconds()),
+            item_beta.id: int(timedelta(minutes=10).total_seconds()),
+        }
+        user_items = {
+            self.item_work.id: self.item_work,
+            item_play.id: item_play,
+            item_alpha.id: item_alpha,
+            item_beta.id: item_beta,
+        }
+        assignments = {
+            a.user_item_id: a
+            for a in TimeBucketAssignment.objects.filter(layout=self.layout)
+        }
+        buckets = list(TimeBucket.objects.filter(layout=self.layout))
+
+        def find_node(nodes: list[dict[str, object]], name: str) -> dict[str, object] | None:
+            for node in nodes:
+                if node["name"] == name:
+                    return node
+                child = find_node(node.get("children", []), name)
+                if child is not None:
+                    return child
+            return None
+
+        result_desc = build_chart_entries(
+            layout=self.layout,
+            buckets=buckets,
+            assignments=assignments,
+            item_durations=durations,
+            user_items=user_items,
+            bucket_id=None,
+            include_zero_time=True,
+            sort_dir="desc",
+        )
+        bucket_names_desc = [node["name"] for node in result_desc["bucket_tree"]]
+        self.assertEqual(bucket_names_desc[:2], ["Work", "Play"])
+        work_node_desc = find_node(result_desc["bucket_tree"], "Work")
+        self.assertIsNotNone(work_node_desc)
+        work_item_titles_desc = [item["title"] for item in work_node_desc["items"]]
+        self.assertEqual(work_item_titles_desc[:3], [
+            "Work item",
+            "Alpha task",
+            "Beta task",
+        ])
+
+        result_asc = build_chart_entries(
+            layout=self.layout,
+            buckets=buckets,
+            assignments=assignments,
+            item_durations=durations,
+            user_items=user_items,
+            bucket_id=None,
+            include_zero_time=True,
+            sort_dir="asc",
+        )
+        bucket_names_asc = [node["name"] for node in result_asc["bucket_tree"]]
+        self.assertEqual(bucket_names_asc[:2], ["Play", "Work"])
+        work_node_asc = find_node(result_asc["bucket_tree"], "Work")
+        self.assertIsNotNone(work_node_asc)
+        work_item_titles_asc = [item["title"] for item in work_node_asc["items"]]
+        self.assertEqual(work_item_titles_asc[:3], [
+            "Alpha task",
+            "Beta task",
+            "Work item",
+        ])
+
     def test_ignore_assignment_clears_bucket(self):
         self.client.force_login(self.user)
         url = reverse("time_assignment_update")

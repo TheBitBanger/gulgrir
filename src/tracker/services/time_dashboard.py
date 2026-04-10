@@ -113,6 +113,7 @@ def build_chart_entries(
     bucket_id: int | None,
     include_zero_time: bool = False,
     expand_depth: int = 3,
+    sort_dir: str = "desc",
 ) -> dict[str, object]:
     bucket_by_id = {bucket.id: bucket for bucket in buckets}
     bucket_children = build_bucket_children_map(buckets)
@@ -193,6 +194,27 @@ def build_chart_entries(
                 }
             )
 
+    def bucket_sort_key(node: dict[str, object]) -> tuple[int, str]:
+        seconds = int(node["seconds"])
+        name = str(node["name"]).lower()
+        if sort_dir == "asc":
+            return (seconds, name)
+        return (-seconds, name)
+
+    def item_sort_key(item: dict[str, object]) -> tuple[int, str]:
+        seconds = int(item["seconds"])
+        name = str(item["title"]).lower()
+        if sort_dir == "asc":
+            return (seconds, name)
+        return (-seconds, name)
+
+    def entry_sort_key(entry: dict[str, object]) -> tuple[int, str]:
+        seconds = int(entry["seconds"])
+        name = str(entry["name"]).lower()
+        if sort_dir == "asc":
+            return (seconds, name)
+        return (-seconds, name)
+
     def build_node(bucket: TimeBucket, depth: int) -> dict[str, object] | None:
         if bucket.id is None or bucket.id not in allowed_bucket_ids:
             return None
@@ -202,7 +224,7 @@ def build_chart_entries(
             if node is not None:
                 child_nodes.append(node)
         items = bucket_items.get(bucket.id, [])
-        items = sorted(items, key=lambda x: x["seconds"], reverse=True)
+        items = sorted(items, key=item_sort_key)
         seconds = bucket_seconds.get(bucket.id, 0)
         node = {
             "id": bucket.id,
@@ -215,6 +237,27 @@ def build_chart_entries(
             "children": child_nodes,
             "is_expanded": depth < default_expand_depth,
         }
+        entries: list[dict[str, object]] = []
+        for child in child_nodes:
+            entries.append(
+                {
+                    "kind": "bucket",
+                    "node": child,
+                    "nodes": [child],
+                    "seconds": child["seconds"],
+                    "name": child["name"],
+                }
+            )
+        for item in items:
+            entries.append(
+                {
+                    "kind": "item",
+                    "item": item,
+                    "seconds": item["seconds"],
+                    "name": item["title"],
+                }
+            )
+        node["entries"] = sorted(entries, key=entry_sort_key)
         if include_zero_time or seconds > 0 or items or child_nodes:
             return node
         return None
@@ -228,6 +271,7 @@ def build_chart_entries(
         for bucket in root_buckets
         if (node := build_node(bucket, 0)) is not None
     ]
+    bucket_tree = sorted(bucket_tree, key=bucket_sort_key)
 
     def collect_max(nodes: list[dict[str, object]]) -> int:
         max_value = 0

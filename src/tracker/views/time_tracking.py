@@ -32,6 +32,7 @@ def time_dashboard(request):
     range_start_raw = request.GET.get("range_start")
     range_end_raw = request.GET.get("range_end")
     expand_depth_raw = request.GET.get("expand_depth")
+    sort_dir_raw = request.GET.get("sort_dir")
 
     def parse_date(value: str | None) -> date | None:
         if not value:
@@ -52,9 +53,17 @@ def time_dashboard(request):
             return None
         return depth
 
+    def parse_sort_dir(value: str | None) -> str | None:
+        if not value:
+            return None
+        if value not in {"asc", "desc"}:
+            return None
+        return value
+
     range_start = parse_date(range_start_raw)
     range_end = parse_date(range_end_raw)
     expand_depth = parse_expand_depth(expand_depth_raw)
+    sort_dir = parse_sort_dir(sort_dir_raw)
     if range_start and range_end and range_start > range_end:
         range_start, range_end = range_end, range_start
 
@@ -63,7 +72,7 @@ def time_dashboard(request):
         profile, _ = Profile.objects.get_or_create(user=request.user)
 
     has_time_params = any(
-        [mode, window_key, range_start_raw, range_end_raw, expand_depth_raw]
+        [mode, window_key, range_start_raw, range_end_raw, expand_depth_raw, sort_dir_raw]
     )
 
     if not has_time_params and profile:
@@ -72,9 +81,12 @@ def time_dashboard(request):
         range_start = profile.time_dashboard_range_start
         range_end = profile.time_dashboard_range_end
         expand_depth = profile.time_dashboard_expand_depth or 3
+        sort_dir = profile.time_dashboard_sort_dir or "desc"
 
     if expand_depth is None:
         expand_depth = 3
+    if sort_dir is None:
+        sort_dir = "desc"
 
     resolved_mode = mode if mode in {"last", "range"} else "last"
     resolved_window = window_key or "all_time"
@@ -98,6 +110,7 @@ def time_dashboard(request):
             resolved_range_end if resolved_mode == "range" else None
         )
         profile.time_dashboard_expand_depth = expand_depth
+        profile.time_dashboard_sort_dir = sort_dir
         profile.save(
             update_fields=[
                 "time_dashboard_mode",
@@ -105,6 +118,7 @@ def time_dashboard(request):
                 "time_dashboard_range_start",
                 "time_dashboard_range_end",
                 "time_dashboard_expand_depth",
+                "time_dashboard_sort_dir",
             ]
         )
 
@@ -126,12 +140,14 @@ def time_dashboard(request):
         selected_range_start=selected_range_start,
         selected_range_end=selected_range_end,
         expand_depth=expand_depth,
+        sort_dir=sort_dir,
     )
     context["time_mode"] = resolved_mode
     context["time_window"] = resolved_window
     context["range_start"] = resolved_range_start
     context["range_end"] = resolved_range_end
     context["expand_depth"] = expand_depth
+    context["sort_dir"] = sort_dir
     return render(request, "tracker/time_dashboard.html", context)
 
 

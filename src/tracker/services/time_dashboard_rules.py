@@ -23,6 +23,7 @@ def build_dashboard_context_for_user(
     selected_range_end: date | None = None,
     selected_label: str | None = None,
     expand_depth: int = 3,
+    sort_dir: str = "desc",
 ) -> dict[str, object]:
     layouts = list(TimeLayout.objects.filter(user=user).order_by("order", "name"))
     layout = None
@@ -82,6 +83,7 @@ def build_dashboard_context_for_user(
                 bucket_id=bucket_id,
                 include_zero_time=include_zero_time,
                 expand_depth=expand_depth,
+                sort_dir=sort_dir,
             )
             chart["label"] = label
             return chart
@@ -149,6 +151,7 @@ def build_dashboard_context_for_user(
             bucket_id=None,
             include_zero_time=show_zero_time,
             expand_depth=expand_depth,
+            sort_dir=sort_dir,
         )
 
     bucket_options = []
@@ -180,4 +183,5 @@ def build_dashboard_context_for_user(
         "selector_windows": selector_windows,
         "show_zero_time": show_zero_time,
         "expand_depth": expand_depth,
+        "sort_dir": sort_dir,
     }

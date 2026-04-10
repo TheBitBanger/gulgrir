@@ -48,12 +48,12 @@
   {% else %}
     <div class="panel space-y-4">
       {% if layout %}
-          {% with mode=time_mode|default:"last" window=time_window rs=range_start re=range_end ed=expand_depth %}
+          {% with mode=time_mode|default:"last" window=time_window rs=range_start re=range_end ed=expand_depth sd=sort_dir %}
             <div class="text-sm flex flex-wrap items-center gap-2">
-              <a class="link" href="{% url 'time_dashboard' %}?layout={{ layout.id }}{% if mode %}&mode={{ mode }}{% endif %}{% if window %}&window={{ window }}{% endif %}{% if rs %}&range_start={{ rs|date:'Y-m-d' }}{% endif %}{% if re %}&range_end={{ re|date:'Y-m-d' }}{% endif %}{% if ed %}&expand_depth={{ ed }}{% endif %}">{{ layout.name }}</a>
+              <a class="link" href="{% url 'time_dashboard' %}?layout={{ layout.id }}{% if mode %}&mode={{ mode }}{% endif %}{% if window %}&window={{ window }}{% endif %}{% if rs %}&range_start={{ rs|date:'Y-m-d' }}{% endif %}{% if re %}&range_end={{ re|date:'Y-m-d' }}{% endif %}{% if ed %}&expand_depth={{ ed }}{% endif %}{% if sd %}&sort_dir={{ sd }}{% endif %}">{{ layout.name }}</a>
               {% for bucket in breadcrumb_buckets %}
                 <span class="text-muted">/</span>
-                <a class="link" href="{% url 'time_dashboard' %}?layout={{ layout.id }}&bucket={{ bucket.id }}{% if mode %}&mode={{ mode }}{% endif %}{% if window %}&window={{ window }}{% endif %}{% if rs %}&range_start={{ rs|date:'Y-m-d' }}{% endif %}{% if re %}&range_end={{ re|date:'Y-m-d' }}{% endif %}{% if ed %}&expand_depth={{ ed }}{% endif %}">{{ bucket.name }}</a>
+                <a class="link" href="{% url 'time_dashboard' %}?layout={{ layout.id }}&bucket={{ bucket.id }}{% if mode %}&mode={{ mode }}{% endif %}{% if window %}&window={{ window }}{% endif %}{% if rs %}&range_start={{ rs|date:'Y-m-d' }}{% endif %}{% if re %}&range_end={{ re|date:'Y-m-d' }}{% endif %}{% if ed %}&expand_depth={{ ed }}{% endif %}{% if sd %}&sort_dir={{ sd }}{% endif %}">{{ bucket.name }}</a>
               {% endfor %}
             </div>
             <div class="flex flex-wrap items-center gap-2" x-data="{ mode: '{{ mode }}' }">
@@ -132,6 +132,13 @@
                   {% endfor %}
                 </select>
               </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <label class="text-xs text-muted">Sort</label>
+                <select name="sort_dir" class="control">
+                  <option value="desc" {% if sort_dir == "desc" %}selected{% endif %}>Desc</option>
+                  <option value="asc" {% if sort_dir == "asc" %}selected{% endif %}>Asc</option>
+                </select>
+              </div>
               <button type="submit" class="btn">Apply</button>
               <button type="submit" name="save_pref" value="1" class="btn btn-compact">Set as default</button>
             </form>
@@ -177,7 +184,7 @@
             {% if show_zero_time %}
               <a
                 class="btn btn-compact"
-                href="{% url 'time_dashboard' %}?layout={{ layout.id }}{% if selected_bucket %}&bucket={{ selected_bucket.id }}{% endif %}{% if mode %}&mode={{ mode }}{% endif %}{% if window %}&window={{ window }}{% endif %}{% if rs %}&range_start={{ rs|date:'Y-m-d' }}{% endif %}{% if re %}&range_end={{ re|date:'Y-m-d' }}{% endif %}{% if ed %}&expand_depth={{ ed }}{% endif %}"
+                href="{% url 'time_dashboard' %}?layout={{ layout.id }}{% if selected_bucket %}&bucket={{ selected_bucket.id }}{% endif %}{% if mode %}&mode={{ mode }}{% endif %}{% if window %}&window={{ window }}{% endif %}{% if rs %}&range_start={{ rs|date:'Y-m-d' }}{% endif %}{% if re %}&range_end={{ re|date:'Y-m-d' }}{% endif %}{% if ed %}&expand_depth={{ ed }}{% endif %}{% if sd %}&sort_dir={{ sd }}{% endif %}"
               >
                 <span aria-hidden="true">✓</span>
                 Zero-time shown
@@ -185,7 +192,7 @@
             {% else %}
               <a
                 class="btn btn-compact"
-                href="{% url 'time_dashboard' %}?layout={{ layout.id }}&show_zero=1{% if selected_bucket %}&bucket={{ selected_bucket.id }}{% endif %}{% if mode %}&mode={{ mode }}{% endif %}{% if window %}&window={{ window }}{% endif %}{% if rs %}&range_start={{ rs|date:'Y-m-d' }}{% endif %}{% if re %}&range_end={{ re|date:'Y-m-d' }}{% endif %}{% if ed %}&expand_depth={{ ed }}{% endif %}"
+                href="{% url 'time_dashboard' %}?layout={{ layout.id }}&show_zero=1{% if selected_bucket %}&bucket={{ selected_bucket.id }}{% endif %}{% if mode %}&mode={{ mode }}{% endif %}{% if window %}&window={{ window }}{% endif %}{% if rs %}&range_start={{ rs|date:'Y-m-d' }}{% endif %}{% if re %}&range_end={{ re|date:'Y-m-d' }}{% endif %}{% if ed %}&expand_depth={{ ed }}{% endif %}{% if sd %}&sort_dir={{ sd }}{% endif %}"
               >
                 Zero-time hidden
               </a>

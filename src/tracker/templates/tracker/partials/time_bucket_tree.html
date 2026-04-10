@@ -10,7 +10,7 @@
             <span class="bucket-toggle text-muted" aria-hidden="true"></span>
             <span class="text-[10px] uppercase text-muted" style="border: 1px solid var(--border); border-radius: 0.35rem; padding: 0 0.3rem;">B</span>
             {% if node.id %}
-              <a class="link" href="{% url 'time_dashboard' %}?layout={{ layout.id }}&bucket={{ node.id }}{% if time_mode %}&mode={{ time_mode }}{% endif %}{% if time_window %}&window={{ time_window }}{% endif %}{% if range_start %}&range_start={{ range_start|date:'Y-m-d' }}{% endif %}{% if range_end %}&range_end={{ range_end|date:'Y-m-d' }}{% endif %}{% if expand_depth %}&expand_depth={{ expand_depth }}{% endif %}">{{ node.name }}</a>
+              <a class="link" href="{% url 'time_dashboard' %}?layout={{ layout.id }}&bucket={{ node.id }}{% if time_mode %}&mode={{ time_mode }}{% endif %}{% if time_window %}&window={{ time_window }}{% endif %}{% if range_start %}&range_start={{ range_start|date:'Y-m-d' }}{% endif %}{% if range_end %}&range_end={{ range_end|date:'Y-m-d' }}{% endif %}{% if expand_depth %}&expand_depth={{ expand_depth }}{% endif %}{% if sort_dir %}&sort_dir={{ sort_dir }}{% endif %}">{{ node.name }}</a>
             {% else %}
               {{ node.name }}
             {% endif %}
@@ -25,25 +25,28 @@
         </div>
       </summary>
       <div class="space-y-2">
-        {% for item in node.items %}
-          <div class="chart-grid chart-row-grid text-sm">
-            <div
-              class="chart-label truncate flex items-center gap-2"
-              style="padding-left: {{ node.indent_px|add:32 }}px; background: {% if node.depth|add:'1'|divisibleby:'2' %}color-mix(in oklab, var(--surface-2) 45%, transparent){% else %}color-mix(in oklab, var(--surface-2) 18%, transparent){% endif %}; border-radius: 0.4rem; padding-top: 0.2rem; padding-bottom: 0.2rem; padding-right: 0.35rem;"
-            >
-              <span class="text-[10px] uppercase text-muted" style="border: 1px solid var(--border); border-radius: 0.35rem; padding: 0 0.3rem;">I</span>
-              <a class="link" href="{% url 'useritem_detail' item.item_id %}">{{ item.title }}</a>
+        {% for entry in node.entries %}
+          {% if entry.kind == "bucket" %}
+            {% include "tracker/partials/time_bucket_tree.html" with nodes=entry.nodes %}
+          {% elif entry.kind == "item" %}
+            <div class="chart-grid chart-row-grid text-sm">
+              <div
+                class="chart-label truncate flex items-center gap-2"
+                style="padding-left: {{ node.indent_px|add:32 }}px; background: {% if node.depth|add:'1'|divisibleby:'2' %}color-mix(in oklab, var(--surface-2) 45%, transparent){% else %}color-mix(in oklab, var(--surface-2) 18%, transparent){% endif %}; border-radius: 0.4rem; padding-top: 0.2rem; padding-bottom: 0.2rem; padding-right: 0.35rem;"
+              >
+                <span class="text-[10px] uppercase text-muted" style="border: 1px solid var(--border); border-radius: 0.35rem; padding: 0 0.3rem;">I</span>
+                <a class="link" href="{% url 'useritem_detail' entry.item.item_id %}">{{ entry.item.title }}</a>
+              </div>
+              <div class="chart-bar h-2 rounded" style="background: var(--surface-2);">
+                <div class="h-2 rounded" style="width: {{ entry.item.percent }}%; background: var(--success);"></div>
+              </div>
+              <div class="chart-duration text-xs text-muted">{{ entry.item.duration_display }}</div>
+              <div class="chart-percent text-xs text-muted">
+                <span class="chart-percent-number">{{ entry.item.item_share_percent }}</span><span class="chart-percent-sign">%</span>
+              </div>
             </div>
-            <div class="chart-bar h-2 rounded" style="background: var(--surface-2);">
-              <div class="h-2 rounded" style="width: {{ item.percent }}%; background: var(--success);"></div>
-            </div>
-            <div class="chart-duration text-xs text-muted">{{ item.duration_display }}</div>
-            <div class="chart-percent text-xs text-muted">
-              <span class="chart-percent-number">{{ item.item_share_percent }}</span><span class="chart-percent-sign">%</span>
-            </div>
-          </div>
+          {% endif %}
         {% endfor %}
-        {% include "tracker/partials/time_bucket_tree.html" with nodes=node.children %}
       </div>
     </details>
   {% else %}
@@ -54,7 +57,7 @@
       >
         <span class="text-[10px] uppercase text-muted" style="border: 1px solid var(--border); border-radius: 0.35rem; padding: 0 0.3rem;">B</span>
         {% if node.id %}
-          <a class="link" href="{% url 'time_dashboard' %}?layout={{ layout.id }}&bucket={{ node.id }}{% if time_mode %}&mode={{ time_mode }}{% endif %}{% if time_window %}&window={{ time_window }}{% endif %}{% if range_start %}&range_start={{ range_start|date:'Y-m-d' }}{% endif %}{% if range_end %}&range_end={{ range_end|date:'Y-m-d' }}{% endif %}{% if expand_depth %}&expand_depth={{ expand_depth }}{% endif %}">{{ node.name }}</a>
+          <a class="link" href="{% url 'time_dashboard' %}?layout={{ layout.id }}&bucket={{ node.id }}{% if time_mode %}&mode={{ time_mode }}{% endif %}{% if time_window %}&window={{ time_window }}{% endif %}{% if range_start %}&range_start={{ range_start|date:'Y-m-d' }}{% endif %}{% if range_end %}&range_end={{ range_end|date:'Y-m-d' }}{% endif %}{% if expand_depth %}&expand_depth={{ expand_depth }}{% endif %}{% if sort_dir %}&sort_dir={{ sort_dir }}{% endif %}">{{ node.name }}</a>
         {% else %}
           {{ node.name }}
         {% endif %}

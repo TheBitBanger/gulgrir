@@ -2,7 +2,7 @@
   {% if node.children or node.items %}
     <details class="space-y-2" {% if node.is_expanded %}open{% endif %}>
       <summary class="bucket-summary cursor-pointer">
-        <div class="chart-grid text-sm">
+        <div class="chart-grid chart-row-grid text-sm">
           <div
             class="chart-label truncate flex items-center gap-2"
             style="padding-left: {{ node.indent_px }}px; background: {% if node.depth|divisibleby:'2' %}color-mix(in oklab, var(--surface-2) 45%, transparent){% else %}color-mix(in oklab, var(--surface-2) 18%, transparent){% endif %}; border-radius: 0.4rem; padding-top: 0.2rem; padding-bottom: 0.2rem; padding-right: 0.35rem;"
@@ -19,11 +19,14 @@
             <div class="h-2 rounded" style="width: {{ node.percent }}%; background: var(--accent);"></div>
           </div>
           <div class="chart-duration text-xs text-muted">{{ node.duration_display }}</div>
+          <div class="chart-percent text-xs text-muted">
+            <span class="chart-percent-number">{{ node.bucket_share_percent }}</span><span class="chart-percent-sign">%</span>
+          </div>
         </div>
       </summary>
       <div class="space-y-2">
         {% for item in node.items %}
-          <div class="chart-grid text-sm">
+          <div class="chart-grid chart-row-grid text-sm">
             <div
               class="chart-label truncate flex items-center gap-2"
               style="padding-left: {{ node.indent_px|add:32 }}px; background: {% if node.depth|add:'1'|divisibleby:'2' %}color-mix(in oklab, var(--surface-2) 45%, transparent){% else %}color-mix(in oklab, var(--surface-2) 18%, transparent){% endif %}; border-radius: 0.4rem; padding-top: 0.2rem; padding-bottom: 0.2rem; padding-right: 0.35rem;"
@@ -35,13 +38,16 @@
               <div class="h-2 rounded" style="width: {{ item.percent }}%; background: var(--success);"></div>
             </div>
             <div class="chart-duration text-xs text-muted">{{ item.duration_display }}</div>
+            <div class="chart-percent text-xs text-muted">
+              <span class="chart-percent-number">{{ item.item_share_percent }}</span><span class="chart-percent-sign">%</span>
+            </div>
           </div>
         {% endfor %}
         {% include "tracker/partials/time_bucket_tree.html" with nodes=node.children %}
       </div>
     </details>
   {% else %}
-    <div class="chart-grid text-sm">
+    <div class="chart-grid chart-row-grid text-sm">
       <div
         class="chart-label truncate flex items-center gap-2"
         style="padding-left: {{ node.indent_px }}px; background: {% if node.depth|divisibleby:'2' %}color-mix(in oklab, var(--surface-2) 45%, transparent){% else %}color-mix(in oklab, var(--surface-2) 18%, transparent){% endif %}; border-radius: 0.4rem; padding-top: 0.2rem; padding-bottom: 0.2rem; padding-right: 0.35rem;"
@@ -57,6 +63,9 @@
         <div class="h-2 rounded" style="width: {{ node.percent }}%; background: var(--accent);"></div>
       </div>
       <div class="chart-duration text-xs text-muted">{{ node.duration_display }}</div>
+      <div class="chart-percent text-xs text-muted">
+        <span class="chart-percent-number">{{ node.bucket_share_percent }}</span><span class="chart-percent-sign">%</span>
+      </div>
     </div>
   {% endif %}
 {% endfor %}

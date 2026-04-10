@@ -251,8 +251,28 @@ def build_chart_entries(
                     item["percent"] = 0
             apply_percent(node["children"], max_value)
 
+    def apply_share_percent(nodes: list[dict[str, object]], parent_seconds: int) -> None:
+        for node in nodes:
+            if parent_seconds > 0:
+                node["bucket_share_percent"] = int(
+                    node["seconds"] / parent_seconds * 100
+                )
+            else:
+                node["bucket_share_percent"] = 0
+            bucket_seconds = int(node["seconds"])
+            for item in node["items"]:
+                if bucket_seconds > 0:
+                    item["item_share_percent"] = int(
+                        item["seconds"] / bucket_seconds * 100
+                    )
+                else:
+                    item["item_share_percent"] = 0
+            apply_share_percent(node["children"], bucket_seconds)
+
     max_seconds = collect_max(bucket_tree)
     apply_percent(bucket_tree, max_seconds)
+    root_seconds = sum(int(node["seconds"]) for node in bucket_tree)
+    apply_share_percent(bucket_tree, root_seconds)
 
     ignored_items = sorted(ignored_items, key=lambda x: x["seconds"], reverse=True)
     unassigned_items = sorted(unassigned_items, key=lambda x: x["seconds"], reverse=True)

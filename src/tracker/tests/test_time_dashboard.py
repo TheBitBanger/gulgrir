@@ -189,8 +189,11 @@ class TimeDashboardAssignmentTests(TestCase):
         self.assertEqual(projects_node["seconds"], durations[item_deep.id])
         self.assertEqual(coding_node["seconds"], durations[item_deep.id])
         self.assertEqual(play_node["seconds"], durations[item_play.id])
+        self.assertEqual(work_node["bucket_share_percent"], 72)
+        self.assertEqual(play_node["bucket_share_percent"], 27)
         self.assertEqual(len(coding_node["items"]), 1)
         self.assertEqual(coding_node["items"][0]["item_id"], item_deep.id)
+        self.assertEqual(coding_node["items"][0]["item_share_percent"], 100)
         self.assertEqual(len(projects_node["items"]), 0)
 
         result_with_zero = build_chart_entries(
@@ -206,6 +209,7 @@ class TimeDashboardAssignmentTests(TestCase):
         self.assertIsNotNone(projects_node)
         self.assertEqual(len(projects_node["items"]), 1)
         self.assertEqual(projects_node["items"][0]["item_id"], item_zero.id)
+        self.assertEqual(projects_node["items"][0]["item_share_percent"], 0)
 
     def test_build_chart_entries_selected_bucket_tree(self):
         bucket_projects = TimeBucket.objects.create(
@@ -248,6 +252,7 @@ class TimeDashboardAssignmentTests(TestCase):
 
         self.assertEqual(len(result["bucket_tree"]), 1)
         self.assertEqual(result["bucket_tree"][0]["name"], "Projects")
+        self.assertEqual(result["bucket_tree"][0]["bucket_share_percent"], 100)
 
     def test_ignore_assignment_clears_bucket(self):
         self.client.force_login(self.user)

@@ -218,14 +218,54 @@
 
     .chart-grid {
       display: grid;
-      grid-template-columns: minmax(220px, 320px) minmax(140px, 1fr) max-content;
+      grid-template-columns: minmax(160px, 1.1fr) minmax(120px, 2fr) 9ch 4ch;
       column-gap: 0.75rem;
       row-gap: 0.5rem;
       align-items: center;
+      width: 100%;
     }
 
-    .chart-row {
-      display: contents;
+    .chart-row-grid {
+      border-radius: 0.4rem;
+      transition: background 120ms ease-out;
+    }
+
+    .chart-row-grid:hover {
+      background: color-mix(in oklab, var(--surface-2) 22%, transparent);
+    }
+
+    .chart-duration {
+      text-align: right;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+      padding-right: 0.5rem;
+      border-right: 1px solid var(--border);
+    }
+
+    .chart-percent {
+      text-align: right;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+      justify-self: end;
+      padding-left: 0.5rem;
+    }
+
+    .chart-label {
+      min-width: 0;
+    }
+
+    .chart-bar {
+      width: 100%;
+    }
+
+    .chart-percent-number {
+      font-weight: 600;
+    }
+
+    .chart-percent-sign {
+      font-size: 0.75em;
+      opacity: 0.7;
+      margin-left: 0.1rem;
     }
 
     .bucket-summary {

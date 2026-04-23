@@ -5,7 +5,7 @@ COMPOSE := docker compose -f compose/dev.yml -f compose/dev.bind.yml
 APP_EXEC := $(COMPOSE) exec -T -w /workspace app
 APP_MANAGE := $(APP_EXEC) python /app/src/manage.py
 
-.PHONY: dev-build dev-up test qa qa-quick qa-full qa-full-local
+.PHONY: dev-build dev-up test qa qa-quick qa-full
 
 dev-build:
 	$(COMPOSE) up -d --build db app
@@ -50,31 +50,3 @@ qa-full: dev-up
 	  exit 1
 	fi
 	printf "\nQA full completed successfully\n"
-
-qa-full-local:
-	status=0
-	run_check() {
-	  local name="$$1"
-	  shift
-	  printf "\n==> %s\n" "$$name"
-	  if "$$@"; then
-	    printf "[PASS] %s\n" "$$name"
-	  else
-	    rc=$$?
-	    status=1
-	    printf "[FAIL] %s (exit %s)\n" "$$name" "$$rc"
-	  fi
-	}
-	run_check "ruff check" poetry run ruff check src
-	run_check "ruff format --check" poetry run ruff format --check src
-	run_check "mypy" poetry run mypy src
-	run_check "basedpyright" poetry run basedpyright
-	run_check "bandit" poetry run bandit -q -r src -c pyproject.toml
-	run_check "pip-audit" poetry run pip-audit
-	run_check "gitleaks (staged)" bash -lc 'if command -v gitleaks >/dev/null 2>&1; then git diff --cached -- . | gitleaks stdin --no-banner --redact --config .gitleaks.toml; else git diff --cached -- . | docker run --rm -i -v "'"$$PWD"'":/repo -w /repo ghcr.io/gitleaks/gitleaks:latest stdin --no-banner --redact --config .gitleaks.toml; fi'
-	run_check "django check --deploy" bash -lc 'DJANGO_DEBUG=false poetry run python src/manage.py check --deploy'
-	if [[ $$status -ne 0 ]]; then
-	  printf "\nLocal QA full completed with failures\n"
-	  exit 1
-	fi
-	printf "\nLocal QA full completed successfully\n"

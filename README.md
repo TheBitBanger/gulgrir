@@ -207,8 +207,6 @@ make qa-full
 - `make qa-quick` runs `ruff`, formatting checks, and `mypy`.
 - `make qa-full` runs all checks, including `basedpyright`, `bandit`,
   `pip-audit`, `gitleaks` (staged changes), and `check --deploy`.
-- `make qa-full-local` runs the same QA checks via `poetry run` for parity
-  comparisons.
 
 To run scheduled backups in dev, start the backup profile:
 

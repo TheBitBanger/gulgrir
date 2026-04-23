@@ -158,7 +158,9 @@ class TimeDashboardAssignmentTests(TestCase):
         }
         buckets = list(TimeBucket.objects.filter(layout=self.layout))
 
-        def find_node(nodes: list[dict[str, object]], name: str) -> dict[str, object] | None:
+        def find_node(
+            nodes: list[dict[str, object]], name: str
+        ) -> dict[str, object] | None:
             for node in nodes:
                 if node["name"] == name:
                     return node
@@ -303,7 +305,9 @@ class TimeDashboardAssignmentTests(TestCase):
         }
         buckets = list(TimeBucket.objects.filter(layout=self.layout))
 
-        def find_node(nodes: list[dict[str, object]], name: str) -> dict[str, object] | None:
+        def find_node(
+            nodes: list[dict[str, object]], name: str
+        ) -> dict[str, object] | None:
             for node in nodes:
                 if node["name"] == name:
                     return node
@@ -327,11 +331,14 @@ class TimeDashboardAssignmentTests(TestCase):
         work_node_desc = find_node(result_desc["bucket_tree"], "Work")
         self.assertIsNotNone(work_node_desc)
         work_item_titles_desc = [item["title"] for item in work_node_desc["items"]]
-        self.assertEqual(work_item_titles_desc[:3], [
-            "Work item",
-            "Alpha task",
-            "Beta task",
-        ])
+        self.assertEqual(
+            work_item_titles_desc[:3],
+            [
+                "Work item",
+                "Alpha task",
+                "Beta task",
+            ],
+        )
 
         result_asc = build_chart_entries(
             layout=self.layout,
@@ -348,11 +355,14 @@ class TimeDashboardAssignmentTests(TestCase):
         work_node_asc = find_node(result_asc["bucket_tree"], "Work")
         self.assertIsNotNone(work_node_asc)
         work_item_titles_asc = [item["title"] for item in work_node_asc["items"]]
-        self.assertEqual(work_item_titles_asc[:3], [
-            "Alpha task",
-            "Beta task",
-            "Work item",
-        ])
+        self.assertEqual(
+            work_item_titles_asc[:3],
+            [
+                "Alpha task",
+                "Beta task",
+                "Work item",
+            ],
+        )
 
     def test_ignore_assignment_clears_bucket(self):
         self.client.force_login(self.user)
@@ -420,7 +430,8 @@ class TimeDashboardAssignmentTests(TestCase):
         )
         self.client.force_login(self.user)
         url = (
-            f"{reverse('time_dashboard')}?layout={self.layout.id}&bucket={self.bucket_work.id}&show_zero=1"
+            f"{reverse('time_dashboard')}?layout={self.layout.id}"
+            f"&bucket={self.bucket_work.id}&show_zero=1"
         )
         response = self.client.get(url)
         self.assertContains(response, "Unassigned item")

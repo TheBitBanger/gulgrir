@@ -1,7 +1,15 @@
 from django.contrib.auth import views as auth_views
-from django.urls import path, include
+from django.urls import include, path
 
-from .views import actions, items, preferences, saved_filters, tags, time_tracking, useritems
+from .views import (
+    actions,
+    items,
+    preferences,
+    saved_filters,
+    tags,
+    time_tracking,
+    useritems,
+)
 
 item_patterns = [
     path("", items.ItemList.as_view(), name="item_list"),
@@ -13,7 +21,9 @@ useritem_patterns = [
     path("add/", useritems.UserItemCreate.as_view(), name="useritem_add"),
     path("<int:pk>/", useritems.UserItemDetail.as_view(), name="useritem_detail"),
     path("<int:pk>/edit/", useritems.UserItemUpdate.as_view(), name="useritem_edit"),
-    path("<int:pk>/delete/", useritems.UserItemDelete.as_view(), name="useritem_delete"),
+    path(
+        "<int:pk>/delete/", useritems.UserItemDelete.as_view(), name="useritem_delete"
+    ),
     path("<int:pk>/complete/", useritems.useritem_complete, name="useritem_complete"),
     path("<int:pk>/restart/", useritems.useritem_restart, name="useritem_restart"),
     path(
@@ -66,10 +76,10 @@ urlpatterns = [
     path("logout/", auth_views.LogoutView.as_view(), name="logout"),
     path("bulk-action/", actions.bulk_history_action, name="bulk_action"),
     # crud section
-    path("library/items/", include((item_patterns))),
-    path("my/items/", include((useritem_patterns))),
-    path("my/tags/", include((tag_patterns))),
-    path("my/filters/", include((saved_filter_patterns))),
+    path("library/items/", include(item_patterns)),
+    path("my/items/", include(useritem_patterns)),
+    path("my/tags/", include(tag_patterns)),
+    path("my/filters/", include(saved_filter_patterns)),
     path("my/time/", time_tracking.time_dashboard, name="time_dashboard"),
     path("my/time/settings/", time_tracking.time_settings, name="time_settings"),
     path(

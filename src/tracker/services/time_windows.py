@@ -132,7 +132,8 @@ def build_picker_windows(cutoff_time: time | None = None) -> list[TimeWindow]:
     return [
         window
         for window in build_time_windows(cutoff_time=cutoff_time)
-        if window.key in {
+        if window.key
+        in {
             "last_7",
             "last_14",
             "last_21",

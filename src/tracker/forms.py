@@ -1,8 +1,8 @@
-from django import forms
-
 from typing import Any
 
-from .models import UserItem, UserItemHistory, Profile, Item, Tag
+from django import forms
+
+from .models import Item, Profile, Tag, UserItem, UserItemHistory
 from .widgets import FlatpickrISODateInput
 
 
@@ -48,7 +48,7 @@ class UserItemForm(forms.ModelForm):
                 else:
                     field.widget.attrs.setdefault("class", "h-4 w-4")
                 continue
-            if isinstance(field.widget, (forms.Select, forms.SelectMultiple)):
+            if isinstance(field.widget, forms.Select | forms.SelectMultiple):
                 field.widget.attrs.setdefault("class", base)
             else:
                 field.widget.attrs.setdefault("class", base)

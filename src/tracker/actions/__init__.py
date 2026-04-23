@@ -1,5 +1,5 @@
-from typing import Protocol, TypeVar, TypedDict, Any, ClassVar, NotRequired
 from importlib import import_module
+from typing import Any, ClassVar, NotRequired, Protocol, TypedDict, TypeVar
 
 from django import forms
 from django.db.models import QuerySet

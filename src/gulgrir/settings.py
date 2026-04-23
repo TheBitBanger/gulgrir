@@ -20,6 +20,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
+
 def parse_env_list(value: str) -> list[str]:
     return [item.strip() for item in value.split(",") if item.strip()]
 
@@ -33,9 +34,7 @@ DEBUG = os.getenv("DJANGO_DEBUG", "false").lower() == "true"
 allowed_hosts = parse_env_list(os.getenv("DJANGO_ALLOWED_HOSTS", ""))
 ALLOWED_HOSTS = allowed_hosts or ["*"]
 
-CSRF_TRUSTED_ORIGINS = parse_env_list(
-    os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "")
-)
+CSRF_TRUSTED_ORIGINS = parse_env_list(os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", ""))
 
 if os.getenv("DJANGO_SECURE_PROXY_SSL_HEADER", "false").lower() == "true":
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
@@ -110,7 +109,9 @@ DATABASES = {
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
+        "NAME": (
+            "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
+        ),
     },
     {
         "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",

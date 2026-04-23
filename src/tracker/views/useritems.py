@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
-from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
@@ -112,9 +112,7 @@ def build_useritem_detail_context(
     ctx["item"] = user_item.item
     ctx["enable_tag_picker"] = True
     ctx["all_tags"] = list(
-        Tag.objects.filter(user=request.user)
-        .order_by("name")
-        .values("id", "name")
+        Tag.objects.filter(user=request.user).order_by("name").values("id", "name")
     )
 
     raw = form["tags"].value() or []
@@ -274,9 +272,7 @@ class UserItemDetail(OwnObjectsMixin, UpdateView):
             buckets = list(
                 TimeBucket.objects.filter(layout=layout).select_related("parent")
             )
-            bucket_options_by_layout[str(layout.id)] = build_bucket_option_list(
-                buckets
-            )
+            bucket_options_by_layout[str(layout.id)] = build_bucket_option_list(buckets)
         ctx["assignment_layouts"] = layouts
         ctx["bucket_options_by_layout"] = bucket_options_by_layout
 

@@ -6,7 +6,13 @@ from django import forms
 from django.db.models import QuerySet
 
 from tracker.actions import ToastPayload, register
-from tracker.models import TimeBucket, TimeBucketAssignment, TimeLayout, UserItem, UserItemHistory
+from tracker.models import (
+    TimeBucket,
+    TimeBucketAssignment,
+    TimeLayout,
+    UserItem,
+    UserItemHistory,
+)
 
 
 class _NoParams(forms.Form):

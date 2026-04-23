@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import date, datetime, timedelta
+from datetime import datetime
 
 from django.db.models import Sum
-from django.utils import timezone
 
-from ..models import TimeBucket, TimeBucketAssignment, TimeLayout, UserItem, UserItemHistory
-from .time_windows import day_range
+from ..models import (
+    TimeBucket,
+    TimeBucketAssignment,
+    TimeLayout,
+    UserItem,
+    UserItemHistory,
+)
 
 
 def format_seconds(total_seconds: int) -> str:
@@ -267,9 +271,7 @@ def build_chart_entries(
         root_buckets = [selected_bucket]
 
     bucket_tree = [
-        node
-        for bucket in root_buckets
-        if (node := build_node(bucket, 0)) is not None
+        node for bucket in root_buckets if (node := build_node(bucket, 0)) is not None
     ]
     bucket_tree = sorted(bucket_tree, key=bucket_sort_key)
 
@@ -295,7 +297,9 @@ def build_chart_entries(
                     item["percent"] = 0
             apply_percent(node["children"], max_value)
 
-    def apply_share_percent(nodes: list[dict[str, object]], parent_seconds: int) -> None:
+    def apply_share_percent(
+        nodes: list[dict[str, object]], parent_seconds: int
+    ) -> None:
         for node in nodes:
             if parent_seconds > 0:
                 node["bucket_share_percent"] = int(
@@ -319,7 +323,9 @@ def build_chart_entries(
     apply_share_percent(bucket_tree, root_seconds)
 
     ignored_items = sorted(ignored_items, key=lambda x: x["seconds"], reverse=True)
-    unassigned_items = sorted(unassigned_items, key=lambda x: x["seconds"], reverse=True)
+    unassigned_items = sorted(
+        unassigned_items, key=lambda x: x["seconds"], reverse=True
+    )
 
     return {
         "bucket_tree": bucket_tree,

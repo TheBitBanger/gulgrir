@@ -8,9 +8,7 @@ from ..models import UserItem, UserItemHistory
 def can_restart(user_item: UserItem) -> bool:
     if user_item.is_redoing:
         return False
-    return user_item.history.filter(
-        event_type=UserItemHistory.Event.COMPLETED
-    ).exists()
+    return user_item.history.filter(event_type=UserItemHistory.Event.COMPLETED).exists()
 
 
 def mark_completed(user_item: UserItem) -> None:

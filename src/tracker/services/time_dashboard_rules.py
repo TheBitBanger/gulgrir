@@ -30,7 +30,14 @@ def build_dashboard_context_for_user(
     layout = None
     if layouts:
         if layout_id:
-            layout = next((l for l in layouts if str(l.id) == layout_id), None)
+            layout = next(
+                (
+                    layout_candidate
+                    for layout_candidate in layouts
+                    if str(layout_candidate.id) == layout_id
+                ),
+                None,
+            )
         layout = layout or layouts[0]
 
     buckets: list[TimeBucket] = []
@@ -41,7 +48,9 @@ def build_dashboard_context_for_user(
     }
 
     if layout:
-        buckets = list(TimeBucket.objects.filter(layout=layout).select_related("parent"))
+        buckets = list(
+            TimeBucket.objects.filter(layout=layout).select_related("parent")
+        )
         assignments = {
             a.user_item_id: a
             for a in TimeBucketAssignment.objects.filter(layout=layout).select_related(

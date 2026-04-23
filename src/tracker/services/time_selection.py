@@ -8,7 +8,11 @@ from django.urls import reverse
 
 from ..models import TimeBucket, TimeBucketAssignment, TimeLayout, UserItem
 from .selection import apply_selector_eligibility
-from .time_dashboard import build_bucket_children_map, build_bucket_paths, load_item_durations
+from .time_dashboard import (
+    build_bucket_children_map,
+    build_bucket_paths,
+    load_item_durations,
+)
 from .time_windows import day_range, find_time_window
 
 
@@ -34,9 +38,7 @@ def select_from_level_for_user(
         raise ValueError("Layout not found.")
 
     if bucket_id is not None:
-        bucket_exists = TimeBucket.objects.filter(
-            id=bucket_id, layout=layout
-        ).exists()
+        bucket_exists = TimeBucket.objects.filter(id=bucket_id, layout=layout).exists()
         if not bucket_exists:
             raise ValueError("Bucket not found.")
 
@@ -73,9 +75,7 @@ def select_from_level_for_user(
 
     candidate_buckets = bucket_children.get(bucket_id, [])
     candidate_assignments = [
-        assignment
-        for assignment in assignments
-        if assignment.bucket_id == bucket_id
+        assignment for assignment in assignments if assignment.bucket_id == bucket_id
     ]
     candidate_item_ids = {a.user_item_id for a in candidate_assignments}
     eligible_items = {
@@ -88,13 +88,16 @@ def select_from_level_for_user(
     entries: list[dict[str, object]] = []
     for bucket in candidate_buckets:
         seconds = bucket_totals.get(bucket.id, 0)
+        dashboard_url = (
+            f"{reverse('time_dashboard')}?layout={layout.id}&bucket={bucket.id}"
+        )
         entries.append(
             {
                 "kind": "bucket",
                 "id": bucket.id,
                 "label": bucket.name,
                 "seconds": seconds,
-                "url": f"{reverse('time_dashboard')}?layout={layout.id}&bucket={bucket.id}",
+                "url": dashboard_url,
             }
         )
 

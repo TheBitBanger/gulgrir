@@ -1,29 +1,30 @@
 from __future__ import annotations
-from datetime import timedelta
 
 import random
+from datetime import timedelta
 from typing import Any, ClassVar
 
 from django import forms
 from django.db.models import (
+    DateTimeField,
     DurationField,
     ExpressionWrapper,
     F,
     OuterRef,
     QuerySet,
     Subquery,
-    DateTimeField,
     Value,
 )
-from django.db.models.functions import Now, Coalesce
-from django.utils import timezone
+from django.db.models.functions import Coalesce, Now
 from django.urls import reverse
+from django.utils import timezone
 
 from tracker.models import UserItem, UserItemHistory
 from tracker.services.selection import apply_selector_eligibility
 from tracker.services.time_dashboard import load_item_durations
 from tracker.services.time_windows import find_time_window, time_window_choices
-from . import register, ToastPayload
+
+from . import ToastPayload, register
 
 
 class RandomWeightedForm(forms.Form):

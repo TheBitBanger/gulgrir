@@ -29,7 +29,6 @@ class Item(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-
     def __str__(self):
         return self.title
 
@@ -37,7 +36,8 @@ class Item(models.Model):
 class UserItemQuerySet(models.QuerySet):
     def record_event(self, event: "UserItemHistory.Event") -> int:
         """
-        Bulk-create one UserItemHistory row per item and, for COMPLETED, move the shelf to DONE. Returns the number of affected items.
+        Bulk-create one UserItemHistory row per item and, for COMPLETED,
+        move the shelf to DONE. Returns the number of affected items.
         """
         # useritem doesn't exist - quit
         if not self.exists():
@@ -302,7 +302,7 @@ class SavedFilter(models.Model):
             parts.append(f"Tags={', '.join(tag_names)}")
 
         if d.get("title_icontains"):
-            parts.append(f"Title~\"{d['title_icontains']}\"")
+            parts.append(f'Title~"{d["title_icontains"]}"')
 
         if d.get("is_project") is True:
             parts.append("Projects")

@@ -12,7 +12,8 @@ def build_useritem_queryset(request: HttpRequest) -> QuerySet[UserItem]:
     Build the filtered queryset for the UserItem dashboard
     """
 
-    # Always treat URL as the dataset state, but allow POST to carry/override it for actions
+    # Always treat URL as the dataset state, but allow POST
+    # to carry or override it for actions.
     data = request.GET.copy()
     if request.method == "POST":
         for key in request.POST.keys():

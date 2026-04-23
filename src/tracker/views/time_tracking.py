@@ -11,7 +11,12 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from ..models import Profile, TimeBucket, TimeBucketAssignment, TimeLayout, UserItem
-from ..services.time_assignments import assign_item, ignore_item, unassign_item, unignore_item
+from ..services.time_assignments import (
+    assign_item,
+    ignore_item,
+    unassign_item,
+    unignore_item,
+)
 from ..services.time_dashboard import (
     build_bucket_children_map,
     build_bucket_descendants,
@@ -73,7 +78,14 @@ def time_dashboard(request):
         profile, _ = Profile.objects.get_or_create(user=request.user)
 
     has_time_params = any(
-        [mode, window_key, range_start_raw, range_end_raw, expand_depth_raw, sort_dir_raw]
+        [
+            mode,
+            window_key,
+            range_start_raw,
+            range_end_raw,
+            expand_depth_raw,
+            sort_dir_raw,
+        ]
     )
 
     if not has_time_params and profile:
@@ -173,12 +185,21 @@ def time_settings(request):
     if layouts:
         layout_id = request.GET.get("layout")
         if layout_id:
-            layout = next((l for l in layouts if str(l.id) == layout_id), None)
+            layout = next(
+                (
+                    layout_candidate
+                    for layout_candidate in layouts
+                    if str(layout_candidate.id) == layout_id
+                ),
+                None,
+            )
         layout = layout or layouts[0]
 
     buckets: list[TimeBucket] = []
     if layout:
-        buckets = list(TimeBucket.objects.filter(layout=layout).select_related("parent"))
+        buckets = list(
+            TimeBucket.objects.filter(layout=layout).select_related("parent")
+        )
 
     bucket_options = []
     bucket_management: list[dict[str, object]] = []

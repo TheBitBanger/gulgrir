@@ -8,13 +8,8 @@ from .models import Profile, UserItem
 
 def _django_fmt(strftime_fmt: str) -> str:
     """Convert a limited subset of strftime tokens to Django date-filter
-        codes."""
-    return (
-        strftime_fmt
-        .replace("%d", "d")
-        .replace("%m", "m")
-        .replace("%Y", "Y")
-    )
+    codes."""
+    return strftime_fmt.replace("%d", "d").replace("%m", "m").replace("%Y", "Y")
 
 
 def date_format(request):

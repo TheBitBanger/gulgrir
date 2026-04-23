@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --no-cache-dir "poetry==2.0.0"
+RUN pip install --no-cache-dir "poetry==2.3.4"
 
 WORKDIR /app
 # Only copy these files for better layer caching, when only the application code changes

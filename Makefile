@@ -43,7 +43,7 @@ qa-full: dev-up
 	run_check "basedpyright" $(APP_EXEC) basedpyright
 	run_check "bandit" $(APP_EXEC) bandit -q -r src
 	run_check "pip-audit" $(APP_EXEC) pip-audit
-	run_check "gitleaks (staged)" $(APP_EXEC) sh -lc 'git -C /workspace diff --staged -- . | gitleaks stdin --no-banner --redact --config /workspace/.gitleaks.toml'
+	run_check "gitleaks (staged)" sh -lc 'git diff --cached -- . | $(APP_EXEC) gitleaks stdin --no-banner --redact --config /workspace/.gitleaks.toml'
 	run_check "django check --deploy" $(APP_EXEC) env DJANGO_DEBUG=false python /app/src/manage.py check --deploy
 	if [[ $$status -ne 0 ]]; then
 	  printf "\nQA full completed with failures\n"
@@ -71,7 +71,7 @@ qa-full-local:
 	run_check "basedpyright" poetry run basedpyright
 	run_check "bandit" poetry run bandit -q -r src
 	run_check "pip-audit" poetry run pip-audit
-	run_check "gitleaks (staged)" bash -lc 'if command -v gitleaks >/dev/null 2>&1; then git diff --staged -- . | gitleaks stdin --no-banner --redact --config .gitleaks.toml; else git diff --staged -- . | docker run --rm -i -v "'"$$PWD"'":/repo -w /repo ghcr.io/gitleaks/gitleaks:latest stdin --no-banner --redact --config .gitleaks.toml; fi'
+	run_check "gitleaks (staged)" bash -lc 'if command -v gitleaks >/dev/null 2>&1; then git diff --cached -- . | gitleaks stdin --no-banner --redact --config .gitleaks.toml; else git diff --cached -- . | docker run --rm -i -v "'"$$PWD"'":/repo -w /repo ghcr.io/gitleaks/gitleaks:latest stdin --no-banner --redact --config .gitleaks.toml; fi'
 	run_check "django check --deploy" bash -lc 'DJANGO_DEBUG=false poetry run python src/manage.py check --deploy'
 	if [[ $$status -ne 0 ]]; then
 	  printf "\nLocal QA full completed with failures\n"

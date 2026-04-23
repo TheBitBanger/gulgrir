@@ -87,7 +87,7 @@ GULGRIR_PORT=8765
 ```
 
 Notes:
-- `DJANGO_ADMIN_USER` / `DJANGO_ADMIN_PASS` are used to auto-create a superuser on first run.
+- `DJANGO_ADMIN_USER` / `DJANGO_ADMIN_PASS` are used to auto-create a superuser on first run for admin fallback access.
 - Change the defaults for any real deployment.
 - `GULGRIR_PORT` controls the host port that maps to container port 8765.
 - `DJANGO_ALLOWED_HOSTS` should include any hostnames or IPs you use to access the app.
@@ -131,7 +131,7 @@ You can put a reverse proxy in front of the app if you want (not bundled here).
 
 ## Admin user
 
-On first run, the entrypoint auto-creates a superuser using `DJANGO_ADMIN_USER` / `DJANGO_ADMIN_PASS`. Use the admin user to create additional user accounts.
+On first run, the entrypoint auto-creates a superuser using `DJANGO_ADMIN_USER` / `DJANGO_ADMIN_PASS`. Admin is intended as an operational fallback; regular product workflows should use the frontend.
 
 ## Database Backup Location
 

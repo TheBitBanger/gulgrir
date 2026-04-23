@@ -17,7 +17,6 @@ class UserItemRestartTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(
             username="restart",
-            password="password",
         )
         self.item = UserItem.objects.create(
             user=self.user,

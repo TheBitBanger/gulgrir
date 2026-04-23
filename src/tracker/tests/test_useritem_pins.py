@@ -10,7 +10,6 @@ class UserItemPinTests(TestCase):
         self.user = get_user_model().objects.create_user(
             username="pin-user",
             email="pin@example.com",
-            password="pass",
         )
         self.item = Item.objects.create(media_type=Item.MediaType.BOOK, title="Pin")
         self.user_item = UserItem.objects.create(user=self.user, item=self.item)

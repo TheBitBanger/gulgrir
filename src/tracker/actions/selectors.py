@@ -109,7 +109,8 @@ class RandomWeightedSelector:
 
         # Convert duration to positive float seconds for random.choices
         weights = [max(obj.age.total_seconds(), 1.0) for obj in items]
-        chosen = random.choices(items, weights=weights, k=1)[0]
+        # Feature-level weighted selection; cryptographic randomness is not required.
+        chosen = random.choices(items, weights=weights, k=1)[0]  # nosec B311
 
         # Must match ToastPayload TypedDict (id + title)
         return {
@@ -152,7 +153,8 @@ class RandomWeightedTimeSelector:
 
         durations = load_item_durations(user, start, end)
         weights = [1.0 / (durations.get(item.id, 0) + 1) for item in items]
-        chosen = random.choices(items, weights=weights, k=1)[0]
+        # Feature-level weighted selection; cryptographic randomness is not required.
+        chosen = random.choices(items, weights=weights, k=1)[0]  # nosec B311
 
         return {
             "id": chosen.pk,

@@ -120,7 +120,8 @@ def select_from_level_for_user(
         return None
 
     weights = [1.0 / (entry["seconds"] + 1) for entry in entries]
-    chosen = random.choices(entries, weights=weights, k=1)[0]
+    # Feature-level weighted selection; cryptographic randomness is not required.
+    chosen = random.choices(entries, weights=weights, k=1)[0]  # nosec B311
     return {
         "id": int(chosen["id"]),
         "title": str(chosen["label"]),

@@ -16,7 +16,6 @@ class UserItemCreateTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(
             username="creator",
-            password="password",
         )
 
     def test_created_by_set_on_create(self):

@@ -16,7 +16,6 @@ class BulkAssignToBucketTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(
             username="bulk",
-            password="password",
         )
         self.layout = TimeLayout.objects.create(user=self.user, name="Balance")
         self.bucket = TimeBucket.objects.create(layout=self.layout, name="Work")

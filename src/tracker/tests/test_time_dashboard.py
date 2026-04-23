@@ -23,7 +23,6 @@ class TimeDashboardAssignmentTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(
             username="dashboard",
-            password="password",
         )
         self.layout = TimeLayout.objects.create(user=self.user, name="Balance")
         self.bucket_work = TimeBucket.objects.create(

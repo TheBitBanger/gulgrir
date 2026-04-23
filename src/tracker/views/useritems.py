@@ -503,8 +503,25 @@ def useritem_timer_add_retro(request, pk: int):
         )
         return render(request, "tracker/useritem_detail.html", ctx, status=400)
 
-    assert parsed_date is not None
-    assert parsed_duration is not None
+    if parsed_date is None or parsed_duration is None:
+        retro_values = {
+            "date": date_raw or timezone.localdate().isoformat(),
+            "start_time": time_raw,
+            "duration": duration_raw,
+        }
+        if parsed_date is None:
+            retro_errors.setdefault("Date", "Enter a valid date")
+        if parsed_duration is None:
+            retro_errors.setdefault("Duration", "Duration required")
+        form = UserItemForm(instance=user_item, user=request.user)
+        ctx = build_useritem_detail_context(
+            request=request,
+            user_item=user_item,
+            form=form,
+            retro_values=retro_values,
+            retro_errors=retro_errors,
+        )
+        return render(request, "tracker/useritem_detail.html", ctx, status=400)
 
     tz = timezone.get_current_timezone()
     started_at = timezone.make_aware(datetime.combine(parsed_date, parsed_time), tz)

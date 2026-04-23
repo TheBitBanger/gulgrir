@@ -21,7 +21,6 @@ class SelectorEligibilityTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(
             username="selector",
-            password="password",
         )
         self.item_fresh = UserItem.objects.create(
             user=self.user,

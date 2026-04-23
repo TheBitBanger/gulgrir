@@ -191,6 +191,9 @@ The dev app container builds the Docker `qa` target so lint/type/security tools
 are available in-container. Published release images are built from the
 `runtime` target in CI.
 
+Use `make dev-build` when dependencies or Docker layers change. Use
+`make dev-up` for normal bring-up without rebuilding.
+
 ## QA and tests
 
 Run all commands from the repository root:

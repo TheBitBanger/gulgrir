@@ -5,10 +5,13 @@ COMPOSE := docker compose -f compose/dev.yml -f compose/dev.bind.yml
 APP_EXEC := $(COMPOSE) exec -T -w /workspace app
 APP_MANAGE := $(APP_EXEC) python /app/src/manage.py
 
-.PHONY: dev-up test qa qa-quick qa-full qa-full-local
+.PHONY: dev-build dev-up test qa qa-quick qa-full qa-full-local
+
+dev-build:
+	$(COMPOSE) up -d --build db app
 
 dev-up:
-	$(COMPOSE) up -d --build db app
+	$(COMPOSE) up -d db app
 
 test: dev-up
 	$(APP_MANAGE) test

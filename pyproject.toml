@@ -24,8 +24,7 @@ select = ["E", "F", "I", "UP", "B"]
 quote-style = "double"
 
 [tool.bandit]
-exclude_dirs = ["src/tracker/migrations", "src/tracker/tests"]
-skips = ["B101"]
+exclude_dirs = ["src/tracker/migrations"]
 
 [project]
 name = "gulgrir"

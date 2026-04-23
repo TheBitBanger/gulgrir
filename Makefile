@@ -41,7 +41,7 @@ qa-full: dev-up
 	run_check "ruff format --check" $(APP_EXEC) ruff format --check src
 	run_check "mypy" $(APP_EXEC) mypy src
 	run_check "basedpyright" $(APP_EXEC) basedpyright
-	run_check "bandit" $(APP_EXEC) bandit -q -r src
+	run_check "bandit" $(APP_EXEC) bandit -q -r src -c /workspace/pyproject.toml
 	run_check "pip-audit" $(APP_EXEC) pip-audit
 	run_check "gitleaks (staged)" sh -lc 'git diff --cached -- . | $(APP_EXEC) gitleaks stdin --no-banner --redact --config /workspace/.gitleaks.toml'
 	run_check "django check --deploy" $(APP_EXEC) env DJANGO_DEBUG=false python /app/src/manage.py check --deploy
@@ -69,7 +69,7 @@ qa-full-local:
 	run_check "ruff format --check" poetry run ruff format --check src
 	run_check "mypy" poetry run mypy src
 	run_check "basedpyright" poetry run basedpyright
-	run_check "bandit" poetry run bandit -q -r src
+	run_check "bandit" poetry run bandit -q -r src -c pyproject.toml
 	run_check "pip-audit" poetry run pip-audit
 	run_check "gitleaks (staged)" bash -lc 'if command -v gitleaks >/dev/null 2>&1; then git diff --cached -- . | gitleaks stdin --no-banner --redact --config .gitleaks.toml; else git diff --cached -- . | docker run --rm -i -v "'"$$PWD"'":/repo -w /repo ghcr.io/gitleaks/gitleaks:latest stdin --no-banner --redact --config .gitleaks.toml; fi'
 	run_check "django check --deploy" bash -lc 'DJANGO_DEBUG=false poetry run python src/manage.py check --deploy'

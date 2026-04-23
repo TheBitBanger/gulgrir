@@ -93,20 +93,28 @@ If you add pytest, document `pytest -k` style single-test commands here.
 
 ## Linting and formatting
 
-No lint/format config detected (no Ruff/Black/flake8/isort config files).
-Do not assume a formatter unless one is added. Keep edits consistent with
-existing style.
+Use containerized QA commands from repo root:
+
+- `make qa-quick`
+- `make qa-full`
+
+`qa-quick` runs Ruff lint + format checks and mypy.
+`qa-full` runs Ruff, mypy, basedpyright, Bandit, pip-audit, gitleaks
+(staged changes), and `manage.py check --deploy`.
 
 ## Type checking
 
 Mypy is configured in `pyproject.toml` with django-stubs:
 
-- Plugins: `mypy_django_plugin.main`, `django-stubs`
+- Plugins: `mypy_django_plugin.main`
 - Django settings module: `gulgrir.settings`
 
-Suggested type-check command (if mypy is installed):
+Basedpyright is configured via `pyrightconfig.json`.
 
-- `mypy src`
+Suggested type-check commands:
+
+- `make qa-quick` (includes mypy)
+- `docker compose -f compose/dev.yml -f compose/dev.bind.yml exec app basedpyright`
 
 ## Code style guidelines (inferred from codebase)
 

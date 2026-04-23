@@ -83,6 +83,7 @@ jobs:
         with:
           context: .
           file: docker/app/Dockerfile
+          target: runtime
           push: true
           provenance: true
           sbom: true

@@ -3,6 +3,7 @@ services:
   app:
     volumes:
       - ../src:/app/src
+      - ..:/workspace
     environment:
       DJANGO_DEBUG: "true"
     command: "python /app/src/manage.py runserver 0.0.0.0:8765"

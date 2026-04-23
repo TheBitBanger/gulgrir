@@ -4,6 +4,7 @@ services:
     build:
       context: ..
       dockerfile: docker/app/Dockerfile
+      target: qa
     image: gulgrir:dev
     container_name: gulgrir_web
     restart: unless-stopped

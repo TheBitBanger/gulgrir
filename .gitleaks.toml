@@ -1,0 +1,8 @@
+title = "gulgrir gitleaks config"
+
+[allowlist]
+description = "Allow placeholder examples in docs"
+regexes = [
+  '''DJANGO_SECRET_KEY=replace-me''',
+  '''DJANGO_ADMIN_PASS=admin'''
+]

@@ -1,8 +1,31 @@
 [tool.mypy]
-plugins = ["mypy_django_plugin.main", "django-stubs"]
+plugins = ["mypy_django_plugin.main"]
+python_version = "3.12"
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_return_any = true
+check_untyped_defs = true
+strict_equality = true
+exclude = ["^src/tracker/migrations/"]
 
 [tool.django-stubs]
 django_settings_module = "gulgrir.settings"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+exclude = ["src/tracker/migrations"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.bandit]
+exclude_dirs = ["src/tracker/migrations", "src/tracker/tests"]
+skips = ["B101"]
 
 [project]
 name = "gulgrir"
@@ -12,7 +35,7 @@ authors = [
     {name = "Your Name",email = "you@example.com"}
 ]
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<4.0"
 dependencies = [
     "django (>=5.2.1,<6.0.0)",
     "psycopg2-binary (>=2.9.10,<3.0.0)",
@@ -29,3 +52,8 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.group.dev.dependencies]
 django-stubs = {extras = ["compatible-mypy"], version = "^5.2.0"}
+mypy = "^1.15.0"
+ruff = "^0.11.10"
+basedpyright = "^1.29.2"
+bandit = "^1.8.3"
+pip-audit = "^2.9.0"

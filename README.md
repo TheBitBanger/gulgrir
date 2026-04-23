@@ -187,6 +187,26 @@ docker compose start app
 For local development, use `compose/dev.yml`. The `backup` service is available
 for on-demand use and does not run on a schedule unless you opt into it.
 
+The dev app container builds the Docker `qa` target so lint/type/security tools
+are available in-container. Published release images are built from the
+`runtime` target in CI.
+
+## QA and tests
+
+Run all commands from the repository root:
+
+```
+make test
+make qa-quick
+make qa-full
+```
+
+- `make qa-quick` runs `ruff`, formatting checks, and `mypy`.
+- `make qa-full` runs all checks, including `basedpyright`, `bandit`,
+  `pip-audit`, `gitleaks` (staged changes), and `check --deploy`.
+- `make qa-full-local` runs the same QA checks via `poetry run` for parity
+  comparisons.
+
 To run scheduled backups in dev, start the backup profile:
 
 ```

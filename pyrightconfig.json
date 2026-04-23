@@ -1,0 +1,20 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/pyright/main/packages/pyright/schema/pyrightconfig.schema.json",
+  "include": [
+    "src"
+  ],
+  "exclude": [
+    "**/node_modules",
+    "**/__pycache__",
+    ".venv",
+    "src/tracker/migrations"
+  ],
+  "typeCheckingMode": "standard",
+  "pythonVersion": "3.12",
+  "reportMissingTypeStubs": "none",
+  "executionEnvironments": [
+    {
+      "root": "src"
+    }
+  ]
+}

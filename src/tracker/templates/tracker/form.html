@@ -79,9 +79,18 @@
           {# Generic field rendering, works for all models/forms #}
           {% if field.field.widget.input_type == "checkbox" %}
             <div class="md:col-span-2">
-              <label class="flex items-center gap-2 text-sm mt-2">
-                {{ field }} <span>{{ field.label }}</span>
-              </label>
+              {% if field.name == "is_project" or field.name == "is_endless" %}
+                <label class="pill-toggle text-sm mt-2">
+                  {{ field }}
+                  <span class="pill-toggle__pill">
+                    {% if field.name == "is_project" %}Project{% else %}Endless{% endif %}
+                  </span>
+                </label>
+              {% else %}
+                <label class="flex items-center gap-2 text-sm mt-2">
+                  {{ field }} <span>{{ field.label }}</span>
+                </label>
+              {% endif %}
               {% if field.errors %}<div class="mt-1 text-xs">{{ field.errors }}</div>{% endif %}
             </div>
           {% else %}

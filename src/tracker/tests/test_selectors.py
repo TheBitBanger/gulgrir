@@ -1,4 +1,5 @@
 from datetime import timedelta
+from typing import Any, cast
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -19,7 +20,7 @@ from tracker.services.selection import apply_selector_eligibility
 )
 class SelectorEligibilityTests(TestCase):
     def setUp(self):
-        self.user = get_user_model().objects.create_user(
+        self.user = cast(Any, get_user_model().objects).create_user(
             username="selector",
         )
         self.item_fresh = UserItem.objects.create(

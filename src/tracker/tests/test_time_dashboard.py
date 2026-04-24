@@ -1,4 +1,5 @@
-from datetime import time, timedelta
+from datetime import datetime, time, timedelta
+from typing import Any, cast
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -8,8 +9,30 @@ from django.urls import reverse
 from django.utils import timezone
 
 from tracker.models import TimeBucket, TimeBucketAssignment, TimeLayout, UserItem
-from tracker.services.time_dashboard import build_chart_entries
+from tracker.services.time_dashboard import BucketNode, build_chart_entries
 from tracker.services.time_windows import build_time_windows, day_range
+
+
+def _bucket_tree(result: dict[str, object]) -> list[BucketNode]:
+    return cast(list[BucketNode], result["bucket_tree"])
+
+
+def _collect_names(nodes: list[BucketNode]) -> list[str]:
+    names: list[str] = []
+    for node in nodes:
+        names.append(node["name"])
+        names.extend(_collect_names(node.get("children", [])))
+    return names
+
+
+def _find_node(nodes: list[BucketNode], name: str) -> BucketNode | None:
+    for node in nodes:
+        if node["name"] == name:
+            return node
+        child = _find_node(node.get("children", []), name)
+        if child is not None:
+            return child
+    return None
 
 
 @override_settings(
@@ -21,7 +44,7 @@ from tracker.services.time_windows import build_time_windows, day_range
 )
 class TimeDashboardAssignmentTests(TestCase):
     def setUp(self):
-        self.user = get_user_model().objects.create_user(
+        self.user = cast(Any, get_user_model().objects).create_user(
             username="dashboard",
         )
         self.layout = TimeLayout.objects.create(user=self.user, name="Balance")
@@ -87,18 +110,13 @@ class TimeDashboardAssignmentTests(TestCase):
             include_zero_time=True,
         )
 
-        def collect_names(nodes: list[dict[str, object]]) -> list[str]:
-            names: list[str] = []
-            for node in nodes:
-                names.append(str(node["name"]))
-                names.extend(collect_names(node.get("children", [])))
-            return names
-
-        bucket_names = collect_names(result["bucket_tree"])
+        bucket_names = _collect_names(_bucket_tree(result))
         self.assertIn("Work", bucket_names)
         self.assertIn("Play", bucket_names)
-        self.assertEqual(len(result["ignored_items"]), 1)
-        self.assertEqual(len(result["unassigned_items"]), 1)
+        ignored_items = cast(list[object], result["ignored_items"])
+        unassigned_items = cast(list[object], result["unassigned_items"])
+        self.assertEqual(len(ignored_items), 1)
+        self.assertEqual(len(unassigned_items), 1)
 
     def test_build_chart_entries_tree_rollup_and_items(self):
         bucket_projects = TimeBucket.objects.create(
@@ -157,17 +175,6 @@ class TimeDashboardAssignmentTests(TestCase):
         }
         buckets = list(TimeBucket.objects.filter(layout=self.layout))
 
-        def find_node(
-            nodes: list[dict[str, object]], name: str
-        ) -> dict[str, object] | None:
-            for node in nodes:
-                if node["name"] == name:
-                    return node
-                child = find_node(node.get("children", []), name)
-                if child is not None:
-                    return child
-            return None
-
         result = build_chart_entries(
             layout=self.layout,
             buckets=buckets,
@@ -177,15 +184,19 @@ class TimeDashboardAssignmentTests(TestCase):
             bucket_id=None,
             include_zero_time=False,
         )
-        work_node = find_node(result["bucket_tree"], "Work")
-        projects_node = find_node(result["bucket_tree"], "Projects")
-        coding_node = find_node(result["bucket_tree"], "Coding")
-        play_node = find_node(result["bucket_tree"], "Play")
+        work_node = _find_node(_bucket_tree(result), "Work")
+        projects_node = _find_node(_bucket_tree(result), "Projects")
+        coding_node = _find_node(_bucket_tree(result), "Coding")
+        play_node = _find_node(_bucket_tree(result), "Play")
 
         self.assertIsNotNone(work_node)
         self.assertIsNotNone(projects_node)
         self.assertIsNotNone(coding_node)
         self.assertIsNotNone(play_node)
+        work_node = cast(BucketNode, work_node)
+        projects_node = cast(BucketNode, projects_node)
+        coding_node = cast(BucketNode, coding_node)
+        play_node = cast(BucketNode, play_node)
         self.assertEqual(work_node["seconds"], durations[item_deep.id])
         self.assertEqual(projects_node["seconds"], durations[item_deep.id])
         self.assertEqual(coding_node["seconds"], durations[item_deep.id])
@@ -206,8 +217,9 @@ class TimeDashboardAssignmentTests(TestCase):
             bucket_id=None,
             include_zero_time=True,
         )
-        projects_node = find_node(result_with_zero["bucket_tree"], "Projects")
+        projects_node = _find_node(_bucket_tree(result_with_zero), "Projects")
         self.assertIsNotNone(projects_node)
+        projects_node = cast(BucketNode, projects_node)
         self.assertEqual(len(projects_node["items"]), 1)
         self.assertEqual(projects_node["items"][0]["item_id"], item_zero.id)
         self.assertEqual(projects_node["items"][0]["item_share_percent"], 0)
@@ -251,9 +263,10 @@ class TimeDashboardAssignmentTests(TestCase):
             include_zero_time=False,
         )
 
-        self.assertEqual(len(result["bucket_tree"]), 1)
-        self.assertEqual(result["bucket_tree"][0]["name"], "Projects")
-        self.assertEqual(result["bucket_tree"][0]["bucket_share_percent"], 100)
+        bucket_tree = _bucket_tree(result)
+        self.assertEqual(len(bucket_tree), 1)
+        self.assertEqual(bucket_tree[0]["name"], "Projects")
+        self.assertEqual(bucket_tree[0]["bucket_share_percent"], 100)
 
     def test_build_chart_entries_sorting(self):
         item_play = UserItem.objects.create(
@@ -304,17 +317,6 @@ class TimeDashboardAssignmentTests(TestCase):
         }
         buckets = list(TimeBucket.objects.filter(layout=self.layout))
 
-        def find_node(
-            nodes: list[dict[str, object]], name: str
-        ) -> dict[str, object] | None:
-            for node in nodes:
-                if node["name"] == name:
-                    return node
-                child = find_node(node.get("children", []), name)
-                if child is not None:
-                    return child
-            return None
-
         result_desc = build_chart_entries(
             layout=self.layout,
             buckets=buckets,
@@ -325,10 +327,11 @@ class TimeDashboardAssignmentTests(TestCase):
             include_zero_time=True,
             sort_dir="desc",
         )
-        bucket_names_desc = [node["name"] for node in result_desc["bucket_tree"]]
+        bucket_names_desc = [node["name"] for node in _bucket_tree(result_desc)]
         self.assertEqual(bucket_names_desc[:2], ["Work", "Play"])
-        work_node_desc = find_node(result_desc["bucket_tree"], "Work")
+        work_node_desc = _find_node(_bucket_tree(result_desc), "Work")
         self.assertIsNotNone(work_node_desc)
+        work_node_desc = cast(BucketNode, work_node_desc)
         work_item_titles_desc = [item["title"] for item in work_node_desc["items"]]
         self.assertEqual(
             work_item_titles_desc[:3],
@@ -349,10 +352,11 @@ class TimeDashboardAssignmentTests(TestCase):
             include_zero_time=True,
             sort_dir="asc",
         )
-        bucket_names_asc = [node["name"] for node in result_asc["bucket_tree"]]
+        bucket_names_asc = [node["name"] for node in _bucket_tree(result_asc)]
         self.assertEqual(bucket_names_asc[:2], ["Play", "Work"])
-        work_node_asc = find_node(result_asc["bucket_tree"], "Work")
+        work_node_asc = _find_node(_bucket_tree(result_asc), "Work")
         self.assertIsNotNone(work_node_asc)
+        work_node_asc = cast(BucketNode, work_node_asc)
         work_item_titles_asc = [item["title"] for item in work_node_asc["items"]]
         self.assertEqual(
             work_item_titles_asc[:3],
@@ -587,7 +591,7 @@ class TimeWindowCalendarTests(TestCase):
     def test_last_7_days_uses_calendar_bounds(self):
         tz = timezone.get_current_timezone()
         now = timezone.make_aware(
-            timezone.datetime(2025, 5, 19, 15, 30, 0),
+            datetime(2025, 5, 19, 15, 30, 0),
             tz,
         )
         windows = build_time_windows(now=now)
@@ -601,7 +605,7 @@ class TimeWindowCalendarTests(TestCase):
     def test_today_and_yesterday_windows(self):
         tz = timezone.get_current_timezone()
         now = timezone.make_aware(
-            timezone.datetime(2025, 5, 19, 9, 0, 0),
+            datetime(2025, 5, 19, 9, 0, 0),
             tz,
         )
         windows = build_time_windows(now=now)
@@ -621,7 +625,7 @@ class TimeWindowCalendarTests(TestCase):
         tz = timezone.get_current_timezone()
         cutoff = time(4, 0)
         now = timezone.make_aware(
-            timezone.datetime(2025, 5, 19, 2, 0, 0),
+            datetime(2025, 5, 19, 2, 0, 0),
             tz,
         )
         windows = build_time_windows(now=now, cutoff_time=cutoff)

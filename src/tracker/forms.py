@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 
 from django import forms
 
@@ -35,9 +35,8 @@ class UserItemForm(forms.ModelForm):
 
         # Scope tags to current user
         if user is not None and "tags" in self.fields:
-            self.fields["tags"].queryset = Tag.objects.filter(user=user).order_by(
-                "name"
-            )
+            tags_field = cast(forms.ModelMultipleChoiceField, self.fields["tags"])
+            tags_field.queryset = Tag.objects.filter(user=user).order_by("name")
 
         # Light Tailwind-ish styling for consistent sizing
         base = "w-full rounded-lg border px-3 py-2 text-sm"
@@ -125,9 +124,11 @@ class UserItemFilterForm(forms.Form):
         user = kwargs.pop("user")
         super().__init__(*args, **kwargs)
         if user is not None:
-            self.fields["tags"].queryset = Tag.objects.filter(user=user)
-        self.fields["tags"].widget = forms.CheckboxSelectMultiple()
-        self.fields["tags"].help_text = ""
+            tags_field = cast(forms.ModelMultipleChoiceField, self.fields["tags"])
+            tags_field.queryset = Tag.objects.filter(user=user)
+        tags_field = cast(forms.ModelMultipleChoiceField, self.fields["tags"])
+        tags_field.widget = forms.CheckboxSelectMultiple()
+        tags_field.help_text = ""
         self.fields["title_icontains"].widget.attrs.setdefault(
             "class",
             "control",

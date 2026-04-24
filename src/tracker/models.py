@@ -1,4 +1,5 @@
 from datetime import time
+from typing import Any, cast
 from urllib.parse import urlencode
 
 from django.conf import settings
@@ -10,6 +11,8 @@ from pytz import common_timezones
 
 
 class Item(models.Model):
+    id: int
+
     class MediaType(models.TextChoices):
         BOOK = "book", "Book"
         MOVIE = "movie", "Movie"
@@ -33,7 +36,7 @@ class Item(models.Model):
         return self.title
 
 
-class UserItemQuerySet(models.QuerySet):
+class UserItemQuerySet(models.QuerySet["UserItem"]):
     def record_event(self, event: "UserItemHistory.Event") -> int:
         """
         Bulk-create one UserItemHistory row per item and, for COMPLETED,
@@ -55,7 +58,7 @@ class UserItemQuerySet(models.QuerySet):
 
         return len(history_rows)
 
-    def with_latest_dates(self):
+    def with_latest_dates(self) -> "UserItemQuerySet":
         """Annotate UserItem with last_completed_at / last_revisited_at."""
         latest_completed = (
             UserItemHistory.objects.filter(
@@ -72,9 +75,12 @@ class UserItemQuerySet(models.QuerySet):
             .values("happened_at")[:1]
         )
 
-        return self.annotate(
-            last_completed_at=Subquery(latest_completed),
-            last_revisited_at=Subquery(latest_revisited),
+        return cast(
+            UserItemQuerySet,
+            self.annotate(
+                last_completed_at=Subquery(latest_completed),
+                last_revisited_at=Subquery(latest_revisited),
+            ),
         )
 
 
@@ -96,6 +102,12 @@ class UserItem(models.Model):
 
     # custom manager to provide more methods
     objects = UserItemQuerySet.as_manager()
+
+    id: int
+    user_id: int
+    item_id: int | None
+    created_by_id: int | None
+    history: models.Manager["UserItemHistory"]
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     item = models.ForeignKey(
@@ -121,7 +133,7 @@ class UserItem(models.Model):
         on_delete=models.SET_NULL,
         null=True,
     )
-    tags = models.ManyToManyField("Tag", blank=True, related_name="user_items")
+    tags: Any = models.ManyToManyField("Tag", blank=True, related_name="user_items")
     timer_started_at = models.DateTimeField(null=True, blank=True)
     is_pinned = models.BooleanField(default=False)
 
@@ -141,6 +153,9 @@ class UserItem(models.Model):
 
 
 class UserItemHistory(models.Model):
+    id: int
+    user_item_id: int
+
     class Event(models.TextChoices):
         COMPLETED = "completed", "Completed"
         REVISITED = "revisited", "Revisited"
@@ -165,6 +180,9 @@ class UserItemHistory(models.Model):
 class Tag(models.Model):
     """Per-user free-form tags that can be attached to UserItems only."""
 
+    id: int
+    user_id: int
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="tags"
     )
@@ -185,6 +203,9 @@ class Tag(models.Model):
 
 
 class Profile(models.Model):
+    id: int
+    user_id: int
+
     class Theme(models.TextChoices):
         SYSTEM = "system", "System"
         LIGHT = "light", "Light"
@@ -281,13 +302,13 @@ class SavedFilter(models.Model):
         shelf_values = d.get("shelf") or []
         if shelf_values:
             shelf_map = {value: label for value, label in UserItem.Shelf.choices}
-            shelf_labels = [shelf_map.get(value, value) for value in shelf_values]
+            shelf_labels = [str(shelf_map.get(value, value)) for value in shelf_values]
             parts.append(f"Shelf={', '.join(shelf_labels)}")
 
         media_values = d.get("media_type") or []
         if media_values:
             media_map = {value: label for value, label in Item.MediaType.choices}
-            media_labels = [media_map.get(value, value) for value in media_values]
+            media_labels = [str(media_map.get(value, value)) for value in media_values]
             parts.append(f"Media={', '.join(media_labels)}")
 
         tag_ids = d.get("tags") or []
@@ -310,7 +331,7 @@ class SavedFilter(models.Model):
         tier_values = d.get("tier") or []
         if tier_values:
             tier_map = {value: label for value, label in UserItem.Tier.choices}
-            tier_labels = [tier_map.get(value, str(value)) for value in tier_values]
+            tier_labels = [str(tier_map.get(value, value)) for value in tier_values]
             parts.append(f"Tier={', '.join(tier_labels)}")
 
         return " | ".join(parts) if parts else "All items"
@@ -341,6 +362,9 @@ class SavedFilter(models.Model):
 
 
 class TimeLayout(models.Model):
+    id: int
+    user_id: int
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -360,6 +384,10 @@ class TimeLayout(models.Model):
 
 
 class TimeBucket(models.Model):
+    id: int
+    layout_id: int
+    parent_id: int | None
+
     layout = models.ForeignKey(
         TimeLayout,
         on_delete=models.CASCADE,
@@ -384,6 +412,11 @@ class TimeBucket(models.Model):
 
 
 class TimeBucketAssignment(models.Model):
+    id: int
+    layout_id: int
+    user_item_id: int
+    bucket_id: int | None
+
     layout = models.ForeignKey(
         TimeLayout,
         on_delete=models.CASCADE,

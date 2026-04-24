@@ -1,7 +1,11 @@
 import json
 import sys
+from collections.abc import Callable
+from typing import Any, cast
 
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import AnonymousUser
+from django.db.models import QuerySet
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
@@ -13,6 +17,21 @@ from ..models import UserItem, UserItemHistory
 from ..services import build_useritem_queryset
 
 
+def _get_authenticated_user(request):
+    user = request.user
+    if isinstance(user, AnonymousUser):
+        raise ValueError("Authentication required")
+    return user
+
+
+def _build_param_form(param_form_cls, *args: Any, user, **kwargs: Any):
+    build_form = cast(Callable[..., Any], param_form_cls)
+    try:
+        return build_form(*args, user=user, **kwargs)
+    except TypeError:
+        return build_form(*args, **kwargs)
+
+
 @require_POST
 @login_required
 def bulk_history_action(request):
@@ -21,6 +40,8 @@ def bulk_history_action(request):
         action = 'completed' | 'revisited'
         selected_ids = repeated UserItem IDs (e.g. selected_ids=1&selected_ids=2)
     """
+    user = _get_authenticated_user(request)
+
     action = request.POST.get("action")
     ids = request.POST.getlist("selected_ids")
 
@@ -31,9 +52,7 @@ def bulk_history_action(request):
     if action not in valid_actions or not ids:
         return redirect(request.META.get("HTTP_REFERER", "/"))
 
-    queryset = UserItem.objects.filter(user=request.user, id__in=ids).select_related(
-        "item"
-    )
+    queryset = UserItem.objects.filter(user=user, id__in=ids).select_related("item")
 
     history_records = [
         UserItemHistory(user_item=ui, event_type=valid_actions[action])
@@ -62,6 +81,8 @@ def useritem_execute_action(request):
         JSON payload produced by the action.
         Header HX-Trigger: "action-toast" (handled by the client JS)
     """
+    user = _get_authenticated_user(request)
+
     print(
         "ACTION DEBUG:",
         "method=",
@@ -81,24 +102,23 @@ def useritem_execute_action(request):
     if not slug:
         return HttpResponseBadRequest("Missing action slug")
 
-    action: Action | None = action_registry.get(slug)
-    if action is None:
+    action_cls: type[Action] | None = action_registry.get(slug)
+    if action_cls is None:
         return HttpResponseBadRequest("Unknown action")
+    action = action_cls()
 
     sel_ids: list[str] = request.POST.getlist("selected_ids")
+    qs: QuerySet[UserItem]
     if sel_ids:
-        qs = UserItem.objects.filter(pk__in=sel_ids, user=request.user)
+        qs = UserItem.objects.filter(pk__in=sel_ids, user=user)
     else:
         qs = build_useritem_queryset(request)
 
-    try:
-        form = action.ParamForm(request.POST, user=request.user)
-    except TypeError:
-        form = action.ParamForm(request.POST)
+    form = _build_param_form(action.ParamForm, request.POST, user=user)
     if not form.is_valid():
         return HttpResponseBadRequest(form.errors.as_json())
 
-    payload = action()(qs, user=request.user, **form.cleaned_data)
+    payload = action(qs, user=user, **form.cleaned_data)
     response = JsonResponse(payload)
     response["HX-Trigger"] = json.dumps({"action-toast": payload})
 
@@ -121,16 +141,15 @@ def list_actions(request):
 @login_required
 def action_params(request):
     """Return the ParamForm fragment for a given action slug."""
+    user = _get_authenticated_user(request)
+
     slug = request.GET.get("action_slug") or ""
     action = action_registry.get(slug)
 
     if not slug or action is None:
         return HttpResponse("<span></span>")
 
-    try:
-        form = action.ParamForm(auto_id="id_param_%s", user=request.user)
-    except TypeError:
-        form = action.ParamForm(auto_id="id_param_%s")
+    form = _build_param_form(action.ParamForm, auto_id="id_param_%s", user=user)
 
     return render(
         request,

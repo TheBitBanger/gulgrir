@@ -1,5 +1,6 @@
 import re
 from datetime import date, datetime, time, timedelta
+from typing import Any, cast
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -178,12 +179,11 @@ class UserItemCreate(LoginRequiredMixin, CreateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
+        user = cast(Any, self.request.user)
 
         ctx["enable_tag_picker"] = True
         ctx["all_tags"] = list(
-            Tag.objects.filter(user=self.request.user)
-            .order_by("name")
-            .values("id", "name")
+            Tag.objects.filter(user=user).order_by("name").values("id", "name")
         )
 
         form = ctx.get("form")
@@ -211,12 +211,11 @@ class UserItemUpdate(OwnObjectsMixin, UpdateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
+        user = cast(Any, self.request.user)
 
         ctx["enable_tag_picker"] = True
         ctx["all_tags"] = list(
-            Tag.objects.filter(user=self.request.user)
-            .order_by("name")
-            .values("id", "name")
+            Tag.objects.filter(user=user).order_by("name").values("id", "name")
         )
 
         form = ctx["form"]
@@ -240,12 +239,11 @@ class UserItemDetail(OwnObjectsMixin, UpdateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         user_item = self.object
+        user = cast(Any, self.request.user)
 
         ctx["enable_tag_picker"] = True
         ctx["all_tags"] = list(
-            Tag.objects.filter(user=self.request.user)
-            .order_by("name")
-            .values("id", "name")
+            Tag.objects.filter(user=user).order_by("name").values("id", "name")
         )
 
         form = ctx.get("form")
@@ -255,13 +253,11 @@ class UserItemDetail(OwnObjectsMixin, UpdateView):
         else:
             ctx["selected_tag_ids"] = []
 
-        layouts = list(
-            TimeLayout.objects.filter(user=self.request.user).order_by("order", "name")
-        )
+        layouts = list(TimeLayout.objects.filter(user=user).order_by("order", "name"))
         if not layouts:
             layouts = list(
                 TimeLayout.objects.filter(
-                    user=self.request.user,
+                    user=user,
                     assignments__user_item=user_item,
                 )
                 .distinct()

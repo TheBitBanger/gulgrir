@@ -1,4 +1,5 @@
 import os
+from typing import Any, cast
 
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
@@ -13,6 +14,9 @@ class Command(BaseCommand):
             username = os.getenv("DJANGO_ADMIN_USER", "admin")
             password = os.getenv("DJANGO_ADMIN_PASS", "admin")
             self.stdout.write(f"Creating superuser {username}")
-            User.objects.create_superuser(username=username, password=password)
+            cast(Any, User.objects).create_superuser(
+                username=username,
+                password=password,
+            )
         else:
             self.stdout.write("Superuser already exists - skipping")

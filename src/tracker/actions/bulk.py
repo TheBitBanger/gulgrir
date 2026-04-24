@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, ClassVar
+from typing import Any, ClassVar, cast
 
 from django import forms
 from django.db.models import QuerySet
@@ -12,6 +12,7 @@ from tracker.models import (
     TimeLayout,
     UserItem,
     UserItemHistory,
+    UserItemQuerySet,
 )
 
 
@@ -25,20 +26,24 @@ class BulkAssignToBucketForm(forms.Form):
 
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
+        layout_field = cast(forms.ModelChoiceField, self.fields["layout"])
+        bucket_field = cast(forms.ModelChoiceField, self.fields["bucket"])
         if user is None:
-            self.fields["layout"].queryset = TimeLayout.objects.none()
-            self.fields["bucket"].queryset = TimeBucket.objects.none()
+            layout_field.queryset = TimeLayout.objects.none()
+            bucket_field.queryset = TimeBucket.objects.none()
             return
 
-        self.fields["layout"].queryset = TimeLayout.objects.filter(user=user).order_by(
+        layout_field.queryset = TimeLayout.objects.filter(user=user).order_by(
             "order", "name"
         )
-        self.fields["bucket"].queryset = TimeBucket.objects.filter(
+        bucket_field.queryset = TimeBucket.objects.filter(
             layout__user=user
         ).select_related("layout")
 
     def clean(self):
         cleaned = super().clean()
+        if cleaned is None:
+            return {}
         layout = cleaned.get("layout")
         bucket = cleaned.get("bucket")
         if layout and bucket and bucket.layout_id != layout.id:
@@ -53,8 +58,8 @@ class BulkMarkCompleted:
     group: ClassVar[str] = "bulk"
     ParamForm: ClassVar[type[forms.Form]] = _NoParams
 
-    def __call__(self, qs: QuerySet[UserItem], **params: Any) -> ToastPayload:  # type: ignore[override]
-        n = qs.record_event(UserItemHistory.Event.COMPLETED)
+    def __call__(self, qs: QuerySet[UserItem], **params: Any) -> ToastPayload:
+        n = cast(UserItemQuerySet, qs).record_event(UserItemHistory.Event.COMPLETED)
 
         return {"title": f"Completed {n} item(s)", "id": 0}
 
@@ -66,8 +71,8 @@ class BulkMarkRevisited:
     group: ClassVar[str] = "bulk"
     ParamForm: ClassVar[type[forms.Form]] = _NoParams
 
-    def __call__(self, qs: QuerySet[UserItem], **params: Any) -> ToastPayload:  # type: ignore[override]
-        n = qs.record_event(UserItemHistory.Event.REVISITED)
+    def __call__(self, qs: QuerySet[UserItem], **params: Any) -> ToastPayload:
+        n = cast(UserItemQuerySet, qs).record_event(UserItemHistory.Event.REVISITED)
 
         return {"title": f"Revisited {n} item(s)", "id": 0}
 
@@ -79,7 +84,7 @@ class BulkAssignToBucket:
     group: ClassVar[str] = "bulk"
     ParamForm: ClassVar[type[forms.Form]] = BulkAssignToBucketForm
 
-    def __call__(self, qs: QuerySet[UserItem], **params: Any) -> ToastPayload:  # type: ignore[override]
+    def __call__(self, qs: QuerySet[UserItem], **params: Any) -> ToastPayload:
         layout: TimeLayout = params["layout"]
         bucket: TimeBucket = params["bucket"]
         updated = 0

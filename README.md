@@ -89,11 +89,23 @@ GULGRIR_PORT=8765
 Notes:
 - `DJANGO_ADMIN_USER` / `DJANGO_ADMIN_PASS` are used to auto-create a superuser on first run for admin fallback access.
 - Change the defaults for any real deployment.
+- Set `DJANGO_SECRET_KEY` to a long, random, user-defined value (at least 50 characters). Django will raise `security.W009` during `check --deploy` if it is too short or otherwise weak.
+- Keep `DJANGO_SECRET_KEY` out of version control and rotate it carefully in production.
 - `GULGRIR_PORT` controls the host port that maps to container port 8765.
 - `DJANGO_ALLOWED_HOSTS` should include any hostnames or IPs you use to access the app.
 - `DJANGO_CSRF_TRUSTED_ORIGINS` must include the full scheme + host (and port if used).
 - `DJANGO_SECURE_PROXY_SSL_HEADER` should be `true` only when running behind a reverse proxy.
 - `BACKUP_SCHEDULE` only matters if the backup service is running.
+
+Generate a secure `DJANGO_SECRET_KEY` with one of the following:
+
+```bash
+python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+```
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(64))"
+```
 
 ## If using a reverse proxy
 

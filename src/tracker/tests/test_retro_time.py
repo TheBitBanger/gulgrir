@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from typing import Any, cast
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
@@ -45,7 +46,7 @@ class RetroDurationParserTests(TestCase):
 )
 class RetroTimeEntryTests(TestCase):
     def setUp(self):
-        self.user = get_user_model().objects.create_user(
+        self.user = cast(Any, get_user_model().objects).create_user(
             username="tester",
         )
         self.user.profile.timezone = "UTC"

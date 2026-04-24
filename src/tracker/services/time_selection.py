@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import random
-from datetime import date, time
+from datetime import date, datetime, time
 from typing import TypedDict
 
 from django.urls import reverse
@@ -20,6 +20,14 @@ class SelectionResult(TypedDict):
     id: int
     title: str
     kind: str
+    url: str
+
+
+class LevelEntry(TypedDict):
+    kind: str
+    id: int
+    label: str
+    seconds: int
     url: str
 
 
@@ -46,6 +54,8 @@ def select_from_level_for_user(
     bucket_children = build_bucket_children_map(buckets)
     bucket_paths = build_bucket_paths(buckets)
 
+    start: datetime | None
+    end: datetime | None
     if range_start and range_end:
         start, _ = day_range(range_start, day_cutoff)
         _, end = day_range(range_end, day_cutoff)
@@ -70,8 +80,10 @@ def select_from_level_for_user(
         if assignment.bucket_id is None:
             continue
         duration = durations.get(assignment.user_item_id, 0)
-        for bucket in bucket_paths.get(assignment.bucket_id, []):
-            bucket_totals[bucket] = bucket_totals.get(bucket, 0) + duration
+        for bucket_id_in_path in bucket_paths.get(assignment.bucket_id, []):
+            bucket_totals[bucket_id_in_path] = (
+                bucket_totals.get(bucket_id_in_path, 0) + duration
+            )
 
     candidate_buckets = bucket_children.get(bucket_id, [])
     candidate_assignments = [
@@ -85,7 +97,7 @@ def select_from_level_for_user(
         ).select_related("item")
     }
 
-    entries: list[dict[str, object]] = []
+    entries: list[LevelEntry] = []
     for bucket in candidate_buckets:
         seconds = bucket_totals.get(bucket.id, 0)
         dashboard_url = (

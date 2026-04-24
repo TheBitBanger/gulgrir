@@ -1,3 +1,5 @@
+from typing import Any, cast
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from django.urls import reverse
@@ -15,7 +17,7 @@ from tracker.models import UserItem, UserItemHistory
 )
 class UserItemRestartTests(TestCase):
     def setUp(self):
-        self.user = get_user_model().objects.create_user(
+        self.user = cast(Any, get_user_model().objects).create_user(
             username="restart",
         )
         self.item = UserItem.objects.create(

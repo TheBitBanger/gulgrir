@@ -1,3 +1,5 @@
+from typing import Any, cast
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
@@ -7,7 +9,7 @@ from tracker.models import Item, UserItem
 
 class UserItemPinTests(TestCase):
     def setUp(self):
-        self.user = get_user_model().objects.create_user(
+        self.user = cast(Any, get_user_model().objects).create_user(
             username="pin-user",
             email="pin@example.com",
         )

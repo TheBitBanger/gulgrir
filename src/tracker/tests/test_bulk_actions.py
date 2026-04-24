@@ -1,3 +1,5 @@
+from typing import Any, cast
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 
@@ -14,7 +16,7 @@ from tracker.models import TimeBucket, TimeBucketAssignment, TimeLayout, UserIte
 )
 class BulkAssignToBucketTests(TestCase):
     def setUp(self):
-        self.user = get_user_model().objects.create_user(
+        self.user = cast(Any, get_user_model().objects).create_user(
             username="bulk",
         )
         self.layout = TimeLayout.objects.create(user=self.user, name="Balance")

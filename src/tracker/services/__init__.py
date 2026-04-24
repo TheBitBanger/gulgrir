@@ -1,16 +1,21 @@
-from typing import Any
+from typing import Any, cast
 
+from django.contrib.auth.models import AnonymousUser
 from django.db.models import QuerySet
 from django.http import HttpRequest
 
 from ..forms import UserItemFilterForm
-from ..models import SavedFilter, UserItem
+from ..models import SavedFilter, UserItem, UserItemQuerySet
 
 
 def build_useritem_queryset(request: HttpRequest) -> QuerySet[UserItem]:
     """
     Build the filtered queryset for the UserItem dashboard
     """
+
+    user = request.user
+    if isinstance(user, AnonymousUser):
+        return UserItem.objects.none()
 
     # Always treat URL as the dataset state, but allow POST
     # to carry or override it for actions.
@@ -38,17 +43,23 @@ def build_useritem_queryset(request: HttpRequest) -> QuerySet[UserItem]:
 
     data.pop("sf", None)
 
-    form = UserItemFilterForm(data, user=request.user)
+    form = UserItemFilterForm(data, user=user)
     if form.is_valid():
         data_def = form.to_definition()
         if data_def:
             definition.update(data_def)
 
-    q_obj = SavedFilter(user=request.user, definition=definition).as_q()
+    q_obj = SavedFilter(user=cast(Any, user), definition=definition).as_q()
 
-    return (
-        UserItem.objects.filter(q_obj, user=request.user)
-        .prefetch_related("tags", "item")
-        .with_latest_dates()
-        .order_by("last_revisited_at")
+    base_queryset = UserItem.objects.filter(
+        q_obj,
+        user=cast(Any, user),
+    ).prefetch_related("tags", "item")
+    if not isinstance(base_queryset, UserItemQuerySet):
+        raise TypeError("Expected UserItemQuerySet from UserItem.objects")
+    queryset = cast(
+        QuerySet[UserItem],
+        base_queryset.with_latest_dates().order_by("last_revisited_at"),
     )
+
+    return queryset

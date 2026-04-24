@@ -23,7 +23,7 @@ from ..services.time_dashboard import (
     build_bucket_option_list,
 )
 from ..services.time_dashboard_rules import build_dashboard_context_for_user
-from ..services.time_selection import select_from_level_for_user
+from ..services.time_selection import SelectionResult, select_from_level_for_user
 from ..services.time_windows import build_picker_windows
 
 
@@ -393,10 +393,13 @@ def time_level_select(request):
         return HttpResponseBadRequest(str(exc))
 
     if payload is None:
-        payload = {
+        empty_payload: SelectionResult = {
             "id": 0,
             "title": "Nothing to select at this level.",
+            "kind": "item",
+            "url": reverse("time_dashboard"),
         }
+        payload = empty_payload
 
     response = JsonResponse(payload)
     response["HX-Trigger"] = json.dumps({"action-toast": payload})

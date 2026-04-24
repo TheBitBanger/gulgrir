@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import random
 from datetime import timedelta
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Protocol, cast
 
 from django import forms
 from django.db.models import (
@@ -27,6 +27,10 @@ from tracker.services.time_windows import find_time_window, time_window_choices
 from . import ToastPayload, register
 
 
+class _WeightedItem(Protocol):
+    age: timedelta
+
+
 class RandomWeightedForm(forms.Form):
     WEIGHT_CHOICES = (
         ("last_revisited_at", "Older 'last revisited' ↑"),
@@ -48,7 +52,8 @@ class RandomWeightedTimeForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["time_window"].choices = time_window_choices()
+        time_window_field = cast(forms.ChoiceField, self.fields["time_window"])
+        time_window_field.choices = time_window_choices()
 
 
 @register
@@ -108,7 +113,8 @@ class RandomWeightedSelector:
             raise ValueError("Empty queryset passed to RandomWeightedSelector")
 
         # Convert duration to positive float seconds for random.choices
-        weights = [max(obj.age.total_seconds(), 1.0) for obj in items]
+        weighted_items = cast(list[_WeightedItem], items)
+        weights = [max(obj.age.total_seconds(), 1.0) for obj in weighted_items]
         # Feature-level weighted selection; cryptographic randomness is not required.
         chosen = random.choices(items, weights=weights, k=1)[0]  # nosec B311
 

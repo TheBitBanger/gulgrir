@@ -61,7 +61,7 @@ def build_dashboard_context_for_user(
     today_context: dict[str, object] = {"label": "Today", "entries": []}
     yesterday_context: dict[str, object] = {"label": "Yesterday", "entries": []}
     selected_context: dict[str, object] = {"label": "All time", "entries": []}
-    all_time_assignments = {
+    all_time_assignments: dict[str, object] = {
         "unassigned_items": [],
         "ignored_items": [],
         "selected_bucket": None,

@@ -2,12 +2,13 @@ from datetime import datetime, timedelta
 from typing import Any, cast
 
 from django.contrib.auth import get_user_model
+from django.contrib.messages import get_messages
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
 from tracker.models import UserItem, UserItemHistory
-from tracker.views.useritems import parse_retro_duration
+from tracker.views.useritems import parse_retro_duration, parse_retro_time
 
 
 class RetroDurationParserTests(TestCase):
@@ -35,6 +36,12 @@ class RetroDurationParserTests(TestCase):
         duration, error = parse_retro_duration("24h 1s")
         self.assertIsNone(duration)
         self.assertEqual(error, "Duration must be 24h or less")
+
+    def test_accepts_time_without_leading_zero(self):
+        parsed, error = parse_retro_time("9:00")
+        self.assertIsNone(error)
+        self.assertEqual(parsed.hour, 9)
+        self.assertEqual(parsed.minute, 0)
 
 
 @override_settings(
@@ -86,10 +93,24 @@ class RetroTimeEntryTests(TestCase):
             "retro_duration": "10",
         }
 
+        response = self.client.post(url, payload, follow=True)
+        self.assertEqual(response.status_code, 200)
+        messages = [m.message for m in get_messages(response.wsgi_request)]
+        self.assertIn("Duration: Use h/m/s (e.g. 1h 20m 10s)", messages)
+
+    def test_retro_time_entry_accepts_start_time_without_leading_zero(self):
+        self.client.force_login(self.user)
+        url = reverse("useritem_timer_add", kwargs={"pk": self.user_item.pk})
+        payload = {
+            "retro_date": "2026-03-08",
+            "retro_start_time": "9:00",
+            "retro_duration": "30m",
+        }
+
         response = self.client.post(url, payload)
-        self.assertEqual(response.status_code, 400)
-        self.assertContains(
-            response,
-            "Use h/m/s (e.g. 1h 20m 10s)",
-            status_code=400,
-        )
+        self.assertEqual(response.status_code, 302)
+
+        history = UserItemHistory.objects.get(user_item=self.user_item)
+        tz = timezone.get_current_timezone()
+        expected_start = timezone.make_aware(datetime(2026, 3, 8, 9, 0, 0), tz)
+        self.assertEqual(history.started_at, expected_start)

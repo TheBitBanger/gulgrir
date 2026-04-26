@@ -104,12 +104,13 @@ def parse_retro_time(raw: str) -> tuple[time, str | None]:
     if not raw:
         return time(0, 0), None
 
-    try:
-        parsed = datetime.strptime(raw, "%H:%M").time()
-    except ValueError:
+    match = re.fullmatch(r"([01]?\d|2[0-3]):([0-5]\d)", raw)
+    if match is None:
         return time(0, 0), "Enter a valid time (HH:MM)"
 
-    return parsed, None
+    hour = int(match.group(1))
+    minute = int(match.group(2))
+    return time(hour, minute), None
 
 
 def build_useritem_detail_context(
@@ -526,40 +527,16 @@ def useritem_timer_add_retro(request, pk: int):
         retro_errors["Duration"] = duration_error
 
     if retro_errors:
-        retro_values = {
-            "date": date_raw or timezone.localdate().isoformat(),
-            "start_time": time_raw,
-            "duration": duration_raw,
-        }
-        form = UserItemForm(instance=user_item, user=request.user)
-        ctx = build_useritem_detail_context(
-            request=request,
-            user_item=user_item,
-            form=form,
-            retro_values=retro_values,
-            retro_errors=retro_errors,
-        )
-        return render(request, "tracker/useritem_detail.html", ctx, status=400)
+        for field, message in retro_errors.items():
+            messages.error(request, f"{field}: {message}")
+        return redirect("useritem_detail", pk=user_item.pk)
 
     if parsed_date is None or parsed_duration is None:
-        retro_values = {
-            "date": date_raw or timezone.localdate().isoformat(),
-            "start_time": time_raw,
-            "duration": duration_raw,
-        }
         if parsed_date is None:
-            retro_errors.setdefault("Date", "Enter a valid date")
+            messages.error(request, "Date: Enter a valid date")
         if parsed_duration is None:
-            retro_errors.setdefault("Duration", "Duration required")
-        form = UserItemForm(instance=user_item, user=request.user)
-        ctx = build_useritem_detail_context(
-            request=request,
-            user_item=user_item,
-            form=form,
-            retro_values=retro_values,
-            retro_errors=retro_errors,
-        )
-        return render(request, "tracker/useritem_detail.html", ctx, status=400)
+            messages.error(request, "Duration: Duration required")
+        return redirect("useritem_detail", pk=user_item.pk)
 
     tz = timezone.get_current_timezone()
     started_at = timezone.make_aware(datetime.combine(parsed_date, parsed_time), tz)
@@ -572,5 +549,7 @@ def useritem_timer_add_retro(request, pk: int):
         ended_at=ended_at,
     )
     history.save()
+
+    messages.success(request, "Retro time entry added.")
 
     return redirect("useritem_detail", pk=user_item.pk)

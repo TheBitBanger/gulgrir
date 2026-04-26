@@ -317,15 +317,6 @@
           <div class="panel-title">Add time retroactively</div>
           <p class="text-sm text-muted">Log time for a past session without starting a timer.</p>
 
-          <div id="retro-errors"
-               class="mt-2 rounded-lg border p-3 text-sm {% if not retro_errors %}hidden{% endif %}">
-            {% if retro_errors %}
-              {% for field, message in retro_errors.items %}
-                <div><strong>{{ field }}:</strong> {{ message }}</div>
-              {% endfor %}
-            {% endif %}
-          </div>
-
           <form method="post"
                 action="{% url 'useritem_timer_add' object.pk %}"
                 class="mt-3 space-y-3"

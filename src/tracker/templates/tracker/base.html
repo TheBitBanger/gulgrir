@@ -478,6 +478,41 @@
       font-size: 0.8rem;
     }
 
+    .environment-section {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .environment-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.28rem;
+      padding: 0.15rem 0.55rem;
+      border-radius: 9999px;
+      border: 1px solid color-mix(in oklab, var(--border) 85%, transparent);
+      background: color-mix(in oklab, var(--surface-2) 58%, transparent);
+      font-size: 0.75rem;
+      white-space: nowrap;
+      max-width: 14rem;
+    }
+
+    .environment-chip__label {
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-size: 0.68rem;
+    }
+
+    .environment-chip__value {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
+    }
+
     .app-header-wrap {
       position: sticky;
       top: var(--app-header-top);
@@ -657,13 +692,9 @@
     }
 
     .active-timers__name--wrap {
-      white-space: normal;
+      white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      word-break: break-word;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
     }
 
     .active-timers__row:hover {
@@ -718,13 +749,25 @@
     }
 
     .active-timers__name.active-timers__name--wrap {
-      white-space: normal;
+      white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      word-break: break-word;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
+    }
+
+    .active-timers__text {
+      display: grid;
+      gap: 0.05rem;
+      min-width: 0;
+      flex: 1 1 auto;
+    }
+
+    .active-timers__bucket {
+      color: var(--muted);
+      font-size: 0.72rem;
+      line-height: 1.15;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .active-timers__meta {
@@ -979,7 +1022,20 @@
         </div>
         <div class="app-header__account">
           {% if request.user.is_authenticated %}
-            <span class="user-pill">{{ request.user.username }}</span>
+            <div class="environment-section" aria-label="Environment">
+              <span class="environment-chip">
+                <span class="environment-chip__label">User</span>
+                <span class="environment-chip__value">{{ request.user.username }}</span>
+              </span>
+              <span class="environment-chip">
+                <span class="environment-chip__label">Layout</span>
+                <span class="environment-chip__value">{{ current_default_layout_name }}</span>
+              </span>
+              <span class="environment-chip">
+                <span class="environment-chip__label">Env</span>
+                <span class="environment-chip__value">{{ current_environment_name }}</span>
+              </span>
+            </div>
             <form method="post" action="{% url 'logout' %}" class="inline">
               {% csrf_token %}
               <button type="submit" class="btn">Logout</button>

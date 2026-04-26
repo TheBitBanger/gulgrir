@@ -246,6 +246,13 @@ class Profile(models.Model):
     time_dashboard_expand_depth = models.PositiveSmallIntegerField(default=3)
     time_dashboard_sort_dir = models.CharField(max_length=4, default="desc")
     time_dashboard_day_cutoff = models.TimeField(default=time(0, 0))
+    time_default_layout = models.ForeignKey(
+        "TimeLayout",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="default_for_profiles",
+    )
 
     def flatpickr_format(self):
         # convert a few common strftime tokens to flatpickr

@@ -8,7 +8,10 @@
         <div class="active-timers__list">
           <div class="active-timers__row" data-row-href="{{ current_item.detail_url }}">
             <div class="active-timers__main" title="{{ current_item.title }}">
-              <span class="active-timers__name active-timers__name--wrap">{{ current_item.title }}</span>
+              <div class="active-timers__text">
+                <span class="active-timers__name active-timers__name--wrap">{{ current_item.title }}</span>
+                <span class="active-timers__bucket" title="in: {{ current_item.bucket_label }}">in: {{ current_item.bucket_label }}</span>
+              </div>
             </div>
             <div class="active-timers__meta">
               <button
@@ -46,7 +49,10 @@
           {% for item in pinned_items %}
             <div class="active-timers__row" data-row-href="{{ item.detail_url }}">
             <div class="active-timers__main" title="{{ item.title }}">
-              <span class="active-timers__name active-timers__name--wrap">{{ item.title }}</span>
+              <div class="active-timers__text">
+                <span class="active-timers__name active-timers__name--wrap">{{ item.title }}</span>
+                <span class="active-timers__bucket" title="in: {{ item.bucket_label }}">in: {{ item.bucket_label }}</span>
+              </div>
             </div>
               <div class="active-timers__meta">
                 <button
@@ -86,7 +92,10 @@
               >
                 <div class="active-timers__main" title="{{ timer.title }}">
                   <span class="active-timers__status" aria-hidden="true"></span>
-                  <span class="active-timers__name">{{ timer.title }}</span>
+                  <div class="active-timers__text">
+                    <span class="active-timers__name active-timers__name--wrap">{{ timer.title }}</span>
+                    <span class="active-timers__bucket" title="in: {{ timer.bucket_label }}">in: {{ timer.bucket_label }}</span>
+                  </div>
                 </div>
                 <div class="active-timers__meta">
                   <span class="active-timers__duration js-timer-duration" aria-live="polite">00:00:00</span>

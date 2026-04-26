@@ -25,9 +25,11 @@ def build_dashboard_context_for_user(
     expand_depth: int = 3,
     sort_dir: str = "desc",
     day_cutoff: time | None = None,
+    default_layout_id: int | None = None,
 ) -> dict[str, object]:
     layouts = list(TimeLayout.objects.filter(user=user).order_by("order", "name"))
     layout = None
+    layout_by_id = {current_layout.id: current_layout for current_layout in layouts}
     if layouts:
         if layout_id:
             layout = next(
@@ -38,6 +40,8 @@ def build_dashboard_context_for_user(
                 ),
                 None,
             )
+        if layout is None and default_layout_id is not None:
+            layout = layout_by_id.get(default_layout_id)
         layout = layout or layouts[0]
 
     buckets: list[TimeBucket] = []

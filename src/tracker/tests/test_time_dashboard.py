@@ -4,11 +4,12 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.contrib.messages import get_messages
-from django.test import TestCase, override_settings
+from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from tracker.models import TimeBucket, TimeBucketAssignment, TimeLayout, UserItem
+from tracker.context_processors import active_timers as active_timers_context
+from tracker.models import Profile, TimeBucket, TimeBucketAssignment, TimeLayout, UserItem
 from tracker.services.time_dashboard import BucketNode, build_chart_entries
 from tracker.services.time_windows import build_time_windows, day_range
 
@@ -57,6 +58,7 @@ def _root_entry_labels(result: dict[str, object]) -> list[str]:
 )
 class TimeDashboardAssignmentTests(TestCase):
     def setUp(self):
+        self.factory = RequestFactory()
         self.user = cast(Any, get_user_model().objects).create_user(
             username="dashboard",
         )
@@ -521,6 +523,39 @@ class TimeDashboardAssignmentTests(TestCase):
         url = f"{reverse('time_settings')}?layout={self.layout.id}"
         response = self.client.get(url)
         self.assertContains(response, "Work item")
+
+    def test_time_settings_layout_selection_sets_default_layout(self):
+        alt_layout = TimeLayout.objects.create(user=self.user, name="Alt")
+        self.client.force_login(self.user)
+        response = self.client.get(f"{reverse('time_settings')}?layout={alt_layout.id}")
+        self.assertEqual(response.status_code, 200)
+        profile = Profile.objects.get(user=self.user)
+        self.assertEqual(profile.time_default_layout_id, alt_layout.id)
+
+    def test_time_dashboard_layout_selection_sets_default_layout(self):
+        alt_layout = TimeLayout.objects.create(user=self.user, name="Alt")
+        self.client.force_login(self.user)
+        response = self.client.get(f"{reverse('time_dashboard')}?layout={alt_layout.id}")
+        self.assertEqual(response.status_code, 200)
+        profile = Profile.objects.get(user=self.user)
+        self.assertEqual(profile.time_default_layout_id, alt_layout.id)
+
+    def test_active_timers_context_includes_bucket_label_from_default_layout(self):
+        Profile.objects.update_or_create(
+            user=self.user,
+            defaults={"time_default_layout": self.layout},
+        )
+        self.item_work.timer_started_at = timezone.now()
+        self.item_work.save(update_fields=["timer_started_at"])
+
+        request = self.factory.get(reverse("useritem_dashboard"))
+        request.user = self.user
+
+        context = active_timers_context(request)
+        active_timers = cast(list[dict[str, object]], context["active_timers"])
+        active_row = next(timer for timer in active_timers if timer["id"] == self.item_work.id)
+        self.assertEqual(active_row["bucket_label"], self.bucket_work.name)
+        self.assertEqual(context["current_default_layout_name"], self.layout.name)
 
     def test_time_dashboard_lists_assigned_items_with_no_time(self):
         TimeBucketAssignment.objects.create(

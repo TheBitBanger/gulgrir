@@ -24,13 +24,14 @@ from ..services.time_dashboard import (
     build_bucket_option_list,
 )
 from ..services.time_dashboard_rules import build_dashboard_context_for_user
+from ..services.time_layouts import resolve_default_layout
 from ..services.time_selection import SelectionResult, select_from_level_for_user
 from ..services.time_windows import build_picker_windows
 
 
 @login_required
 def time_dashboard(request):
-    layout_id = request.GET.get("layout")
+    requested_layout_id = request.GET.get("layout")
     selected_bucket_id = request.GET.get("bucket")
     bucket_id = int(selected_bucket_id) if selected_bucket_id else None
     show_zero_time = request.GET.get("show_zero") == "1"
@@ -77,6 +78,14 @@ def time_dashboard(request):
     profile = None
     if request.user.is_authenticated:
         profile, _ = Profile.objects.get_or_create(user=request.user)
+
+    _, resolved_layout = resolve_default_layout(
+        user=request.user,
+        requested_layout_id=requested_layout_id,
+        profile=profile,
+        persist_default=True,
+    )
+    layout_id = str(resolved_layout.id) if resolved_layout else None
 
     has_time_params = any(
         [
@@ -163,6 +172,7 @@ def time_dashboard(request):
         expand_depth=expand_depth,
         sort_dir=sort_dir,
         day_cutoff=day_cutoff,
+        default_layout_id=profile.time_default_layout_id if profile else None,
     )
     context["time_mode"] = resolved_mode
     context["time_window"] = resolved_window
@@ -179,22 +189,12 @@ def time_settings(request):
     profile = None
     if request.user.is_authenticated:
         profile, _ = Profile.objects.get_or_create(user=request.user)
-    layouts = list(
-        TimeLayout.objects.filter(user=request.user).order_by("order", "name")
+    layouts, layout = resolve_default_layout(
+        user=request.user,
+        requested_layout_id=request.GET.get("layout"),
+        profile=profile,
+        persist_default=True,
     )
-    layout = None
-    if layouts:
-        layout_id = request.GET.get("layout")
-        if layout_id:
-            layout = next(
-                (
-                    layout_candidate
-                    for layout_candidate in layouts
-                    if str(layout_candidate.id) == layout_id
-                ),
-                None,
-            )
-        layout = layout or layouts[0]
 
     buckets: list[TimeBucket] = []
     if layout:

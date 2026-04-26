@@ -3,8 +3,11 @@ from django.db.models import Value
 from django.db.models.functions import Coalesce
 from django.urls import reverse
 
-from .models import Profile, TimeBucket, TimeBucketAssignment, UserItem
-from .services.time_layouts import resolve_default_layout
+from .models import Profile, UserItem
+from .services.time_layouts import (
+    build_assignment_labels_for_items,
+    resolve_default_layout,
+)
 
 
 def _django_fmt(strftime_fmt: str) -> str:
@@ -136,57 +139,10 @@ def active_timers(request):
     if current_item:
         item_ids.add(current_item["id"])
 
-    bucket_labels_by_item: dict[int, str] = {}
-    if default_layout and item_ids:
-        assignments = list(
-            TimeBucketAssignment.objects.filter(
-                layout=default_layout,
-                user_item_id__in=item_ids,
-            ).select_related("bucket", "bucket__parent")
-        )
-
-        bucket_ids = {
-            assignment.bucket_id
-            for assignment in assignments
-            if assignment.assignment_mode == TimeBucketAssignment.Mode.BUCKET
-            and assignment.bucket_id is not None
-        }
-        bucket_by_id = {
-            bucket.id: bucket
-            for bucket in TimeBucket.objects.filter(
-                layout=default_layout,
-                id__in=bucket_ids,
-            ).select_related("parent")
-        }
-
-        def bucket_path_label(bucket_id: int) -> str:
-            names: list[str] = []
-            current_bucket = bucket_by_id.get(bucket_id)
-            seen: set[int] = set()
-            while current_bucket is not None and current_bucket.id not in seen:
-                seen.add(current_bucket.id)
-                names.append(current_bucket.name)
-                parent_id = current_bucket.parent_id
-                current_bucket = (
-                    bucket_by_id.get(parent_id) if parent_id is not None else None
-                )
-            if not names:
-                return "Unassigned"
-            return " / ".join(reversed(names))
-
-        for assignment in assignments:
-            if assignment.assignment_mode == TimeBucketAssignment.Mode.TOP_LEVEL:
-                bucket_labels_by_item[assignment.user_item_id] = "Top level"
-                continue
-            if assignment.assignment_mode == TimeBucketAssignment.Mode.BUCKET:
-                if assignment.bucket_id is not None:
-                    bucket_labels_by_item[assignment.user_item_id] = bucket_path_label(
-                        assignment.bucket_id
-                    )
-                else:
-                    bucket_labels_by_item[assignment.user_item_id] = "Unassigned"
-                continue
-            bucket_labels_by_item[assignment.user_item_id] = "Ignored"
+    bucket_labels_by_item = build_assignment_labels_for_items(
+        layout=default_layout,
+        item_ids=item_ids,
+    )
 
     for timer in active:
         timer["bucket_label"] = bucket_labels_by_item.get(timer["id"], "Unassigned")

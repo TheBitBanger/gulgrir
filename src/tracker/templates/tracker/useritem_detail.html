@@ -59,6 +59,18 @@
       {% else %}
         <div class="text-sm text-muted">Create a layout to assign buckets.</div>
       {% endif %}
+      {% if assignment_indicator %}
+        <div class="environment-section" aria-label="Assignment context">
+          <span class="environment-chip">
+            <span class="environment-chip__label">Layout</span>
+            <span class="environment-chip__value">{{ assignment_indicator.layout_name }}</span>
+          </span>
+          <span class="environment-chip">
+            <span class="environment-chip__label">In</span>
+            <span class="environment-chip__value">{{ assignment_indicator.bucket_label }}</span>
+          </span>
+        </div>
+      {% endif %}
     </div>
     <a href="{% url 'useritem_dashboard' %}"
        class="btn btn-compact">

@@ -524,6 +524,20 @@ class TimeDashboardAssignmentTests(TestCase):
         response = self.client.get(url)
         self.assertContains(response, "Work item")
 
+    def test_useritem_detail_shows_assignment_indicator(self):
+        Profile.objects.update_or_create(
+            user=self.user,
+            defaults={"time_default_layout": self.layout},
+        )
+        self.client.force_login(self.user)
+        url = reverse("useritem_detail", kwargs={"pk": self.item_work.id})
+        response = self.client.get(url)
+        self.assertContains(response, "Assignment context")
+        self.assertContains(response, "Layout")
+        self.assertContains(response, self.layout.name)
+        self.assertContains(response, "In")
+        self.assertContains(response, self.bucket_work.name)
+
     def test_time_settings_layout_selection_sets_default_layout(self):
         alt_layout = TimeLayout.objects.create(user=self.user, name="Alt")
         self.client.force_login(self.user)

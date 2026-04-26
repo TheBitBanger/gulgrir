@@ -16,9 +16,21 @@ from django.views.generic.edit import CreateView, DeleteView, UpdateView
 from tracker.actions import registry as action_registry
 
 from ..forms import UserItemFilterForm, UserItemForm
-from ..models import SavedFilter, Tag, TimeBucket, TimeLayout, UserItem, UserItemHistory
+from ..models import (
+    Profile,
+    SavedFilter,
+    Tag,
+    TimeBucket,
+    TimeLayout,
+    UserItem,
+    UserItemHistory,
+)
 from ..services import build_useritem_queryset
 from ..services.time_dashboard import build_bucket_option_list
+from ..services.time_layouts import (
+    build_assignment_labels_for_items,
+    resolve_default_layout,
+)
 from ..services.useritem_lifecycle import can_restart, mark_completed, restart_item
 from .mixins import OwnObjectsMixin
 
@@ -155,6 +167,21 @@ def build_useritem_detail_context(
     ctx["retro_values"] = retro_values
     ctx["retro_errors"] = retro_errors
 
+    profile, _ = Profile.objects.get_or_create(user=request.user)
+    _, default_layout = resolve_default_layout(
+        user=request.user,
+        profile=profile,
+        persist_default=True,
+    )
+    assignment_labels = build_assignment_labels_for_items(
+        layout=default_layout,
+        item_ids={user_item.id},
+    )
+    ctx["assignment_indicator"] = {
+        "layout_name": default_layout.name if default_layout else "n/a",
+        "bucket_label": assignment_labels.get(user_item.id, "Unassigned"),
+    }
+
     return ctx
 
 
@@ -271,6 +298,21 @@ class UserItemDetail(OwnObjectsMixin, UpdateView):
             bucket_options_by_layout[str(layout.id)] = build_bucket_option_list(buckets)
         ctx["assignment_layouts"] = layouts
         ctx["bucket_options_by_layout"] = bucket_options_by_layout
+
+        profile, _ = Profile.objects.get_or_create(user=user)
+        _, default_layout = resolve_default_layout(
+            user=user,
+            profile=profile,
+            persist_default=True,
+        )
+        assignment_labels = build_assignment_labels_for_items(
+            layout=default_layout,
+            item_ids={user_item.id},
+        )
+        ctx["assignment_indicator"] = {
+            "layout_name": default_layout.name if default_layout else "n/a",
+            "bucket_label": assignment_labels.get(user_item.id, "Unassigned"),
+        }
 
         ctx["item"] = user_item.item
         history_entries = []

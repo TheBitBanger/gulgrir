@@ -39,8 +39,8 @@
   </script>
   <link rel="stylesheet" href="{% static 'tracker/css/app.css' %}">
   <script defer src="https://unpkg.com/alpinejs@3.14.9/dist/cdn.min.js"></script>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-  <script defer src="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.js"></script>
+  <link rel="stylesheet" href="{% static 'tracker/vendor/flatpickr.min.css' %}">
+  <script defer src="{% static 'tracker/vendor/flatpickr.min.js' %}"></script>
   <script defer>
     document.addEventListener("DOMContentLoaded", () => {
       const fpFormat = "{{ fp_fmt|escapejs }}";
@@ -1076,7 +1076,7 @@
     {% endif %}
   </div>
   <!-- HTMX (required for all hx-* attributes) -->
-  <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.5/dist/htmx.min.js"></script>
+  <script src="{% static 'tracker/vendor/htmx.min.js' %}"></script>
   <script src="{% static "tracker/js/action_toast.js" %}"></script>
   <script src="{% static "tracker/js/checkbox_bulk.js" %}"></script>
   <script>

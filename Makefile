@@ -43,6 +43,7 @@ qa-full: dev-up
 	run_check "basedpyright" $(APP_EXEC) basedpyright
 	run_check "bandit" $(APP_EXEC) bandit -q -r src -c /workspace/pyproject.toml
 	run_check "pip-audit" $(APP_EXEC) pip-audit
+	run_check "npm audit" npm audit
 	run_check "gitleaks (staged)" sh -lc 'git diff --cached -- . | $(APP_EXEC) gitleaks stdin --no-banner --redact --config /workspace/.gitleaks.toml'
 	run_check "django check --deploy" $(APP_EXEC) env DJANGO_DEBUG=false python /app/src/manage.py check --deploy
 	if [[ $$status -ne 0 ]]; then

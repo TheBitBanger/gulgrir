@@ -12,10 +12,9 @@
   </aside>
 
   <section class="space-y-4">
-    <div>
-      <h1 class="text-2xl font-semibold">{% block settings_title %}Settings{% endblock %}</h1>
-      {% block settings_subtitle %}{% endblock %}
-    </div>
+    {% block settings_head %}
+      {% include "tracker/partials/page_head.html" with title="Settings" subtitle="" %}
+    {% endblock %}
     {% block settings_content %}{% endblock %}
   </section>
 </div>

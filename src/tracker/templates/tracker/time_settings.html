@@ -1,7 +1,6 @@
 {% extends "tracker/settings_base.html" %}
-{% block settings_title %}Time tracking settings{% endblock %}
-{% block settings_subtitle %}
-  <div class="panel-subtitle">Manage layouts and bucket hierarchy for time tracking.</div>
+{% block settings_head %}
+  {% include "tracker/partials/page_head.html" with title="Time tracking settings" subtitle="Manage layouts and bucket hierarchy for time tracking." %}
 {% endblock %}
 {% block settings_content %}
 <div class="space-y-6">

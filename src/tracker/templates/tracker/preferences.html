@@ -1,5 +1,7 @@
 {% extends "tracker/settings_base.html" %}
-{% block settings_title %}Global settings{% endblock %}
+{% block settings_head %}
+  {% include "tracker/partials/page_head.html" with title="Global settings" subtitle="" %}
+{% endblock %}
 {% block settings_content %}
 <div class="panel">
   <form method="post" class="space-y-4">

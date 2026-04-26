@@ -1,6 +1,6 @@
 {% extends "tracker/base.html" %}
 {% block content %}
-<h1 class="text-xl font-semibold mb-4">Library - Items</h1>
+{% include "tracker/partials/page_head.html" with title="Global library" subtitle="Browse and manage shared items available to everyone." %}
 
 <a class="btn mb-2" href="{% url 'item_add' %}">Add item</a>
 

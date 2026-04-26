@@ -1,6 +1,6 @@
 {% extends "tracker/base.html" %}
 {% block content %}
-<h1 class="text-xl font-semibold mb-4">My tags</h1>
+{% include "tracker/partials/page_head.html" with title="My tags" subtitle="Organize and review the tags used across your items." %}
 
 <a class="btn mb-2" href="{% url 'tag_add' %}">➕ New tag</a>
 

@@ -1,8 +1,6 @@
 {% extends "tracker/base.html" %}
 {% load static %}
 {% block content %}
-<h1 class="text-xl font-semibold mb-4">My items</h1>
-
 <div class="flex gap-8">
   <input id="current_filter" type="hidden" name="sf" value="{{ active_filter.id|default:'' }}">
 
@@ -24,14 +22,16 @@
       {% endfor %}
     </ul>
   </aside>
-
+  
   <!-- main column -->
   <section class="flex-1">
+    {% include "tracker/partials/page_head.html" with title="My items" subtitle="Manage your personal queue and active work." %}
     <a class="btn mb-2" href="{% url 'useritem_add' %}">➕ Add to my list</a>
     {% include "tracker/partials/action_bar.html" %}
     <div id="dash-fragment">
-    {% include "tracker/partials/useritem_filter_bar.html" %}
-    {% include "tracker/partials/useritem_table.html" %}
+      {% include "tracker/partials/useritem_filter_bar.html" %}
+      {% include "tracker/partials/useritem_table.html" %}
+    </div>
   </section>
 
 </div>

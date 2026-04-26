@@ -1,8 +1,6 @@
 {% extends "tracker/base.html" %}
 {% block content %}
-<h1 class="text-xl font-semibold mb-4">Saved filters</h1>
-
-<p class="text-sm text-muted mb-3">Create filters from the item dashboard filter bar.</p>
+{% include "tracker/partials/page_head.html" with title="Saved filters" subtitle="Create filters from the item dashboard filter bar." %}
 
 <table class="w-full border-collapse">
   <thead>

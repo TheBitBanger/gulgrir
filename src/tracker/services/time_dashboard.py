@@ -245,51 +245,67 @@ def build_chart_entries(
 
     bucket_seconds: dict[int, int] = defaultdict(int)
     bucket_items: dict[int, list[BucketItem]] = defaultdict(list)
+    root_items: list[BucketItem] = []
     unassigned_items: list[ContextItem] = []
     ignored_items: list[ContextItem] = []
 
     for item_id, item in user_items.items():
         seconds = item_durations.get(item_id, 0)
         assignment = assignments.get(item_id)
-        if assignment and assignment.is_ignored:
-            ignored_items.append(
-                {
-                    "item": item,
-                    "seconds": seconds,
-                    "duration_display": format_seconds(seconds),
-                }
-            )
-            continue
-
-        if assignment:
-            assigned_bucket_id = _assignment_bucket_id(assignment)
-        else:
-            assigned_bucket_id = None
-        if assigned_bucket_id is not None:
-            if assigned_bucket_id not in allowed_bucket_ids:
-                continue
-            if include_zero_time or seconds > 0:
-                bucket_items[assigned_bucket_id].append(
+        if assignment is not None:
+            mode = assignment.assignment_mode
+            if mode == TimeBucketAssignment.Mode.IGNORED:
+                ignored_items.append(
                     {
-                        "item_id": _item_id(item),
-                        "title": item.display_title,
+                        "item": item,
                         "seconds": seconds,
                         "duration_display": format_seconds(seconds),
-                        "percent": 0.0,
-                        "item_share_percent": 0,
                     }
                 )
-            if seconds > 0:
-                path = path_to_root(assigned_bucket_id)
+                continue
+
+            if mode == TimeBucketAssignment.Mode.TOP_LEVEL:
                 if selected_bucket is not None:
-                    selected_bucket_id = _bucket_id(selected_bucket)
-                    if selected_bucket_id is None or selected_bucket_id not in path:
-                        continue
-                    path = path[: path.index(selected_bucket_id) + 1]
-                for path_bucket_id in path:
-                    if path_bucket_id in allowed_bucket_ids:
-                        bucket_seconds[path_bucket_id] += seconds
-            continue
+                    continue
+                if include_zero_time or seconds > 0:
+                    root_items.append(
+                        {
+                            "item_id": _item_id(item),
+                            "title": item.display_title,
+                            "seconds": seconds,
+                            "duration_display": format_seconds(seconds),
+                            "percent": 0.0,
+                            "item_share_percent": 0,
+                        }
+                    )
+                continue
+
+            assigned_bucket_id = _assignment_bucket_id(assignment)
+            if assigned_bucket_id is not None:
+                if assigned_bucket_id not in allowed_bucket_ids:
+                    continue
+                if include_zero_time or seconds > 0:
+                    bucket_items[assigned_bucket_id].append(
+                        {
+                            "item_id": _item_id(item),
+                            "title": item.display_title,
+                            "seconds": seconds,
+                            "duration_display": format_seconds(seconds),
+                            "percent": 0.0,
+                            "item_share_percent": 0,
+                        }
+                    )
+                if seconds > 0:
+                    path = path_to_root(assigned_bucket_id)
+                    if selected_bucket is not None:
+                        selected_bucket_id = _bucket_id(selected_bucket)
+                        if selected_bucket_id is None or selected_bucket_id not in path:
+                            continue
+                        path = path[: path.index(selected_bucket_id) + 1]
+                    for path_bucket_id in path:
+                        if path_bucket_id in allowed_bucket_ids:
+                            bucket_seconds[path_bucket_id] += seconds
+                continue
 
         if selected_bucket is None and seconds > 0:
             unassigned_items.append(
@@ -380,14 +396,38 @@ def build_chart_entries(
         node for bucket in root_buckets if (node := build_node(bucket, 0)) is not None
     ]
     bucket_tree = sorted(bucket_tree, key=bucket_sort_key)
+    root_items = sorted(root_items, key=item_sort_key)
+    root_entries: list[BucketEntry] = []
+    for node in bucket_tree:
+        root_entries.append(
+            {
+                "kind": "bucket",
+                "node": node,
+                "nodes": [node],
+                "seconds": node["seconds"],
+                "name": node["name"],
+            }
+        )
+    for item in root_items:
+        root_entries.append(
+            {
+                "kind": "item",
+                "item": item,
+                "seconds": item["seconds"],
+                "name": item["title"],
+            }
+        )
+    root_entries = sorted(root_entries, key=entry_sort_key)
 
-    def collect_max(nodes: list[BucketNode]) -> int:
+    def collect_max(nodes: list[BucketNode], top_items: list[BucketItem]) -> int:
         max_value = 0
+        for item in top_items:
+            max_value = max(max_value, item["seconds"])
         for node in nodes:
             max_value = max(max_value, node["seconds"])
             for item in node["items"]:
                 max_value = max(max_value, item["seconds"])
-            max_value = max(max_value, collect_max(node["children"]))
+            max_value = max(max_value, collect_max(node["children"], []))
         return max_value
 
     def apply_percent(nodes: list[BucketNode], max_value: int) -> None:
@@ -402,6 +442,13 @@ def build_chart_entries(
                 else:
                     item["percent"] = 0
             apply_percent(node["children"], max_value)
+
+    def apply_top_item_percent(top_items: list[BucketItem], max_value: int) -> None:
+        for item in top_items:
+            if max_value > 0:
+                item["percent"] = round(item["seconds"] / max_value * 100, 2)
+            else:
+                item["percent"] = 0
 
     def apply_share_percent(nodes: list[BucketNode], parent_seconds: int) -> None:
         for node in nodes:
@@ -421,10 +468,24 @@ def build_chart_entries(
                     item["item_share_percent"] = 0
             apply_share_percent(node["children"], bucket_seconds)
 
-    max_seconds = collect_max(bucket_tree)
+    def apply_top_item_share_percent(
+        top_items: list[BucketItem],
+        total_seconds: int,
+    ) -> None:
+        for item in top_items:
+            if total_seconds > 0:
+                item["item_share_percent"] = int(item["seconds"] / total_seconds * 100)
+            else:
+                item["item_share_percent"] = 0
+
+    max_seconds = collect_max(bucket_tree, root_items)
     apply_percent(bucket_tree, max_seconds)
-    root_seconds = sum(node["seconds"] for node in bucket_tree)
+    apply_top_item_percent(root_items, max_seconds)
+    root_seconds = sum(node["seconds"] for node in bucket_tree) + sum(
+        item["seconds"] for item in root_items
+    )
     apply_share_percent(bucket_tree, root_seconds)
+    apply_top_item_share_percent(root_items, root_seconds)
 
     ignored_items = sorted(ignored_items, key=lambda x: x["seconds"], reverse=True)
     unassigned_items = sorted(
@@ -433,6 +494,8 @@ def build_chart_entries(
 
     return {
         "bucket_tree": bucket_tree,
+        "root_entries": root_entries,
+        "root_items": root_items,
         "total_seconds": sum(item_durations.values()),
         "total_display": format_seconds(sum(item_durations.values())),
         "unassigned_items": unassigned_items,

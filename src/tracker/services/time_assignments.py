@@ -16,26 +16,27 @@ def assign_item(layout: TimeLayout, user_item: UserItem, bucket: TimeBucket) -> 
         raise ValueError("Bucket does not belong to layout.")
     assignment = _get_assignment(layout, user_item)
     assignment.bucket = bucket
-    assignment.is_ignored = False
-    assignment.save(update_fields=["bucket", "is_ignored", "updated_at"])
+    assignment.assignment_mode = TimeBucketAssignment.Mode.BUCKET
+    assignment.save(update_fields=["bucket", "assignment_mode", "updated_at"])
+
+
+def assign_item_to_top_level(layout: TimeLayout, user_item: UserItem) -> None:
+    assignment = _get_assignment(layout, user_item)
+    assignment.bucket = None
+    assignment.assignment_mode = TimeBucketAssignment.Mode.TOP_LEVEL
+    assignment.save(update_fields=["bucket", "assignment_mode", "updated_at"])
 
 
 def unassign_item(layout: TimeLayout, user_item: UserItem) -> None:
-    assignment = _get_assignment(layout, user_item)
-    assignment.bucket = None
-    assignment.is_ignored = False
-    assignment.save(update_fields=["bucket", "is_ignored", "updated_at"])
+    TimeBucketAssignment.objects.filter(layout=layout, user_item=user_item).delete()
 
 
 def ignore_item(layout: TimeLayout, user_item: UserItem) -> None:
     assignment = _get_assignment(layout, user_item)
-    assignment.is_ignored = True
+    assignment.assignment_mode = TimeBucketAssignment.Mode.IGNORED
     assignment.bucket = None
-    assignment.save(update_fields=["is_ignored", "bucket", "updated_at"])
+    assignment.save(update_fields=["assignment_mode", "bucket", "updated_at"])
 
 
 def unignore_item(layout: TimeLayout, user_item: UserItem) -> None:
-    assignment = _get_assignment(layout, user_item)
-    assignment.is_ignored = False
-    assignment.bucket = None
-    assignment.save(update_fields=["is_ignored", "bucket", "updated_at"])
+    TimeBucketAssignment.objects.filter(layout=layout, user_item=user_item).delete()

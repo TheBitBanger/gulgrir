@@ -70,13 +70,13 @@ def select_from_level_for_user(
     assignments = list(
         TimeBucketAssignment.objects.filter(
             layout=layout,
-            bucket__isnull=False,
-            is_ignored=False,
         ).select_related("bucket", "user_item", "user_item__item")
     )
 
     bucket_totals: dict[int, int] = {}
     for assignment in assignments:
+        if assignment.assignment_mode != TimeBucketAssignment.Mode.BUCKET:
+            continue
         if assignment.bucket_id is None:
             continue
         duration = durations.get(assignment.user_item_id, 0)
@@ -86,9 +86,19 @@ def select_from_level_for_user(
             )
 
     candidate_buckets = bucket_children.get(bucket_id, [])
-    candidate_assignments = [
-        assignment for assignment in assignments if assignment.bucket_id == bucket_id
-    ]
+    if bucket_id is None:
+        candidate_assignments = [
+            assignment
+            for assignment in assignments
+            if assignment.assignment_mode == TimeBucketAssignment.Mode.TOP_LEVEL
+        ]
+    else:
+        candidate_assignments = [
+            assignment
+            for assignment in assignments
+            if assignment.assignment_mode == TimeBucketAssignment.Mode.BUCKET
+            and assignment.bucket_id == bucket_id
+        ]
     candidate_item_ids = {a.user_item_id for a in candidate_assignments}
     eligible_items = {
         item.id: item

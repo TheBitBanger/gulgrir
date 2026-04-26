@@ -208,9 +208,30 @@
               <div class="panel-title">{{ chart.label }}</div>
               <div class="text-xs text-muted">{{ chart.total_display }}</div>
             </div>
-            {% if chart.bucket_tree %}
+            {% if chart.root_entries %}
               <div class="space-y-2">
-                {% include "tracker/partials/time_bucket_tree.html" with nodes=chart.bucket_tree %}
+                {% for entry in chart.root_entries %}
+                  {% if entry.kind == "bucket" %}
+                    {% include "tracker/partials/time_bucket_tree.html" with nodes=entry.nodes %}
+                  {% elif entry.kind == "item" %}
+                    <div class="chart-grid chart-row-grid text-sm">
+                      <div
+                        class="chart-label truncate flex items-center gap-2"
+                        style="padding-left: 16px; background: color-mix(in oklab, var(--surface-2) 45%, transparent); border-radius: 0.4rem; padding-top: 0.2rem; padding-bottom: 0.2rem; padding-right: 0.35rem;"
+                      >
+                        <span class="text-[10px] uppercase text-muted" style="border: 1px solid var(--border); border-radius: 0.35rem; padding: 0 0.3rem;">I</span>
+                        <a class="link" href="{% url 'useritem_detail' entry.item.item_id %}">{{ entry.item.title }}</a>
+                      </div>
+                      <div class="chart-bar h-2 rounded" style="background: var(--surface-2);">
+                        <div class="h-2 rounded" style="width: {{ entry.item.percent }}%; background: var(--success);"></div>
+                      </div>
+                      <div class="chart-duration text-xs text-muted">{{ entry.item.duration_display }}</div>
+                      <div class="chart-percent text-xs text-muted">
+                        <span class="chart-percent-number">{{ entry.item.item_share_percent }}</span><span class="chart-percent-sign">%</span>
+                      </div>
+                    </div>
+                  {% endif %}
+                {% endfor %}
               </div>
             {% else %}
               <div class="text-sm text-muted">No time tracked yet.</div>
@@ -223,9 +244,30 @@
               <div class="panel-title">{{ chart.label }}</div>
               <div class="text-xs text-muted">{{ chart.total_display }}</div>
             </div>
-            {% if chart.bucket_tree %}
+            {% if chart.root_entries %}
               <div class="space-y-2">
-                {% include "tracker/partials/time_bucket_tree.html" with nodes=chart.bucket_tree %}
+                {% for entry in chart.root_entries %}
+                  {% if entry.kind == "bucket" %}
+                    {% include "tracker/partials/time_bucket_tree.html" with nodes=entry.nodes %}
+                  {% elif entry.kind == "item" %}
+                    <div class="chart-grid chart-row-grid text-sm">
+                      <div
+                        class="chart-label truncate flex items-center gap-2"
+                        style="padding-left: 16px; background: color-mix(in oklab, var(--surface-2) 45%, transparent); border-radius: 0.4rem; padding-top: 0.2rem; padding-bottom: 0.2rem; padding-right: 0.35rem;"
+                      >
+                        <span class="text-[10px] uppercase text-muted" style="border: 1px solid var(--border); border-radius: 0.35rem; padding: 0 0.3rem;">I</span>
+                        <a class="link" href="{% url 'useritem_detail' entry.item.item_id %}">{{ entry.item.title }}</a>
+                      </div>
+                      <div class="chart-bar h-2 rounded" style="background: var(--surface-2);">
+                        <div class="h-2 rounded" style="width: {{ entry.item.percent }}%; background: var(--success);"></div>
+                      </div>
+                      <div class="chart-duration text-xs text-muted">{{ entry.item.duration_display }}</div>
+                      <div class="chart-percent text-xs text-muted">
+                        <span class="chart-percent-number">{{ entry.item.item_share_percent }}</span><span class="chart-percent-sign">%</span>
+                      </div>
+                    </div>
+                  {% endif %}
+                {% endfor %}
               </div>
             {% else %}
               <div class="text-sm text-muted">No time tracked yet.</div>
@@ -241,9 +283,30 @@
               <div class="panel-title">{{ chart.label }}</div>
               <div class="text-xs text-muted">{{ chart.total_display }}</div>
             </div>
-            {% if chart.bucket_tree %}
+            {% if chart.root_entries %}
               <div class="space-y-2">
-                {% include "tracker/partials/time_bucket_tree.html" with nodes=chart.bucket_tree %}
+                {% for entry in chart.root_entries %}
+                  {% if entry.kind == "bucket" %}
+                    {% include "tracker/partials/time_bucket_tree.html" with nodes=entry.nodes %}
+                  {% elif entry.kind == "item" %}
+                    <div class="chart-grid chart-row-grid text-sm">
+                      <div
+                        class="chart-label truncate flex items-center gap-2"
+                        style="padding-left: 16px; background: color-mix(in oklab, var(--surface-2) 45%, transparent); border-radius: 0.4rem; padding-top: 0.2rem; padding-bottom: 0.2rem; padding-right: 0.35rem;"
+                      >
+                        <span class="text-[10px] uppercase text-muted" style="border: 1px solid var(--border); border-radius: 0.35rem; padding: 0 0.3rem;">I</span>
+                        <a class="link" href="{% url 'useritem_detail' entry.item.item_id %}">{{ entry.item.title }}</a>
+                      </div>
+                      <div class="chart-bar h-2 rounded" style="background: var(--surface-2);">
+                        <div class="h-2 rounded" style="width: {{ entry.item.percent }}%; background: var(--success);"></div>
+                      </div>
+                      <div class="chart-duration text-xs text-muted">{{ entry.item.duration_display }}</div>
+                      <div class="chart-percent text-xs text-muted">
+                        <span class="chart-percent-number">{{ entry.item.item_share_percent }}</span><span class="chart-percent-sign">%</span>
+                      </div>
+                    </div>
+                  {% endif %}
+                {% endfor %}
               </div>
             {% else %}
               <div class="text-sm text-muted">No time tracked yet.</div>
@@ -268,6 +331,7 @@
                   <input type="hidden" name="item_id" value="{{ row.item.id }}">
                   <input type="hidden" name="action" value="assign">
                   <select name="bucket_id" class="control">
+                    <option value="__top__">Top level</option>
                     {% for opt in bucket_options %}
                       <option value="{{ opt.id }}">{{ opt.label }}</option>
                     {% endfor %}
@@ -310,6 +374,7 @@
                   <input type="hidden" name="item_id" value="{{ row.item.id }}">
                   <input type="hidden" name="action" value="assign">
                   <select name="bucket_id" class="control">
+                    <option value="__top__">Top level</option>
                     {% for opt in bucket_options %}
                       <option value="{{ opt.id }}">{{ opt.label }}</option>
                     {% endfor %}

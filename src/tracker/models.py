@@ -412,6 +412,11 @@ class TimeBucket(models.Model):
 
 
 class TimeBucketAssignment(models.Model):
+    class Mode(models.TextChoices):
+        BUCKET = "bucket", "Bucket"
+        TOP_LEVEL = "top_level", "Top level"
+        IGNORED = "ignored", "Ignored"
+
     id: int
     layout_id: int
     user_item_id: int
@@ -434,7 +439,11 @@ class TimeBucketAssignment(models.Model):
         on_delete=models.SET_NULL,
         related_name="assignments",
     )
-    is_ignored = models.BooleanField(default=False)
+    assignment_mode = models.CharField(
+        max_length=16,
+        choices=Mode.choices,
+        default=Mode.BUCKET,
+    )
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

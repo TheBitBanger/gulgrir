@@ -624,14 +624,12 @@
     function renderBuckets(layoutId) {
       const options = optionsByLayout[layoutId] || [];
       bucketSelect.innerHTML = "";
-      if (!options.length) {
-        const opt = document.createElement("option");
-        opt.value = "";
-        opt.textContent = "No buckets";
-        bucketSelect.appendChild(opt);
-        bucketSelect.disabled = true;
-        return;
-      }
+
+      const topOption = document.createElement("option");
+      topOption.value = "__top__";
+      topOption.textContent = "Top level";
+      bucketSelect.appendChild(topOption);
+
       bucketSelect.disabled = false;
       options.forEach((row) => {
         const opt = document.createElement("option");

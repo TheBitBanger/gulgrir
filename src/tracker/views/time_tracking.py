@@ -13,6 +13,7 @@ from django.views.decorators.http import require_POST
 from ..models import Profile, TimeBucket, TimeBucketAssignment, TimeLayout, UserItem
 from ..services.time_assignments import (
     assign_item,
+    assign_item_to_top_level,
     ignore_item,
     unassign_item,
     unignore_item,
@@ -212,7 +213,7 @@ def time_settings(request):
             TimeBucketAssignment.objects.filter(
                 layout=layout,
                 bucket__isnull=False,
-                is_ignored=False,
+                assignment_mode=TimeBucketAssignment.Mode.BUCKET,
             ).select_related("bucket", "user_item__item")
         )
         for assignment in assignments:
@@ -746,6 +747,9 @@ def time_assignment_update(request):
     if action == "assign":
         bucket_id = request.POST.get("bucket_id")
         if not bucket_id:
+            return response_redirect()
+        if bucket_id == "__top__":
+            assign_item_to_top_level(layout, user_item)
             return response_redirect()
         bucket = get_object_or_404(TimeBucket, id=bucket_id, layout=layout)
         assign_item(layout, user_item, bucket)

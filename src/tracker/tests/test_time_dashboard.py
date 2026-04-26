@@ -35,6 +35,19 @@ def _find_node(nodes: list[BucketNode], name: str) -> BucketNode | None:
     return None
 
 
+def _root_entry_labels(result: dict[str, object]) -> list[str]:
+    labels: list[str] = []
+    entries = cast(list[dict[str, object]], result["root_entries"])
+    for entry in entries:
+        if entry["kind"] == "bucket":
+            node = cast(dict[str, object], entry["node"])
+            labels.append(f"B:{cast(str, node['name'])}")
+        else:
+            item = cast(dict[str, object], entry["item"])
+            labels.append(f"I:{cast(str, item['title'])}")
+    return labels
+
+
 @override_settings(
     STORAGES={
         "staticfiles": {
@@ -80,7 +93,7 @@ class TimeDashboardAssignmentTests(TestCase):
         TimeBucketAssignment.objects.create(
             layout=self.layout,
             user_item=self.item_ignored,
-            is_ignored=True,
+            assignment_mode=TimeBucketAssignment.Mode.IGNORED,
         )
 
     def test_build_chart_entries_bucket_priority(self):
@@ -299,17 +312,24 @@ class TimeDashboardAssignmentTests(TestCase):
             user_item=item_beta,
             bucket=self.bucket_work,
         )
+        TimeBucketAssignment.objects.create(
+            layout=self.layout,
+            user_item=self.item_unassigned,
+            assignment_mode=TimeBucketAssignment.Mode.TOP_LEVEL,
+        )
         durations = {
             self.item_work.id: int(timedelta(minutes=40).total_seconds()),
             item_play.id: int(timedelta(minutes=20).total_seconds()),
             item_alpha.id: int(timedelta(minutes=10).total_seconds()),
             item_beta.id: int(timedelta(minutes=10).total_seconds()),
+            self.item_unassigned.id: int(timedelta(minutes=30).total_seconds()),
         }
         user_items = {
             self.item_work.id: self.item_work,
             item_play.id: item_play,
             item_alpha.id: item_alpha,
             item_beta.id: item_beta,
+            self.item_unassigned.id: self.item_unassigned,
         }
         assignments = {
             a.user_item_id: a
@@ -329,6 +349,10 @@ class TimeDashboardAssignmentTests(TestCase):
         )
         bucket_names_desc = [node["name"] for node in _bucket_tree(result_desc)]
         self.assertEqual(bucket_names_desc[:2], ["Work", "Play"])
+        self.assertEqual(
+            _root_entry_labels(result_desc)[:3],
+            ["B:Work", "I:Unassigned item", "B:Play"],
+        )
         work_node_desc = _find_node(_bucket_tree(result_desc), "Work")
         self.assertIsNotNone(work_node_desc)
         work_node_desc = cast(BucketNode, work_node_desc)
@@ -354,6 +378,10 @@ class TimeDashboardAssignmentTests(TestCase):
         )
         bucket_names_asc = [node["name"] for node in _bucket_tree(result_asc)]
         self.assertEqual(bucket_names_asc[:2], ["Play", "Work"])
+        self.assertEqual(
+            _root_entry_labels(result_asc)[:3],
+            ["B:Play", "I:Unassigned item", "B:Work"],
+        )
         work_node_asc = _find_node(_bucket_tree(result_asc), "Work")
         self.assertIsNotNone(work_node_asc)
         work_node_asc = cast(BucketNode, work_node_asc)
@@ -381,7 +409,10 @@ class TimeDashboardAssignmentTests(TestCase):
             layout=self.layout,
             user_item=self.item_work,
         )
-        self.assertTrue(assignment.is_ignored)
+        self.assertEqual(
+            assignment.assignment_mode,
+            TimeBucketAssignment.Mode.IGNORED,
+        )
         self.assertIsNone(assignment.bucket)
 
     def test_assign_unignores(self):
@@ -399,7 +430,10 @@ class TimeDashboardAssignmentTests(TestCase):
             layout=self.layout,
             user_item=self.item_ignored,
         )
-        self.assertFalse(assignment.is_ignored)
+        self.assertEqual(
+            assignment.assignment_mode,
+            TimeBucketAssignment.Mode.BUCKET,
+        )
         self.assertEqual(assignment.bucket, self.bucket_play)
 
     def test_unassign_clears_bucket(self):
@@ -412,12 +446,75 @@ class TimeDashboardAssignmentTests(TestCase):
         }
         response = self.client.post(url, payload)
         self.assertEqual(response.status_code, 302)
+        self.assertFalse(
+            TimeBucketAssignment.objects.filter(
+                layout=self.layout,
+                user_item=self.item_work,
+            ).exists()
+        )
+
+    def test_assign_top_level_removes_from_unassigned(self):
+        self.client.force_login(self.user)
+        url = reverse("time_assignment_update")
+        payload = {
+            "layout_id": self.layout.id,
+            "item_id": self.item_unassigned.id,
+            "action": "assign",
+            "bucket_id": "__top__",
+        }
+        response = self.client.post(url, payload)
+        self.assertEqual(response.status_code, 302)
+
         assignment = TimeBucketAssignment.objects.get(
             layout=self.layout,
-            user_item=self.item_work,
+            user_item=self.item_unassigned,
         )
-        self.assertFalse(assignment.is_ignored)
+        self.assertEqual(
+            assignment.assignment_mode,
+            TimeBucketAssignment.Mode.TOP_LEVEL,
+        )
         self.assertIsNone(assignment.bucket)
+
+        durations = {
+            self.item_unassigned.id: int(timedelta(minutes=15).total_seconds()),
+        }
+        user_items = {self.item_unassigned.id: self.item_unassigned}
+        assignments = {
+            a.user_item_id: a
+            for a in TimeBucketAssignment.objects.filter(layout=self.layout)
+        }
+        buckets = list(TimeBucket.objects.filter(layout=self.layout))
+        chart = build_chart_entries(
+            layout=self.layout,
+            buckets=buckets,
+            assignments=assignments,
+            item_durations=durations,
+            user_items=user_items,
+            bucket_id=None,
+            include_zero_time=True,
+        )
+        root_items = cast(list[dict[str, object]], chart["root_items"])
+        unassigned_items = cast(list[dict[str, object]], chart["unassigned_items"])
+        self.assertEqual(len(root_items), 1)
+        self.assertEqual(root_items[0]["item_id"], self.item_unassigned.id)
+        self.assertEqual(len(unassigned_items), 0)
+
+    def test_unignore_moves_to_unassigned(self):
+        self.client.force_login(self.user)
+        url = reverse("time_assignment_update")
+        payload = {
+            "layout_id": self.layout.id,
+            "item_id": self.item_ignored.id,
+            "action": "unignore",
+        }
+        response = self.client.post(url, payload)
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(
+            TimeBucketAssignment.objects.filter(
+                layout=self.layout,
+                user_item=self.item_ignored,
+            ).exists()
+        )
 
     def test_time_settings_shows_assigned_items(self):
         self.client.force_login(self.user)
@@ -465,6 +562,32 @@ class TimeDashboardAssignmentTests(TestCase):
         data = response.json()
         self.assertEqual(data["kind"], "bucket")
         self.assertIn(f"bucket={child.id}", data["url"])
+
+    @patch("tracker.services.time_selection.random.choices")
+    def test_time_level_select_includes_top_level_items(self, mock_choices):
+        TimeBucketAssignment.objects.create(
+            layout=self.layout,
+            user_item=self.item_unassigned,
+            assignment_mode=TimeBucketAssignment.Mode.TOP_LEVEL,
+        )
+        mock_choices.side_effect = lambda entries, weights, k: [
+            next(entry for entry in entries if entry["kind"] == "item")
+        ]
+
+        self.client.force_login(self.user)
+        url = reverse("time_level_select")
+        payload = {
+            "layout_id": self.layout.id,
+            "time_window": "all_time",
+        }
+        response = self.client.post(url, payload, HTTP_HX_REQUEST="true")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["kind"], "item")
+        self.assertEqual(
+            data["url"],
+            reverse("useritem_detail", kwargs={"pk": self.item_unassigned.id}),
+        )
 
     def test_update_layout(self):
         self.client.force_login(self.user)

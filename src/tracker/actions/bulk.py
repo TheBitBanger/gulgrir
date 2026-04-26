@@ -95,8 +95,8 @@ class BulkAssignToBucket:
                 user_item=item,
             )
             assignment.bucket = bucket
-            assignment.is_ignored = False
-            assignment.save(update_fields=["bucket", "is_ignored", "updated_at"])
+            assignment.assignment_mode = TimeBucketAssignment.Mode.BUCKET
+            assignment.save(update_fields=["bucket", "assignment_mode", "updated_at"])
             updated += 1
 
         return {

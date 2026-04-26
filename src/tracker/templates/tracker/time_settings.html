@@ -200,6 +200,9 @@
                     <div class="truncate">{{ assignment.user_item.display_title }}</div>
                   </div>
                   <select name="bucket_id" class="control min-w-0 w-full">
+                    <option value="__top__" {% if assignment.assignment_mode == "top_level" %}selected{% endif %}>
+                      Top level
+                    </option>
                     {% for opt in bucket_options %}
                       <option value="{{ opt.id }}" {% if assignment.bucket_id == opt.id %}selected{% endif %}>
                         {{ opt.label }}

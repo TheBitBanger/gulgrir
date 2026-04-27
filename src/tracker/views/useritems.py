@@ -627,6 +627,7 @@ def useritem_history_update(request, pk: int, history_pk: int):
             messages.error(request, "Start: Enter a valid date and time")
             return redirect("useritem_detail", pk=user_item.pk)
 
+        ended_at: datetime
         if mode == "duration":
             parsed_duration, duration_error = parse_retro_duration(duration_raw)
             if duration_error:
@@ -637,13 +638,14 @@ def useritem_history_update(request, pk: int, history_pk: int):
                 return redirect("useritem_detail", pk=user_item.pk)
             ended_at = started_at + parsed_duration
         else:
-            ended_at, ended_error = parse_local_datetime(ended_raw)
+            parsed_ended_at, ended_error = parse_local_datetime(ended_raw)
             if ended_error:
                 messages.error(request, f"End: {ended_error}")
                 return redirect("useritem_detail", pk=user_item.pk)
-            if ended_at is None:
+            if parsed_ended_at is None:
                 messages.error(request, "End: Enter a valid date and time")
                 return redirect("useritem_detail", pk=user_item.pk)
+            ended_at = parsed_ended_at
             if ended_at <= started_at:
                 messages.error(request, "End: Must be after start")
                 return redirect("useritem_detail", pk=user_item.pk)

@@ -1,0 +1,25 @@
+<div class="saved-filters-sidebar" aria-label="Saved filters">
+  <div class="saved-filters-sidebar__header">
+    <span class="saved-filters-sidebar__title">Saved filters</span>
+    <a class="btn btn-compact" href="{% url 'saved_filter_list' %}">Manage</a>
+  </div>
+  {% if global_saved_filters %}
+    <div class="saved-filters-sidebar__list">
+      {% for sf in global_saved_filters %}
+        <a
+          href="{% url 'useritem_dashboard' %}?{{ sf.query_params }}"
+          class="saved-filters-sidebar__link {% if sf.id == global_active_filter_id %}saved-filters-sidebar__link--active{% endif %}"
+          title="{{ sf.summary }}"
+        >
+          <span class="saved-filters-sidebar__name">{{ sf.name }}</span>
+          <span class="saved-filters-sidebar__summary">{{ sf.summary }}</span>
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="text-sm text-muted">None yet</div>
+  {% endif %}
+  <div class="saved-filters-sidebar__footer">
+    <a class="link" href="{% url 'useritem_dashboard' %}">Browse all items</a>
+  </div>
+</div>

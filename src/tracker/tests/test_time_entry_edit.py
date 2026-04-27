@@ -80,10 +80,16 @@ class TimeEntryEditTests(TestCase):
         self.assertEqual(response.status_code, 302)
 
         self.entry.refresh_from_db()
-        self.assertEqual(self.entry.started_at.hour, 10)
-        self.assertEqual(self.entry.started_at.minute, 0)
-        self.assertEqual(self.entry.ended_at.hour, 11)
-        self.assertEqual(self.entry.ended_at.minute, 30)
+        started_at = self.entry.started_at
+        ended_at = self.entry.ended_at
+        self.assertIsNotNone(started_at)
+        self.assertIsNotNone(ended_at)
+        if started_at is None or ended_at is None:
+            self.fail("Expected started_at and ended_at to be set")
+        self.assertEqual(started_at.hour, 10)
+        self.assertEqual(started_at.minute, 0)
+        self.assertEqual(ended_at.hour, 11)
+        self.assertEqual(ended_at.minute, 30)
         self.assertEqual(self.entry.duration, timedelta(hours=1, minutes=30))
         self.assertEqual(self.entry.happened_at, self.entry.ended_at)
 
@@ -105,8 +111,12 @@ class TimeEntryEditTests(TestCase):
         self.assertEqual(response.status_code, 302)
 
         self.entry.refresh_from_db()
-        self.assertEqual(self.entry.started_at.hour, 8)
-        self.assertEqual(self.entry.started_at.minute, 15)
+        started_at = self.entry.started_at
+        self.assertIsNotNone(started_at)
+        if started_at is None:
+            self.fail("Expected started_at to be set")
+        self.assertEqual(started_at.hour, 8)
+        self.assertEqual(started_at.minute, 15)
         self.assertEqual(self.entry.duration, timedelta(hours=1, minutes=20))
         self.assertEqual(self.entry.happened_at, self.entry.ended_at)
 

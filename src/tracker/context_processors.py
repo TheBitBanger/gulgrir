@@ -166,3 +166,25 @@ def active_timers(request):
         "current_default_layout_name": default_layout.name if default_layout else "n/a",
         "current_environment_name": "n/a",
     }
+
+
+def saved_filters_sidebar(request):
+    if not request.user.is_authenticated:
+        return {
+            "global_saved_filters": [],
+            "global_active_filter_id": None,
+        }
+
+    active_filter_id = request.GET.get("sf")
+    if active_filter_id is not None:
+        try:
+            active_filter_id = int(active_filter_id)
+        except (TypeError, ValueError):
+            active_filter_id = None
+
+    return {
+        "global_saved_filters": list(
+            request.user.saved_filters.all().only("id", "name", "definition")
+        ),
+        "global_active_filter_id": active_filter_id,
+    }

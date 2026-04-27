@@ -87,6 +87,7 @@
 
     :root {
       --active-timers-top: 7.5rem;
+      --sidebar-left-width: 17rem;
       --sidebar-right-width: 23rem;
       --app-header-top: 0.5rem;
     }
@@ -596,15 +597,31 @@
 
     .app-shell {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(18rem, var(--sidebar-right-width));
+      grid-template-columns: minmax(0, 1fr);
       gap: 1.1rem;
       align-items: stretch;
+    }
+
+    .app-shell--left {
+      grid-template-columns: minmax(15rem, var(--sidebar-left-width)) minmax(0, 1fr);
+    }
+
+    .app-shell--right {
+      grid-template-columns: minmax(0, 1fr) minmax(18rem, var(--sidebar-right-width));
+    }
+
+    .app-shell--left.app-shell--right {
+      grid-template-columns:
+        minmax(15rem, var(--sidebar-left-width))
+        minmax(0, 1fr)
+        minmax(18rem, var(--sidebar-right-width));
     }
 
     .app-shell__main {
       min-width: 0;
     }
 
+    .app-shell__left,
     .app-shell__right {
       position: sticky;
       top: var(--active-timers-top);
@@ -620,16 +637,99 @@
       box-shadow: 0 6px 14px color-mix(in oklab, var(--surface-2) 18%, transparent);
     }
 
+    .saved-filters-sidebar {
+      width: 100%;
+      display: grid;
+      gap: 0.65rem;
+      padding: 0.25rem 0;
+    }
+
+    .saved-filters-sidebar__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    .saved-filters-sidebar__title {
+      font-size: 0.76rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .saved-filters-sidebar__list {
+      display: grid;
+      gap: 0.35rem;
+    }
+
+    .saved-filters-sidebar__link {
+      display: grid;
+      gap: 0.1rem;
+      border-radius: 0.5rem;
+      border: 1px solid var(--border);
+      padding: 0.35rem 0.5rem;
+      color: var(--text);
+      text-decoration: none;
+      background: color-mix(in oklab, var(--surface-2) 62%, transparent);
+      transition: border-color 120ms ease, background 120ms ease;
+    }
+
+    .saved-filters-sidebar__link:hover {
+      color: var(--text);
+      text-decoration: none;
+      border-color: color-mix(in oklab, var(--accent) 55%, var(--border));
+      background: color-mix(in oklab, var(--surface-2) 74%, transparent);
+    }
+
+    .saved-filters-sidebar__link--active {
+      border-color: color-mix(in oklab, var(--accent) 75%, var(--border));
+      box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 28%, transparent);
+      background: color-mix(in oklab, var(--accent) 12%, var(--surface-2));
+    }
+
+    .saved-filters-sidebar__name {
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .saved-filters-sidebar__summary {
+      color: var(--muted);
+      font-size: 0.72rem;
+      line-height: 1.15;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .saved-filters-sidebar__footer {
+      border-top: 1px solid color-mix(in oklab, var(--border) 74%, transparent);
+      padding-top: 0.55rem;
+    }
+
+    .app-shell__right {
+      padding-right: 0.65rem;
+    }
+
     .active-timers {
       width: 100%;
       padding: 0.4rem 0 0.35rem;
     }
 
     @media (max-width: 1100px) {
-      .app-shell {
+      .app-shell,
+      .app-shell--left,
+      .app-shell--right,
+      .app-shell--left.app-shell--right {
         grid-template-columns: minmax(0, 1fr);
       }
 
+      .app-shell__left,
       .app-shell__right {
         position: static;
         min-height: 0;
@@ -1054,7 +1154,12 @@
       {% endfor %}
     </div>
   {% endif %}
-  <div class="app-shell">
+  <div class="app-shell{% if request.user.is_authenticated %} app-shell--left{% endif %}{% if active_timers or pinned_items or current_item %} app-shell--right{% endif %}">
+    {% if request.user.is_authenticated %}
+      <aside class="app-shell__left" aria-label="Saved filters sidebar">
+        {% include "tracker/partials/saved_filters_sidebar.html" %}
+      </aside>
+    {% endif %}
     <main class="app-shell__main">
       {% block content %}{% endblock %}
       {% if is_paginated %}

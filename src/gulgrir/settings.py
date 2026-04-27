@@ -79,6 +79,7 @@ TEMPLATES = [
                 "tracker.context_processors.date_format",
                 "tracker.context_processors.theme_preference",
                 "tracker.context_processors.active_timers",
+                "tracker.context_processors.saved_filters_sidebar",
             ],
         },
     },

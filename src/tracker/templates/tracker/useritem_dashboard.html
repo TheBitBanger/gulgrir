@@ -1,38 +1,12 @@
 {% extends "tracker/base.html" %}
 {% load static %}
 {% block content %}
-<div class="flex gap-8">
-  <input id="current_filter" type="hidden" name="sf" value="{{ active_filter.id|default:'' }}">
-
-  <!-- left sidebar: saved filters -->
-  <aside class="w-56">
-    <h2 class="font-medium mb-2">Saved filters</h2>
-    <ul id="saved-filters" class="space-y-1">
-      {% for sf in saved_filters %}
-        <li>
-          <a
-              href="{% url 'useritem_dashboard' %}?{{ sf.query_params }}"
-              class="link"
-          >
-            {{ sf.name }}
-          </a>
-        </li>
-      {% empty %}
-        <li class="text-sm text-muted">None yet</li>
-      {% endfor %}
-    </ul>
-  </aside>
-  
-  <!-- main column -->
-  <section class="flex-1">
-    {% include "tracker/partials/page_head.html" with title="My items" subtitle="Manage your personal queue and active work." %}
-    <a class="btn mb-2" href="{% url 'useritem_add' %}">➕ Add to my list</a>
-    {% include "tracker/partials/action_bar.html" %}
-    <div id="dash-fragment">
-      {% include "tracker/partials/useritem_filter_bar.html" %}
-      {% include "tracker/partials/useritem_table.html" %}
-    </div>
-  </section>
-
+<input id="current_filter" type="hidden" name="sf" value="{{ active_filter.id|default:'' }}">
+{% include "tracker/partials/page_head.html" with title="My items" subtitle="Manage your personal queue and active work." %}
+<a class="btn mb-2" href="{% url 'useritem_add' %}">➕ Add to my list</a>
+{% include "tracker/partials/action_bar.html" %}
+<div id="dash-fragment">
+  {% include "tracker/partials/useritem_filter_bar.html" %}
+  {% include "tracker/partials/useritem_table.html" %}
 </div>
 {% endblock %}

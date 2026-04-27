@@ -5,7 +5,7 @@
 
 {% if usage_count %}
   <div class="alert-warning mb-4 rounded-lg p-3 text-sm">
-    This tag is currently used by {{ usage_count }} item{{ usage_count|pluralize }}.
+    This {{ usage_subject|default:"item" }} is currently used by {{ usage_count }} item{{ usage_count|pluralize }}.
   </div>
 {% endif %}
 

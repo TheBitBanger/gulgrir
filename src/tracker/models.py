@@ -32,6 +32,15 @@ class Item(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                Lower("title"),
+                "media_type",
+                name="uniq_item_lower_title_media_type",
+            )
+        ]
+
     def __str__(self):
         return self.title
 
@@ -111,7 +120,7 @@ class UserItem(models.Model):
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     item = models.ForeignKey(
-        Item, null=True, blank=True, on_delete=models.CASCADE
+        Item, null=True, blank=True, on_delete=models.PROTECT
     )  # Null UserItems are actually projects, they won't have an Item entry
     is_project = models.BooleanField(default=False)
     is_redoing = models.BooleanField(default=False)

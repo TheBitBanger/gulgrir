@@ -69,6 +69,7 @@ class TagDelete(OwnObjectsMixin, DeleteView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["usage_count"] = self.object.user_items.count()
+        ctx["usage_subject"] = "tag"
 
         return ctx
 

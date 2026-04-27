@@ -1008,7 +1008,7 @@
           <a href="{% url 'time_dashboard' %}" class="nav-link {% if current_url|slice:':5' == 'time_' %}nav-link--active{% endif %}">Time stats</a>
           <a href="{% url 'tag_list' %}" class="nav-link {% if current_url == 'tag_list' %}nav-link--active{% endif %}">My tags</a>
           <a href="{% url 'saved_filter_list' %}" class="nav-link {% if current_url|slice:':13' == 'saved_filter_' %}nav-link--active{% endif %}">Saved filters</a>
-          <a href="{% url 'item_list' %}" class="nav-link {% if current_url == 'item_list' %}nav-link--active{% endif %}">Global library</a>
+          <a href="{% url 'item_list' %}" class="nav-link {% if current_url|slice:':5' == 'item_' %}nav-link--active{% endif %}">Global library</a>
           <div x-data="{ open: false }" class="relative">
             <button type="button" class="nav-link nav-link--button {% if current_url == 'preferences' or current_url == 'time_settings' %}nav-link--active{% endif %}" @click="open = !open" @click.outside="open = false">
               Settings

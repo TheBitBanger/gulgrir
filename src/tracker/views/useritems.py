@@ -15,8 +15,9 @@ from django.views.generic.edit import CreateView, DeleteView, UpdateView
 
 from tracker.actions import registry as action_registry
 
-from ..forms import UserItemFilterForm, UserItemForm
+from ..forms import UserItemCreateForm, UserItemFilterForm, UserItemForm
 from ..models import (
+    Item,
     Profile,
     SavedFilter,
     Tag,
@@ -187,7 +188,7 @@ def build_useritem_detail_context(
 
 
 class UserItemCreate(LoginRequiredMixin, CreateView):
-    form_class = UserItemForm
+    form_class = UserItemCreateForm
     model = UserItem
     template_name = "tracker/form.html"
     success_url = reverse_lazy("useritem_dashboard")
@@ -220,6 +221,9 @@ class UserItemCreate(LoginRequiredMixin, CreateView):
             ctx["selected_tag_ids"] = [int(x) for x in raw]
         else:
             ctx["selected_tag_ids"] = []
+
+        ctx["enable_item_suggestions"] = True
+        ctx["item_suggestions_url"] = reverse("useritem_item_suggestions")
 
         return ctx
 
@@ -553,3 +557,21 @@ def useritem_timer_add_retro(request, pk: int):
     messages.success(request, "Retro time entry added.")
 
     return redirect("useritem_detail", pk=user_item.pk)
+
+
+@login_required
+def useritem_item_suggestions(request):
+    query = (request.GET.get("q") or "").strip()
+    media_type = (request.GET.get("media_type") or "").strip()
+    if not query:
+        return JsonResponse({"results": []})
+
+    queryset = Item.objects.filter(title__icontains=query)
+    if media_type in Item.MediaType.values:
+        queryset = queryset.filter(media_type=media_type)
+
+    results = list(
+        queryset.order_by("title", "id").values("id", "title", "media_type")[:10]
+    )
+
+    return JsonResponse({"results": results})

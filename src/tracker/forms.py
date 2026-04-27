@@ -1,6 +1,7 @@
 from typing import Any, cast
 
 from django import forms
+from django.db import IntegrityError
 
 from .models import Item, Profile, Tag, UserItem, UserItemHistory
 from .widgets import FlatpickrISODateInput
@@ -75,6 +76,89 @@ class UserItemForm(forms.ModelForm):
                     happened_at=cd["revisited_at"],
                 )
         return ui
+
+
+class UserItemCreateForm(forms.ModelForm):
+    item_title = forms.CharField(max_length=255, required=False, label="Title")
+    media_type = forms.ChoiceField(
+        choices=Item.MediaType.choices,
+        required=False,
+        initial=Item.MediaType.OTHER,
+        label="Media type",
+    )
+
+    class Meta:
+        model = UserItem
+        fields = [
+            "item_title",
+            "media_type",
+            "is_project",
+            "is_endless",
+            "title_override",
+            "shelf",
+            "tier",
+            "tags",
+        ]
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if user is not None and "tags" in self.fields:
+            tags_field = cast(forms.ModelMultipleChoiceField, self.fields["tags"])
+            tags_field.queryset = Tag.objects.filter(user=user).order_by("name")
+
+        base = "w-full rounded-lg border px-3 py-2 text-sm"
+        for name, field in self.fields.items():
+            if isinstance(field.widget, forms.CheckboxInput):
+                if name in {"is_project", "is_endless"}:
+                    field.widget.attrs.setdefault("class", "pill-toggle__input")
+                else:
+                    field.widget.attrs.setdefault("class", "h-4 w-4")
+                continue
+            field.widget.attrs.setdefault("class", base)
+
+    def clean(self):
+        cleaned_data = super().clean() or {}
+        is_project = bool(cleaned_data.get("is_project"))
+        item_title = (cleaned_data.get("item_title") or "").strip()
+
+        if not is_project and not item_title:
+            self.add_error("item_title", "Title is required for non-project items.")
+
+        cleaned_data["item_title"] = item_title
+        return cleaned_data
+
+    def save(self, commit=True):
+        user_item = super().save(commit=False)
+        cleaned_data = self.cleaned_data
+        is_project = bool(cleaned_data.get("is_project"))
+
+        if is_project:
+            user_item.item = None
+        else:
+            title = cleaned_data["item_title"]
+            media_type = cleaned_data.get("media_type") or Item.MediaType.OTHER
+            existing_item = Item.objects.filter(
+                title__iexact=title,
+                media_type=media_type,
+            ).first()
+            if existing_item is None:
+                try:
+                    existing_item = Item.objects.create(
+                        title=title,
+                        media_type=media_type,
+                    )
+                except IntegrityError:
+                    existing_item = Item.objects.get(
+                        title__iexact=title,
+                        media_type=media_type,
+                    )
+            user_item.item = existing_item
+
+        if commit:
+            user_item.save()
+            self.save_m2m()
+        return user_item
 
 
 PRESETS = [

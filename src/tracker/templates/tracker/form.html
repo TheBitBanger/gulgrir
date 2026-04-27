@@ -75,6 +75,22 @@
               <div class="mt-1 text-xs">{{ field.errors }}</div>
             {% endif %}
           </div>
+        {% elif enable_item_suggestions and field.name == "item_title" %}
+          <div class="md:col-span-2">
+            <label for="{{ field.id_for_label }}" class="block text-sm mb-1">
+              {{ field.label }}
+            </label>
+            <div id="item-title-suggest"
+                 class="relative"
+                 data-suggest-url="{{ item_suggestions_url }}">
+              {{ field }}
+              <div id="item-title-suggest-list"
+                   class="hidden absolute left-0 right-0 mt-1 rounded-lg border p-1 text-sm"
+                   style="background: var(--surface); z-index: 30;"></div>
+            </div>
+            {% if field.help_text %}<div class="mt-1 text-xs opacity-70">{{ field.help_text }}</div>{% endif %}
+            {% if field.errors %}<div class="mt-1 text-xs">{{ field.errors }}</div>{% endif %}
+          </div>
         {% else %}
           {# Generic field rendering, works for all models/forms #}
           {% if field.field.widget.input_type == "checkbox" %}
@@ -94,7 +110,7 @@
               {% if field.errors %}<div class="mt-1 text-xs">{{ field.errors }}</div>{% endif %}
             </div>
           {% else %}
-            <div class="{% if field.name == 'item' or field.name == 'title_override' %}md:col-span-2{% endif %}">
+            <div class="{% if field.name == 'item' or field.name == 'item_title' or field.name == 'title_override' %}md:col-span-2{% endif %}">
               <label for="{{ field.id_for_label }}" class="block text-sm mb-1">
                 {{ field.label }}
               </label>
@@ -309,6 +325,82 @@
           });
 
           queueRender();
+        })();
+      </script>
+    {% endif %}
+
+    {% if enable_item_suggestions %}
+      <script>
+        (function () {
+          const wrapper = document.getElementById("item-title-suggest");
+          const input = document.getElementById("id_item_title");
+          const mediaType = document.getElementById("id_media_type");
+          const results = document.getElementById("item-title-suggest-list");
+          if (!wrapper || !input || !results) return;
+
+          const suggestUrl = wrapper.dataset.suggestUrl;
+          let timer = null;
+
+          function clearResults() {
+            results.innerHTML = "";
+            results.classList.add("hidden");
+          }
+
+          function renderResult(row) {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "w-full text-left rounded px-2 py-1 hover:opacity-80";
+            btn.textContent = `${row.title} (${row.media_type})`;
+            btn.addEventListener("click", () => {
+              input.value = row.title;
+              if (mediaType) mediaType.value = row.media_type;
+              clearResults();
+            });
+            return btn;
+          }
+
+          async function fetchSuggestions() {
+            const q = (input.value || "").trim();
+            if (!q) {
+              clearResults();
+              return;
+            }
+            const params = new URLSearchParams({ q });
+            if (mediaType && mediaType.value) params.set("media_type", mediaType.value);
+            const res = await fetch(`${suggestUrl}?${params.toString()}`);
+            if (!res.ok) {
+              clearResults();
+              return;
+            }
+            const data = await res.json();
+            const rows = data.results || [];
+            if (!rows.length) {
+              clearResults();
+              return;
+            }
+            results.innerHTML = "";
+            rows.forEach((row) => {
+              results.appendChild(renderResult(row));
+            });
+            results.classList.remove("hidden");
+          }
+
+          input.addEventListener("input", () => {
+            window.clearTimeout(timer);
+            timer = window.setTimeout(fetchSuggestions, 150);
+          });
+
+          input.addEventListener("blur", () => {
+            window.setTimeout(clearResults, 120);
+          });
+
+          if (mediaType) {
+            mediaType.addEventListener("change", () => {
+              if ((input.value || "").trim()) {
+                fetchSuggestions();
+              }
+            });
+          }
         })();
       </script>
     {% endif %}

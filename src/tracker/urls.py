@@ -14,6 +14,8 @@ from .views import (
 item_patterns = [
     path("", items.ItemList.as_view(), name="item_list"),
     path("add/", items.ItemCreate.as_view(), name="item_add"),
+    path("<int:pk>/edit/", items.ItemUpdate.as_view(), name="item_edit"),
+    path("<int:pk>/delete/", items.ItemDelete.as_view(), name="item_delete"),
 ]
 
 useritem_patterns = [
@@ -47,6 +49,11 @@ useritem_patterns = [
     path("actions/", actions.useritem_execute_action, name="useritem_actions"),
     path("actions/list/", actions.list_actions, name="action_list"),
     path("actions/params/", actions.action_params, name="action_params"),
+    path(
+        "item-suggestions/",
+        useritems.useritem_item_suggestions,
+        name="useritem_item_suggestions",
+    ),
 ]
 
 tag_patterns = [

@@ -8,7 +8,9 @@
   <thead>
     <tr class="border-b">
       <th class="text-left p-1">Title</th>
-      <th>Media type</th>
+      <th class="text-left p-1">Media type</th>
+      <th class="text-left p-1">Usage</th>
+      <th class="w-24"></th>
     </tr>
   </thead>
   <tbody>
@@ -16,9 +18,19 @@
       <tr class="border-b">
         <td class="p-1">{{ itm.title }}</td>
         <td class="p-1">{{ itm.media_type }}</td>
+        <td class="p-1 text-sm">
+          {{ itm.usage_count }}
+          {% if itm.usage_count == 0 %}
+            <span class="badge">Unused</span>
+          {% endif %}
+        </td>
+        <td class="p-1 text-right">
+          <a href="{% url 'item_edit' itm.pk %}" class="mr-2">✏️</a>
+          <a href="{% url 'item_delete' itm.pk %}">🗑️</a>
+        </td>
       </tr>
     {% empty %}
-      <tr><td colspan="2" class="p-2">No items yet.</td></tr>
+      <tr><td colspan="4" class="p-2">No items yet.</td></tr>
     {% endfor %}
   </tbody>
 </table>

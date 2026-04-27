@@ -68,6 +68,7 @@ Run all tests:
 
 - `python src/manage.py test`
 - `docker compose -f compose/dev.yml -f compose/dev.bind.yml exec app python /app/src/manage.py test`
+- `make test` (containerized)
 
 Run tests for a single app:
 
@@ -78,16 +79,19 @@ Run a single test module:
 
 - `python src/manage.py test tracker.tests`
 - `docker compose -f compose/dev.yml -f compose/dev.bind.yml exec app python /app/src/manage.py test tracker.tests`
+- `make test-label TEST=tracker.tests`
 
 Run a single TestCase class:
 
 - `python src/manage.py test tracker.tests.MyTestCase`
 - `docker compose -f compose/dev.yml -f compose/dev.bind.yml exec app python /app/src/manage.py test tracker.tests.MyTestCase`
+- `make test-label TEST=tracker.tests.MyTestCase`
 
 Run a single test method:
 
 - `python src/manage.py test tracker.tests.MyTestCase.test_something`
 - `docker compose -f compose/dev.yml -f compose/dev.bind.yml exec app python /app/src/manage.py test tracker.tests.MyTestCase.test_something`
+- `make test-label TEST=tracker.tests.MyTestCase.test_something`
 
 If you add pytest, document `pytest -k` style single-test commands here.
 

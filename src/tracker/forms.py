@@ -90,9 +90,9 @@ class UserItemCreateForm(forms.ModelForm):
     class Meta:
         model = UserItem
         fields = [
-            "item_title",
-            "media_type",
             "is_project",
+            "media_type",
+            "item_title",
             "is_endless",
             "title_override",
             "shelf",
@@ -117,15 +117,34 @@ class UserItemCreateForm(forms.ModelForm):
                 continue
             field.widget.attrs.setdefault("class", base)
 
+        item_title_field = cast(forms.CharField, self.fields["item_title"])
+        item_title_field.widget.attrs.setdefault("autocomplete", "off")
+        item_title_field.widget.attrs.setdefault("autocorrect", "off")
+        item_title_field.widget.attrs.setdefault("autocapitalize", "none")
+        item_title_field.widget.attrs.setdefault("spellcheck", "false")
+
     def clean(self):
         cleaned_data = super().clean() or {}
         is_project = bool(cleaned_data.get("is_project"))
         item_title = (cleaned_data.get("item_title") or "").strip()
-
-        if not is_project and not item_title:
-            self.add_error("item_title", "Title is required for non-project items.")
+        title_override = (cleaned_data.get("title_override") or "").strip()
+        media_type = (cleaned_data.get("media_type") or "").strip()
 
         cleaned_data["item_title"] = item_title
+        cleaned_data["title_override"] = title_override
+
+        if is_project:
+            if not title_override:
+                self.add_error("title_override", "Project title is required.")
+            return cleaned_data
+
+        if not media_type:
+            self.add_error(
+                "media_type",
+                "Media type is required for non-project items.",
+            )
+        if not item_title:
+            self.add_error("item_title", "Title is required for non-project items.")
         return cleaned_data
 
     def save(self, commit=True):

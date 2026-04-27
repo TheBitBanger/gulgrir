@@ -563,12 +563,13 @@ def useritem_timer_add_retro(request, pk: int):
 def useritem_item_suggestions(request):
     query = (request.GET.get("q") or "").strip()
     media_type = (request.GET.get("media_type") or "").strip()
-    if not query:
+    if not query or media_type not in Item.MediaType.values:
         return JsonResponse({"results": []})
 
-    queryset = Item.objects.filter(title__icontains=query)
-    if media_type in Item.MediaType.values:
-        queryset = queryset.filter(media_type=media_type)
+    queryset = Item.objects.filter(
+        title__icontains=query,
+        media_type=media_type,
+    )
 
     results = list(
         queryset.order_by("title", "id").values("id", "title", "media_type")[:10]

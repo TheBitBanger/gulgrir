@@ -101,3 +101,15 @@ class ItemLibraryTests(TestCase):
         self.assertEqual(len(payload["results"]), 1)
         self.assertEqual(payload["results"][0]["title"], "Dune")
         self.assertEqual(payload["results"][0]["media_type"], Item.MediaType.BOOK)
+
+    def test_suggestions_return_empty_without_media_type(self):
+        Item.objects.create(title="Dune", media_type=Item.MediaType.BOOK)
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            reverse("useritem_item_suggestions"),
+            {"q": "du"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["results"], [])

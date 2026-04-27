@@ -67,3 +67,36 @@ class UserItemCreateTests(TestCase):
         self.assertEqual(Item.objects.filter(media_type=Item.MediaType.BOOK).count(), 1)
         user_item = UserItem.objects.get(user=self.user)
         self.assertEqual(user_item.item_id, existing.id)
+
+    def test_project_requires_title_override(self):
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse("useritem_add"),
+            {
+                "is_project": "on",
+                "title_override": "",
+                "shelf": UserItem.Shelf.BACKLOG,
+                "tier": UserItem.Tier.UNRATED,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Project title is required.")
+        self.assertEqual(UserItem.objects.count(), 0)
+
+    def test_non_project_requires_media_type(self):
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse("useritem_add"),
+            {
+                "item_title": "Some title",
+                "shelf": UserItem.Shelf.BACKLOG,
+                "tier": UserItem.Tier.UNRATED,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            "Media type is required for non-project items.",
+        )

@@ -45,6 +45,11 @@ useritem_patterns = [
         useritems.useritem_timer_add_retro,
         name="useritem_timer_add",
     ),
+    path(
+        "<int:pk>/history/<int:history_pk>/update/",
+        useritems.useritem_history_update,
+        name="useritem_history_update",
+    ),
     path("save-filter/", saved_filters.save_current_filter, name="save_filter"),
     path("actions/", actions.useritem_execute_action, name="useritem_actions"),
     path("actions/list/", actions.list_actions, name="action_list"),

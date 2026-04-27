@@ -48,6 +48,25 @@ def format_duration(duration) -> str:
     return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
 
 
+def format_duration_input(duration: timedelta | None) -> str:
+    if duration is None:
+        return ""
+    total_seconds = int(duration.total_seconds())
+    if total_seconds <= 0:
+        return ""
+    hours = total_seconds // 3600
+    minutes = (total_seconds % 3600) // 60
+    seconds = total_seconds % 60
+    parts: list[str] = []
+    if hours:
+        parts.append(f"{hours}h")
+    if minutes:
+        parts.append(f"{minutes}m")
+    if seconds:
+        parts.append(f"{seconds}s")
+    return " ".join(parts)
+
+
 def parse_retro_duration(raw: str) -> tuple[timedelta | None, str | None]:
     if not raw:
         return None, "Duration required"
@@ -114,6 +133,22 @@ def parse_retro_time(raw: str) -> tuple[time, str | None]:
     return time(hour, minute), None
 
 
+def parse_local_datetime(raw: str) -> tuple[datetime | None, str | None]:
+    if not raw:
+        return None, "Enter a valid date and time"
+    try:
+        parsed = datetime.fromisoformat(raw)
+    except ValueError:
+        return None, "Enter a valid date and time"
+
+    if timezone.is_naive(parsed):
+        parsed = timezone.make_aware(parsed, timezone.get_current_timezone())
+    else:
+        parsed = parsed.astimezone(timezone.get_current_timezone())
+
+    return parsed, None
+
+
 def build_useritem_detail_context(
     request,
     user_item: UserItem,
@@ -142,6 +177,7 @@ def build_useritem_detail_context(
             {
                 "entry": entry,
                 "duration_display": format_duration(duration),
+                "duration_input": format_duration_input(duration),
             }
         )
     ctx["history_entries"] = history_entries
@@ -329,6 +365,7 @@ class UserItemDetail(OwnObjectsMixin, UpdateView):
                 {
                     "entry": entry,
                     "duration_display": format_duration(duration),
+                    "duration_input": format_duration_input(duration),
                 }
             )
         ctx["history_entries"] = history_entries
@@ -360,6 +397,11 @@ class UserItemDetail(OwnObjectsMixin, UpdateView):
         }
         ctx["retro_errors"] = {}
         ctx["can_restart_item"] = can_restart(user_item)
+        user_items_for_reassign = list(
+            UserItem.objects.filter(user=user).select_related("item")
+        )
+        user_items_for_reassign.sort(key=lambda row: row.display_title.lower())
+        ctx["history_reassign_options"] = user_items_for_reassign
 
         return ctx
 
@@ -557,6 +599,79 @@ def useritem_timer_add_retro(request, pk: int):
     messages.success(request, "Retro time entry added.")
 
     return redirect("useritem_detail", pk=user_item.pk)
+
+
+@require_POST
+@login_required
+def useritem_history_update(request, pk: int, history_pk: int):
+    user_item = get_object_or_404(UserItem, pk=pk, user=request.user)
+    with transaction.atomic():
+        history_entry = get_object_or_404(
+            UserItemHistory.objects.select_for_update(),
+            pk=history_pk,
+            user_item=user_item,
+            event_type=UserItemHistory.Event.REVISITED,
+        )
+
+        started_raw = (request.POST.get("started_at") or "").strip()
+        mode = (request.POST.get("edit_mode") or "end").strip().lower()
+        ended_raw = (request.POST.get("ended_at") or "").strip()
+        duration_raw = (request.POST.get("duration") or "").strip()
+        target_raw = (request.POST.get("target_user_item") or "").strip()
+
+        started_at, started_error = parse_local_datetime(started_raw)
+        if started_error:
+            messages.error(request, f"Start: {started_error}")
+            return redirect("useritem_detail", pk=user_item.pk)
+        if started_at is None:
+            messages.error(request, "Start: Enter a valid date and time")
+            return redirect("useritem_detail", pk=user_item.pk)
+
+        if mode == "duration":
+            parsed_duration, duration_error = parse_retro_duration(duration_raw)
+            if duration_error:
+                messages.error(request, f"Duration: {duration_error}")
+                return redirect("useritem_detail", pk=user_item.pk)
+            if parsed_duration is None:
+                messages.error(request, "Duration: Duration required")
+                return redirect("useritem_detail", pk=user_item.pk)
+            ended_at = started_at + parsed_duration
+        else:
+            ended_at, ended_error = parse_local_datetime(ended_raw)
+            if ended_error:
+                messages.error(request, f"End: {ended_error}")
+                return redirect("useritem_detail", pk=user_item.pk)
+            if ended_at is None:
+                messages.error(request, "End: Enter a valid date and time")
+                return redirect("useritem_detail", pk=user_item.pk)
+            if ended_at <= started_at:
+                messages.error(request, "End: Must be after start")
+                return redirect("useritem_detail", pk=user_item.pk)
+
+        target_user_item = user_item
+        if target_raw:
+            target_user_item = get_object_or_404(
+                UserItem,
+                pk=target_raw,
+                user=request.user,
+            )
+
+        history_entry.user_item = target_user_item
+        history_entry.started_at = started_at
+        history_entry.ended_at = ended_at
+        history_entry.happened_at = ended_at
+        history_entry.save(
+            update_fields=[
+                "user_item",
+                "started_at",
+                "ended_at",
+                "happened_at",
+                "duration",
+            ]
+        )
+
+    messages.success(request, "Time entry updated.")
+    return redirect("useritem_detail", pk=target_user_item.pk)
 
 
 @login_required

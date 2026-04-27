@@ -39,7 +39,8 @@ Common commands (run from repo root):
 Local virtualenv workflow (Poetry):
 
 - Enter shell: `poetry shell`
-- Run Django commands: `poetry run python src/manage.py <command>`
+- Run one-off Django commands: `poetry run python src/manage.py <command>`
+- Do not use Poetry commands for test/QA execution; use Make targets below.
 - Note: default DB host is `db`, so local commands need the Compose network or a local DB override.
 - To run migrations against the Compose DB:
   - `docker compose -f compose/dev.yml -f compose/dev.bind.yml exec app python /app/src/manage.py migrate`
@@ -61,36 +62,18 @@ Environment variables:
 
 ## Tests
 
-No dedicated test runner config (pytest/tox/nox) is present. Use Django's
-test runner via `manage.py`.
+Use Make targets for test/QA execution. Prefer containerized commands to avoid
+host-env DB/network drift.
 
 Run all tests:
 
-- `python src/manage.py test`
-- `docker compose -f compose/dev.yml -f compose/dev.bind.yml exec app python /app/src/manage.py test`
-- `make test` (containerized)
+- `make test`
 
-Run tests for a single app:
+Run a single app/module/class/method:
 
-- `python src/manage.py test tracker`
-- `docker compose -f compose/dev.yml -f compose/dev.bind.yml exec app python /app/src/manage.py test tracker`
-
-Run a single test module:
-
-- `python src/manage.py test tracker.tests`
-- `docker compose -f compose/dev.yml -f compose/dev.bind.yml exec app python /app/src/manage.py test tracker.tests`
+- `make test-label TEST=tracker`
 - `make test-label TEST=tracker.tests`
-
-Run a single TestCase class:
-
-- `python src/manage.py test tracker.tests.MyTestCase`
-- `docker compose -f compose/dev.yml -f compose/dev.bind.yml exec app python /app/src/manage.py test tracker.tests.MyTestCase`
 - `make test-label TEST=tracker.tests.MyTestCase`
-
-Run a single test method:
-
-- `python src/manage.py test tracker.tests.MyTestCase.test_something`
-- `docker compose -f compose/dev.yml -f compose/dev.bind.yml exec app python /app/src/manage.py test tracker.tests.MyTestCase.test_something`
 - `make test-label TEST=tracker.tests.MyTestCase.test_something`
 
 If you add pytest, document `pytest -k` style single-test commands here.
@@ -105,6 +88,12 @@ Use containerized QA commands from repo root:
 `qa-quick` runs Ruff lint + format checks and mypy.
 `qa-full` runs Ruff, mypy, basedpyright, Bandit, pip-audit, gitleaks
 (staged changes), and `manage.py check --deploy`.
+
+Agent default verification policy:
+
+- Use `make qa-quick` for normal validation after most code changes.
+- Use `make qa-full` for deep/thorough validation or cross-cutting changes.
+- Do not run tests/QA via `poetry run ...` unless the user explicitly asks.
 
 ## Type checking
 
@@ -193,6 +182,6 @@ Suggested type-check commands:
 
 - Add tests when coverage is missing for the change.
 - Run tests after every change:
-  - Use scoped tests for small, localized changes.
-  - Use the full test suite for changes that involve multiple modules.
-  - When in doubt, run the full test suite.
+  - Small/localized changes: run scoped checks with `make test-label ...` and/or `make qa-quick`.
+  - Multi-module or risky changes: run `make qa-full`.
+  - When in doubt, prefer `make qa-quick` at minimum.

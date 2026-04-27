@@ -384,6 +384,61 @@
                     {{ entry.ended_at|date:tpl_fmt }} {{ entry.ended_at|date:"H:i" }}
                   </div>
                   <div class="text-muted">Duration {{ row.duration_display }}</div>
+                  {% if entry.event_type == "revisited" %}
+                    <details class="mt-2">
+                      <summary class="text-xs cursor-pointer">Edit entry</summary>
+                      <form method="post"
+                            action="{% url 'useritem_history_update' object.pk entry.pk %}"
+                            class="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {% csrf_token %}
+                        <div>
+                          <label class="block text-xs mb-1" for="history-start-{{ entry.pk }}">Start</label>
+                          <input id="history-start-{{ entry.pk }}"
+                                 name="started_at"
+                                 type="datetime-local"
+                                 class="control w-full"
+                                 value="{{ entry.started_at|date:'Y-m-d\\TH:i' }}" />
+                        </div>
+                        <div>
+                          <label class="block text-xs mb-1" for="history-end-{{ entry.pk }}">End</label>
+                          <input id="history-end-{{ entry.pk }}"
+                                 name="ended_at"
+                                 type="datetime-local"
+                                 class="control w-full"
+                                 value="{{ entry.ended_at|date:'Y-m-d\\TH:i' }}" />
+                        </div>
+                        <div>
+                          <label class="block text-xs mb-1" for="history-mode-{{ entry.pk }}">Edit with</label>
+                          <select id="history-mode-{{ entry.pk }}" name="edit_mode" class="control w-full">
+                            <option value="end" selected>Start + End</option>
+                            <option value="duration">Start + Duration</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label class="block text-xs mb-1" for="history-duration-{{ entry.pk }}">Duration</label>
+                          <input id="history-duration-{{ entry.pk }}"
+                                 name="duration"
+                                 type="text"
+                                 class="control w-full"
+                                 value="{{ row.duration_input|default:'' }}"
+                                 placeholder="1h 20m 10s" />
+                        </div>
+                        <div class="md:col-span-2">
+                          <label class="block text-xs mb-1" for="history-target-{{ entry.pk }}">Move to item</label>
+                          <select id="history-target-{{ entry.pk }}" name="target_user_item" class="control w-full">
+                            {% for reassign_item in history_reassign_options %}
+                              <option value="{{ reassign_item.pk }}" {% if reassign_item.pk == entry.user_item_id %}selected{% endif %}>
+                                {{ reassign_item.display_title }}
+                              </option>
+                            {% endfor %}
+                          </select>
+                        </div>
+                        <div class="md:col-span-2">
+                          <button type="submit" class="btn btn-compact">Save entry</button>
+                        </div>
+                      </form>
+                    </details>
+                  {% endif %}
                 {% else %}
                   <div class="text-muted">{{ entry.happened_at|date:tpl_fmt }}</div>
                 {% endif %}

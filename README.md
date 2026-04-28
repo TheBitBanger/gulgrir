@@ -84,6 +84,7 @@ TZ=UTC
 
 # Gulgrir
 GULGRIR_PORT=8765
+GULGRIR_ENV=dev
 ```
 
 Notes:
@@ -92,6 +93,9 @@ Notes:
 - Set `DJANGO_SECRET_KEY` to a long, random, user-defined value (at least 50 characters). Django will raise `security.W009` during `check --deploy` if it is too short or otherwise weak.
 - Keep `DJANGO_SECRET_KEY` out of version control and rotate it carefully in production.
 - `GULGRIR_PORT` controls the host port that maps to container port 8765.
+- `GULGRIR_ENV` controls the environment indicator in the app header.
+  Supported values normalize to `dev`, `staging`, and `production`
+  (aliases like `prod`, `stage`, `qa`, and `live` are accepted).
 - `DJANGO_ALLOWED_HOSTS` should include any hostnames or IPs you use to access the app.
 - `DJANGO_CSRF_TRUSTED_ORIGINS` must include the full scheme + host (and port if used).
 - `DJANGO_SECURE_PROXY_SSL_HEADER` should be `true` only when running behind a reverse proxy.

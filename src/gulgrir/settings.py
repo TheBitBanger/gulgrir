@@ -31,6 +31,18 @@ SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "replace-me")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DJANGO_DEBUG", "false").lower() == "true"
 
+
+def normalize_environment(value: str) -> str:
+    raw = value.strip().lower()
+    if raw in {"prod", "production", "live"}:
+        return "production"
+    if raw in {"staging", "stage", "preprod", "qa"}:
+        return "staging"
+    return "dev"
+
+
+GULGRIR_ENV = normalize_environment(os.getenv("GULGRIR_ENV", "dev"))
+
 allowed_hosts = parse_env_list(os.getenv("DJANGO_ALLOWED_HOSTS", ""))
 ALLOWED_HOSTS = allowed_hosts or ["*"]
 

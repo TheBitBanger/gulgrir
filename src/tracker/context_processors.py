@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Value
 from django.db.models.functions import Coalesce
@@ -47,6 +48,14 @@ def theme_preference(request):
 
 
 def active_timers(request):
+    env_value = getattr(settings, "GULGRIR_ENV", "dev")
+    env_map = {
+        "dev": ("DEV", "dev"),
+        "staging": ("STAGING", "staging"),
+        "production": ("PROD", "prod"),
+    }
+    env_name, env_tone = env_map.get(env_value, ("DEV", "dev"))
+
     if not request.user.is_authenticated:
         return {
             "active_timers": [],
@@ -54,7 +63,8 @@ def active_timers(request):
             "pinned_items": [],
             "current_item": None,
             "current_default_layout_name": "n/a",
-            "current_environment_name": "n/a",
+            "current_environment_name": env_name,
+            "current_environment_tone": env_tone,
         }
 
     profile, _ = Profile.objects.get_or_create(user=request.user)
@@ -161,7 +171,8 @@ def active_timers(request):
         "pinned_items": pinned_items,
         "current_item": current_item,
         "current_default_layout_name": default_layout.name if default_layout else "n/a",
-        "current_environment_name": "n/a",
+        "current_environment_name": env_name,
+        "current_environment_tone": env_tone,
     }
 
 

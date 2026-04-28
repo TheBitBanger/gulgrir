@@ -514,6 +514,32 @@
       min-width: 0;
     }
 
+    .environment-chip--env {
+      border-width: 1px;
+      border-style: solid;
+    }
+
+    .environment-chip--env-dev {
+      border-color: color-mix(in oklab, var(--accent) 65%, var(--border));
+      background: color-mix(in oklab, var(--accent) 12%, var(--surface-2));
+    }
+
+    .environment-chip--env-staging {
+      border-color: color-mix(in oklab, var(--warn) 70%, var(--border));
+      background: color-mix(in oklab, var(--warn) 16%, var(--surface-2));
+    }
+
+    .environment-chip--env-prod {
+      border-color: color-mix(in oklab, var(--danger) 75%, var(--border));
+      background: color-mix(in oklab, var(--danger) 16%, var(--surface-2));
+    }
+
+    .app-header--env-prod {
+      box-shadow:
+        inset 0 2px 0 color-mix(in oklab, var(--danger) 70%, transparent),
+        0 10px 22px color-mix(in oklab, var(--surface-2) 44%, transparent);
+    }
+
     .app-header-wrap {
       position: sticky;
       top: var(--app-header-top);
@@ -1156,7 +1182,7 @@
 <body class="w-full px-4 pt-5 pb-4 lg:px-6 xl:px-8">
   {% with current_url=request.resolver_match.url_name|default:'' %}
     <div class="app-header-wrap">
-      <nav class="app-header" aria-label="Primary navigation">
+      <nav class="app-header {% if current_environment_tone == 'prod' %}app-header--env-prod{% endif %}" aria-label="Primary navigation">
         <div class="app-header__links">
           <a href="{% url 'useritem_dashboard' %}" class="nav-link {% if current_url|slice:':9' == 'useritem_' %}nav-link--active{% endif %}">My items</a>
           <a href="{% url 'time_dashboard' %}" class="nav-link {% if current_url|slice:':5' == 'time_' %}nav-link--active{% endif %}">Time stats</a>
@@ -1185,7 +1211,7 @@
                 <span class="environment-chip__label">Layout</span>
                 <span class="environment-chip__value">{{ current_default_layout_name }}</span>
               </span>
-              <span class="environment-chip">
+              <span class="environment-chip environment-chip--env environment-chip--env-{{ current_environment_tone }}">
                 <span class="environment-chip__label">Env</span>
                 <span class="environment-chip__value">{{ current_environment_name }}</span>
               </span>

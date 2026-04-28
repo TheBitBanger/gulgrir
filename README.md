@@ -1,12 +1,3 @@
-# Docs
-
-- `docs/release-checklist.md`
-
-# Release Tags
-
-- Stable releases use `vX.Y` tags on `master` (publishes `latest` + `vX.Y`).
-- Dev releases use `vX.Y.Z` tags on `dev` (publishes `dev` + `vX.Y.Z`).
-
 # Install (Docker Compose)
 
 ## Requirements

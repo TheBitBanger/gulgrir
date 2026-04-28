@@ -18,6 +18,14 @@ this document.
 - No Cursor rules found: no `.cursorrules` or `.cursor/rules/*` present.
 - No Copilot rules found: no `.github/copilot-instructions.md` present.
 
+## Release tag conventions (agent-facing)
+
+- Stable releases use `vX.Y` tags on `master`/`main` and publish `latest` +
+  `vX.Y`.
+- Dev releases use `vX.Y.Z` tags on `dev` and publish `dev` + `vX.Y.Z`.
+- Interpret stable as major/minor and dev as major/minor/patch for pre-stable
+  iteration.
+
 ## Build, run, and environment
 
 Local dev uses Docker Compose. The app container runs Django and depends on

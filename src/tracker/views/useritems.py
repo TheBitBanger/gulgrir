@@ -1,4 +1,5 @@
 import re
+from collections import defaultdict
 from datetime import date, datetime, time, timedelta
 from typing import Any, cast
 
@@ -6,10 +7,12 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
+from django.db.models import Count, Max, Q, Sum
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 from django.views.generic.edit import CreateView, DeleteView, UpdateView
 
@@ -147,6 +150,233 @@ def parse_local_datetime(raw: str) -> tuple[datetime | None, str | None]:
         parsed = parsed.astimezone(timezone.get_current_timezone())
 
     return parsed, None
+
+
+def parse_iso_date(raw: str | None) -> date | None:
+    if not raw:
+        return None
+    try:
+        return date.fromisoformat(raw)
+    except ValueError:
+        return None
+
+
+def resolve_entry_duration(entry: UserItemHistory) -> timedelta | None:
+    duration = entry.duration
+    if duration is None and entry.started_at and entry.ended_at:
+        duration = entry.ended_at - entry.started_at
+    return duration
+
+
+def entry_reference_datetime(entry: UserItemHistory) -> datetime:
+    if entry.ended_at:
+        return entry.ended_at
+    if entry.happened_at:
+        return entry.happened_at
+    if entry.started_at:
+        return entry.started_at
+    return timezone.now()
+
+
+def build_grouped_history_entries(
+    user_item: UserItem,
+    *,
+    day_limit: int,
+    before_day: date | None,
+) -> dict[str, object]:
+    groups: list[dict[str, object]] = []
+    has_more = False
+    today = timezone.localdate()
+
+    queryset = user_item.history.order_by("-happened_at", "-pk")
+    for entry in queryset.iterator(chunk_size=200):
+        reference_dt = timezone.localtime(entry_reference_datetime(entry))
+        local_day = reference_dt.date()
+        if before_day is not None and local_day >= before_day:
+            continue
+
+        duration = resolve_entry_duration(entry)
+        row = {
+            "entry": entry,
+            "duration_display": format_duration(duration),
+            "duration_input": format_duration_input(duration),
+            "has_timing": bool(entry.started_at and entry.ended_at),
+        }
+
+        if not groups or groups[-1]["day"] != local_day:
+            if len(groups) >= day_limit:
+                has_more = True
+                break
+            groups.append(
+                {
+                    "day": local_day,
+                    "entries": [],
+                    "day_total_seconds": 0,
+                    "session_count": 0,
+                    "is_collapsed": local_day < (today - timedelta(days=6)),
+                }
+            )
+
+        current_group = groups[-1]
+        current_group_entries = cast(list[dict[str, object]], current_group["entries"])
+        current_group_entries.append(row)
+        if duration:
+            current_group["day_total_seconds"] = int(
+                cast(int, current_group["day_total_seconds"])
+                + int(duration.total_seconds())
+            )
+            current_group["session_count"] = int(
+                cast(int, current_group["session_count"]) + 1
+            )
+
+    for group in groups:
+        group["day_total_display"] = format_duration(
+            timedelta(seconds=int(cast(int, group["day_total_seconds"])))
+        )
+        entries = cast(list[dict[str, object]], group["entries"])
+        group["preview_entries"] = entries[:3]
+        group["hidden_entries"] = entries[3:]
+        group["hidden_count"] = max(0, len(entries) - 3)
+
+    next_before = None
+    if has_more and groups:
+        next_before = cast(date, groups[-1]["day"]).isoformat()
+
+    return {
+        "groups": groups,
+        "has_more": has_more,
+        "next_before": next_before,
+    }
+
+
+def build_time_tracking_summary(user_item: UserItem) -> dict[str, object]:
+    timed_qs = user_item.history.filter(
+        event_type=UserItemHistory.Event.REVISITED,
+        duration__isnull=False,
+        ended_at__isnull=False,
+    )
+
+    tz = timezone.get_current_timezone()
+    local_today = timezone.localdate()
+    last_7_start = timezone.make_aware(
+        datetime.combine(local_today - timedelta(days=6), time.min),
+        tz,
+    )
+    last_30_start = timezone.make_aware(
+        datetime.combine(local_today - timedelta(days=29), time.min),
+        tz,
+    )
+
+    totals = timed_qs.aggregate(
+        total=Sum("duration"),
+        sessions=Count("id"),
+        last_tracked=Max("ended_at"),
+        last_7=Sum("duration", filter=Q(ended_at__gte=last_7_start)),
+        last_30=Sum("duration", filter=Q(ended_at__gte=last_30_start)),
+    )
+
+    total = cast(timedelta | None, totals["total"]) or timedelta()
+    sessions = int(cast(int | None, totals["sessions"]) or 0)
+    active_days: set[date] = set()
+    for entry in timed_qs.only("ended_at").iterator(chunk_size=200):
+        if entry.ended_at is None:
+            continue
+        active_days.add(timezone.localtime(entry.ended_at).date())
+    active_day_count = len(active_days)
+    average_per_day = (total / active_day_count) if active_day_count > 0 else None
+
+    return {
+        "total_display": format_duration(total),
+        "last_7_display": format_duration(
+            cast(timedelta | None, totals["last_7"]) or timedelta()
+        ),
+        "last_30_display": format_duration(
+            cast(timedelta | None, totals["last_30"]) or timedelta()
+        ),
+        "avg_per_day_display": format_duration(average_per_day),
+        "active_day_count": active_day_count,
+        "session_count": sessions,
+        "last_tracked": totals["last_tracked"],
+    }
+
+
+def day_month_format(date_format: str | None) -> str:
+    fmt = (date_format or "").strip() or "%d/%m/%Y"
+    reduced = fmt.replace("%Y", "").replace("%y", "")
+
+    while "//" in reduced:
+        reduced = reduced.replace("//", "/")
+    while "--" in reduced:
+        reduced = reduced.replace("--", "-")
+    while ".." in reduced:
+        reduced = reduced.replace("..", ".")
+
+    reduced = reduced.strip("/-. ")
+    if not reduced:
+        return "%d/%m"
+    return reduced
+
+
+def build_time_tracking_trend(
+    user_item: UserItem,
+    *,
+    day_count: int = 30,
+    before_day: date | None = None,
+    date_format: str | None = None,
+) -> list[dict[str, object]]:
+    if day_count < 1:
+        return []
+
+    end_day = before_day - timedelta(days=1) if before_day else timezone.localdate()
+    start_day = end_day - timedelta(days=day_count - 1)
+
+    tz = timezone.get_current_timezone()
+    start_dt = timezone.make_aware(datetime.combine(start_day, time.min), tz)
+    end_dt = timezone.make_aware(
+        datetime.combine(end_day + timedelta(days=1), time.min),
+        tz,
+    )
+
+    totals_by_day: dict[date, int] = defaultdict(int)
+    entries = user_item.history.filter(
+        event_type=UserItemHistory.Event.REVISITED,
+        duration__isnull=False,
+        ended_at__gte=start_dt,
+        ended_at__lt=end_dt,
+    ).only("ended_at", "duration")
+    for entry in entries:
+        if entry.ended_at is None or entry.duration is None:
+            continue
+        local_day = timezone.localtime(entry.ended_at).date()
+        totals_by_day[local_day] += int(entry.duration.total_seconds())
+
+    max_seconds = max(totals_by_day.values(), default=0)
+    tick_format = day_month_format(date_format)
+    trend: list[dict[str, object]] = []
+    for offset in range(day_count):
+        day = start_day + timedelta(days=offset)
+        seconds = totals_by_day.get(day, 0)
+        height_percent = 0
+        if max_seconds > 0 and seconds > 0:
+            height_percent = max(10, int((seconds / max_seconds) * 100))
+        if max_seconds > 0 and seconds > 0:
+            bar_opacity = 0.2 + (seconds / max_seconds) * 0.8
+        else:
+            bar_opacity = 0.12
+        trend.append(
+            {
+                "day": day,
+                "seconds": seconds,
+                "duration_display": format_duration(timedelta(seconds=seconds)),
+                "height_percent": height_percent,
+                "bar_opacity": f"{bar_opacity:.2f}",
+                "is_tick": offset % 7 == 0,
+                "tick_label": day.strftime(tick_format),
+                "anchor_id": f"history-day-{day.isoformat()}",
+            }
+        )
+
+    return trend
 
 
 def build_useritem_detail_context(
@@ -356,19 +586,33 @@ class UserItemDetail(OwnObjectsMixin, UpdateView):
         }
 
         ctx["item"] = user_item.item
-        history_entries = []
-        for entry in user_item.history.order_by("-happened_at"):
-            duration = entry.duration
-            if duration is None and entry.started_at and entry.ended_at:
-                duration = entry.ended_at - entry.started_at
-            history_entries.append(
-                {
-                    "entry": entry,
-                    "duration_display": format_duration(duration),
-                    "duration_input": format_duration_input(duration),
-                }
+        before_day = parse_iso_date(self.request.GET.get("history_before"))
+        grouped_history = build_grouped_history_entries(
+            user_item,
+            day_limit=30,
+            before_day=before_day,
+        )
+        next_before = cast(str | None, grouped_history["next_before"])
+        history_load_older_url = None
+        if next_before:
+            history_load_older_url = (
+                f"{reverse('useritem_detail', kwargs={'pk': user_item.pk})}"
+                f"?history_before={next_before}"
             )
-        ctx["history_entries"] = history_entries
+        ctx["time_summary"] = build_time_tracking_summary(user_item)
+        ctx["history_trend"] = build_time_tracking_trend(
+            user_item,
+            day_count=30,
+            before_day=before_day,
+            date_format=profile.date_format,
+        )
+        ctx["history_day_groups"] = grouped_history["groups"]
+        ctx["history_has_more"] = grouped_history["has_more"]
+        ctx["history_load_older_url"] = history_load_older_url
+        ctx["history_window_days"] = 30
+        ctx["history_full_page_url"] = reverse(
+            "useritem_time_history", kwargs={"pk": user_item.pk}
+        )
         ctx["last_completed_at"] = (
             user_item.history.filter(event_type=UserItemHistory.Event.COMPLETED)
             .order_by("-happened_at")
@@ -413,6 +657,59 @@ class UserItemDelete(OwnObjectsMixin, DeleteView):
     model = UserItem
     success_url = reverse_lazy("useritem_dashboard")
     template_name = "tracker/confirm_delete.html"
+
+
+@login_required
+def useritem_time_history(request, pk: int):
+    user_item = get_object_or_404(
+        UserItem.objects.select_related("item"),
+        pk=pk,
+        user=request.user,
+    )
+    before_day = parse_iso_date(request.GET.get("history_before"))
+    grouped_history = build_grouped_history_entries(
+        user_item,
+        day_limit=30,
+        before_day=before_day,
+    )
+
+    user_items_for_reassign = list(
+        UserItem.objects.filter(user=request.user).select_related("item")
+    )
+    user_items_for_reassign.sort(key=lambda row: row.display_title.lower())
+    profile, _ = Profile.objects.get_or_create(user=request.user)
+
+    history_load_older_url = None
+    next_before = cast(str | None, grouped_history["next_before"])
+    if next_before:
+        history_load_older_url = (
+            f"{reverse('useritem_time_history', kwargs={'pk': user_item.pk})}"
+            f"?history_before={next_before}"
+        )
+
+    return render(
+        request,
+        "tracker/useritem_time_history.html",
+        {
+            "object": user_item,
+            "item": user_item.item,
+            "time_summary": build_time_tracking_summary(user_item),
+            "history_trend": build_time_tracking_trend(
+                user_item,
+                day_count=30,
+                before_day=before_day,
+                date_format=profile.date_format,
+            ),
+            "history_day_groups": grouped_history["groups"],
+            "history_has_more": grouped_history["has_more"],
+            "history_load_older_url": history_load_older_url,
+            "history_window_days": 30,
+            "history_full_page_url": reverse(
+                "useritem_time_history", kwargs={"pk": user_item.pk}
+            ),
+            "history_reassign_options": user_items_for_reassign,
+        },
+    )
 
 
 @require_POST
@@ -673,6 +970,13 @@ def useritem_history_update(request, pk: int, history_pk: int):
         )
 
     messages.success(request, "Time entry updated.")
+    next_url = (request.POST.get("next") or "").strip()
+    if next_url and url_has_allowed_host_and_scheme(
+        next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return redirect(next_url)
     return redirect("useritem_detail", pk=target_user_item.pk)
 
 

@@ -22,6 +22,11 @@ useritem_patterns = [
     path("", useritems.useritem_dashboard, name="useritem_dashboard"),
     path("add/", useritems.UserItemCreate.as_view(), name="useritem_add"),
     path("<int:pk>/", useritems.UserItemDetail.as_view(), name="useritem_detail"),
+    path(
+        "<int:pk>/time-history/",
+        useritems.useritem_time_history,
+        name="useritem_time_history",
+    ),
     path("<int:pk>/edit/", useritems.UserItemUpdate.as_view(), name="useritem_edit"),
     path(
         "<int:pk>/delete/", useritems.UserItemDelete.as_view(), name="useritem_delete"

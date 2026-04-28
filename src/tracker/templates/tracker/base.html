@@ -1094,6 +1094,60 @@
       font-size: 1rem;
     }
 
+    .history-trend {
+      display: grid;
+      grid-template-columns: repeat(30, minmax(0, 1fr));
+      gap: 0.2rem;
+      align-items: end;
+      height: 4.2rem;
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      padding: 0.35rem;
+      background: color-mix(in oklab, var(--surface-2) 45%, transparent);
+    }
+
+    .history-trend__bar-wrap {
+      display: flex;
+      align-items: end;
+      justify-content: center;
+      height: 100%;
+      border-radius: 0.2rem;
+      text-decoration: none;
+      outline: none;
+    }
+
+    .history-trend__bar-wrap--tick {
+      box-shadow: inset 0 -2px 0 color-mix(in oklab, var(--muted) 40%, transparent);
+    }
+
+    .history-trend__bar-wrap:hover,
+    .history-trend__bar-wrap:focus-visible {
+      background: color-mix(in oklab, var(--accent) 18%, transparent);
+    }
+
+    .history-trend__bar {
+      width: 0.38rem;
+      min-height: 0.2rem;
+      border-radius: 9999px;
+      background: var(--accent);
+    }
+
+    .history-trend-axis {
+      display: grid;
+      grid-template-columns: repeat(30, minmax(0, 1fr));
+      gap: 0.2rem;
+      margin-top: 0.12rem;
+    }
+
+    .history-trend-axis__label {
+      font-size: 0.56rem;
+      line-height: 1;
+      color: var(--muted);
+      letter-spacing: 0.01em;
+      text-align: center;
+      white-space: nowrap;
+    }
+
     [x-cloak] {
       display: none !important;
     }

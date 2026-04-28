@@ -1,0 +1,59 @@
+{% extends "tracker/base.html" %}
+{% block content %}
+<div class="space-y-4">
+  {% include "tracker/partials/page_head.html" with title="Time history" subtitle=object.display_title %}
+
+  <div class="panel" style="padding: 0.75rem;">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <div>
+        <div class="panel-title">Full history view</div>
+        <div class="text-xs text-muted">Grouped by day. Showing {{ history_window_days }} days at a time.</div>
+      </div>
+      <a class="btn btn-compact" href="{% url 'useritem_detail' object.pk %}">Back to item</a>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-2 mt-3 text-sm">
+      <div class="rounded border p-2">
+        <div class="text-xs text-muted">Total tracked</div>
+        <div class="font-medium">{{ time_summary.total_display }}</div>
+      </div>
+      <div class="rounded border p-2">
+        <div class="text-xs text-muted">Last 7d</div>
+        <div class="font-medium">{{ time_summary.last_7_display }}</div>
+      </div>
+      <div class="rounded border p-2">
+        <div class="text-xs text-muted">Last 30d</div>
+        <div class="font-medium">{{ time_summary.last_30_display }}</div>
+      </div>
+      <div class="rounded border p-2">
+        <div class="text-xs text-muted">Avg/day (active)</div>
+        <div class="font-medium">{{ time_summary.avg_per_day_display }}</div>
+      </div>
+      <div class="rounded border p-2">
+        <div class="text-xs text-muted">Sessions</div>
+        <div class="font-medium">{{ time_summary.session_count }}</div>
+      </div>
+    </div>
+
+    <div class="history-trend mt-3" aria-label="30 day trend">
+      {% for bar in history_trend %}
+        <a href="#{{ bar.anchor_id }}"
+           class="history-trend__bar-wrap {% if bar.is_tick %}history-trend__bar-wrap--tick{% endif %}"
+           title="{{ bar.day|date:tpl_fmt }} · {{ bar.duration_display }}">
+          <span class="history-trend__bar"
+                style="height: {{ bar.height_percent }}%; opacity: {{ bar.bar_opacity }};"></span>
+        </a>
+      {% endfor %}
+    </div>
+    <div class="history-trend-axis" aria-hidden="true">
+      {% for bar in history_trend %}
+        <span class="history-trend-axis__label">{% if bar.is_tick %}{{ bar.tick_label }}{% endif %}</span>
+      {% endfor %}
+    </div>
+
+    <div class="mt-3">
+      {% include "tracker/partials/useritem_time_history_groups.html" %}
+    </div>
+  </div>
+</div>
+{% endblock %}

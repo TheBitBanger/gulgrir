@@ -1,0 +1,133 @@
+<div class="history-list">
+  {% for day in history_day_groups %}
+    <details id="history-day-{{ day.day|date:'Y-m-d' }}" {% if not day.is_collapsed %}open{% endif %}>
+      <summary class="history-item cursor-pointer">
+        <div class="flex items-center justify-between w-full gap-3">
+          <div class="font-medium">{{ day.day|date:tpl_fmt }}</div>
+          <div class="text-xs text-muted">
+            {{ day.day_total_display }} · {{ day.session_count }} sessions
+          </div>
+        </div>
+      </summary>
+      <div class="history-list mt-2">
+        {% for row in day.preview_entries %}
+          {% with entry=row.entry %}
+            <div class="history-item">
+              <span class="history-icon">
+                {% if entry.event_type == "completed" %}✅{% else %}🔁{% endif %}
+              </span>
+              <div class="w-full">
+                <div class="font-medium">
+                  {% if entry.event_type == "completed" %}Completed{% else %}Revisited{% endif %}
+                </div>
+                {% if row.has_timing %}
+                  <div class="text-muted">
+                    {{ entry.started_at|date:tpl_fmt }} {{ entry.started_at|date:"H:i" }} ->
+                    {{ entry.ended_at|date:tpl_fmt }} {{ entry.ended_at|date:"H:i" }}
+                  </div>
+                  <div class="text-muted">Duration {{ row.duration_display }}</div>
+                  {% if entry.event_type == "revisited" %}
+                    <details class="mt-2">
+                      <summary class="text-xs cursor-pointer">Edit entry</summary>
+                      <form method="post"
+                            action="{% url 'useritem_history_update' object.pk entry.pk %}"
+                            class="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <div>
+                          <label class="block text-xs mb-1" for="history-start-{{ entry.pk }}">Start</label>
+                          <input id="history-start-{{ entry.pk }}"
+                                 name="started_at"
+                                 type="datetime-local"
+                                 class="control w-full"
+                                 value="{{ entry.started_at|date:'Y-m-d\\TH:i' }}" />
+                        </div>
+                        <div>
+                          <label class="block text-xs mb-1" for="history-end-{{ entry.pk }}">End</label>
+                          <input id="history-end-{{ entry.pk }}"
+                                 name="ended_at"
+                                 type="datetime-local"
+                                 class="control w-full"
+                                 value="{{ entry.ended_at|date:'Y-m-d\\TH:i' }}" />
+                        </div>
+                        <div>
+                          <label class="block text-xs mb-1" for="history-mode-{{ entry.pk }}">Edit with</label>
+                          <select id="history-mode-{{ entry.pk }}" name="edit_mode" class="control w-full">
+                            <option value="end" selected>Start + End</option>
+                            <option value="duration">Start + Duration</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label class="block text-xs mb-1" for="history-duration-{{ entry.pk }}">Duration</label>
+                          <input id="history-duration-{{ entry.pk }}"
+                                 name="duration"
+                                 type="text"
+                                 class="control w-full"
+                                 value="{{ row.duration_input|default:'' }}"
+                                 placeholder="1h 20m 10s" />
+                        </div>
+                        <div class="md:col-span-2">
+                          <label class="block text-xs mb-1" for="history-target-{{ entry.pk }}">Move to item</label>
+                          <select id="history-target-{{ entry.pk }}" name="target_user_item" class="control w-full">
+                            {% for reassign_item in history_reassign_options %}
+                              <option value="{{ reassign_item.pk }}" {% if reassign_item.pk == entry.user_item_id %}selected{% endif %}>
+                                {{ reassign_item.display_title }}
+                              </option>
+                            {% endfor %}
+                          </select>
+                        </div>
+                        <div class="md:col-span-2">
+                          <button type="submit" class="btn btn-compact">Save entry</button>
+                        </div>
+                      </form>
+                    </details>
+                  {% endif %}
+                {% else %}
+                  <div class="text-muted">{{ entry.happened_at|date:tpl_fmt }} {{ entry.happened_at|date:"H:i" }}</div>
+                {% endif %}
+              </div>
+            </div>
+          {% endwith %}
+        {% endfor %}
+        {% if day.hidden_entries %}
+          <details>
+            <summary class="text-xs text-muted cursor-pointer">Show {{ day.hidden_count }} more entries</summary>
+            <div class="history-list mt-2">
+              {% for row in day.hidden_entries %}
+                {% with entry=row.entry %}
+                  <div class="history-item">
+                    <span class="history-icon">
+                      {% if entry.event_type == "completed" %}✅{% else %}🔁{% endif %}
+                    </span>
+                    <div class="w-full">
+                      <div class="font-medium">
+                        {% if entry.event_type == "completed" %}Completed{% else %}Revisited{% endif %}
+                      </div>
+                      {% if row.has_timing %}
+                        <div class="text-muted">
+                          {{ entry.started_at|date:tpl_fmt }} {{ entry.started_at|date:"H:i" }} ->
+                          {{ entry.ended_at|date:tpl_fmt }} {{ entry.ended_at|date:"H:i" }}
+                        </div>
+                        <div class="text-muted">Duration {{ row.duration_display }}</div>
+                      {% else %}
+                        <div class="text-muted">{{ entry.happened_at|date:tpl_fmt }} {{ entry.happened_at|date:"H:i" }}</div>
+                      {% endif %}
+                    </div>
+                  </div>
+                {% endwith %}
+              {% endfor %}
+            </div>
+          </details>
+        {% endif %}
+      </div>
+    </details>
+  {% empty %}
+    <div class="text-sm text-muted">No history yet.</div>
+  {% endfor %}
+
+  {% if history_has_more and history_load_older_url %}
+    <div class="pt-2">
+      <a class="btn btn-compact" href="{{ history_load_older_url }}">Load older days</a>
+    </div>
+  {% endif %}
+</div>

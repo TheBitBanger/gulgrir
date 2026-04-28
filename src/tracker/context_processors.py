@@ -52,7 +52,6 @@ def active_timers(request):
             "active_timers": [],
             "active_timer_current_id": None,
             "pinned_items": [],
-            "pinned_more_count": 0,
             "current_item": None,
             "current_default_layout_name": "n/a",
             "current_environment_name": "n/a",
@@ -100,8 +99,7 @@ def active_timers(request):
         .annotate(sort_title=Coalesce("title_override", "item__title", Value("")))
         .order_by("sort_title", "pk")
     )
-    pinned = list(pinned_qs[:10])
-    pinned_more_count = max(0, pinned_qs.count() - len(pinned))
+    pinned = list(pinned_qs)
 
     pinned_items = [
         {
@@ -161,7 +159,6 @@ def active_timers(request):
         "active_timers": active,
         "active_timer_current_id": current_id,
         "pinned_items": pinned_items,
-        "pinned_more_count": pinned_more_count,
         "current_item": current_item,
         "current_default_layout_name": default_layout.name if default_layout else "n/a",
         "current_environment_name": "n/a",

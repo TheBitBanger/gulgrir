@@ -610,9 +610,109 @@
       flex-shrink: 0;
     }
 
+    .app-header__search {
+      position: relative;
+      width: min(100%, 34rem);
+      flex: 1 1 24rem;
+      min-width: 12rem;
+    }
+
+    .global-search__input {
+      width: 100%;
+      border-radius: 9999px;
+      border: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
+      background: color-mix(in oklab, var(--surface) 86%, var(--surface-2));
+      padding: 0.45rem 0.85rem;
+      font-size: 0.88rem;
+    }
+
+    .global-search__panel {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: calc(100% + 0.35rem);
+      z-index: 80;
+      border: 1px solid color-mix(in oklab, var(--accent) 20%, var(--border));
+      border-radius: 0.8rem;
+      background: color-mix(in oklab, var(--surface) 96%, var(--surface-2));
+      box-shadow: 0 12px 24px color-mix(in oklab, var(--surface-2) 55%, transparent);
+      padding: 0.45rem;
+      display: grid;
+      gap: 0.35rem;
+    }
+
+    .global-search__panel.hidden {
+      display: none;
+    }
+
+    .global-search__section-title {
+      font-size: 0.68rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 0.2rem 0.45rem 0.05rem;
+    }
+
+    .global-search__section {
+      display: grid;
+      gap: 0.15rem;
+      padding-top: 0.15rem;
+    }
+
+    .global-search__section + .global-search__section {
+      border-top: 1px solid color-mix(in oklab, var(--border) 78%, transparent);
+      margin-top: 0.1rem;
+      padding-top: 0.35rem;
+    }
+
+    .global-search__row {
+      display: grid;
+      gap: 0.02rem;
+      border-radius: 0.5rem;
+      border: 1px solid transparent;
+      padding: 0.35rem 0.5rem;
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .global-search__row:hover,
+    .global-search__row:focus-visible,
+    .global-search__row--active {
+      border-color: color-mix(in oklab, var(--accent) 50%, var(--border));
+      background: color-mix(in oklab, var(--accent) 12%, transparent);
+      text-decoration: none;
+      color: var(--text);
+      outline: none;
+    }
+
+    .global-search__title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .global-search__subtitle {
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+
+    .global-search__status {
+      font-size: 0.8rem;
+      color: var(--muted);
+      padding: 0.35rem 0.5rem;
+    }
+
     @media (max-width: 900px) {
       .app-header {
         padding: 0.6rem 0.75rem;
+      }
+
+      .app-header__search {
+        order: 3;
+        width: 100%;
+        flex: 1 1 100%;
       }
 
       .app-header__account {
@@ -1200,6 +1300,20 @@
             </div>
           </div>
         </div>
+        {% if request.user.is_authenticated %}
+          <div class="app-header__search" data-global-search data-search-url="{% url 'useritem_global_search' %}">
+            <input
+              id="global-search-input"
+              type="search"
+              class="global-search__input"
+              placeholder="Search anything..."
+              autocomplete="off"
+              spellcheck="false"
+              aria-label="Global search"
+            >
+            <div class="global-search__panel hidden" data-global-search-panel></div>
+          </div>
+        {% endif %}
         <div class="app-header__account">
           {% if request.user.is_authenticated %}
             <div class="environment-section" aria-label="Environment">
@@ -1264,6 +1378,210 @@
   <script src="{% static 'tracker/vendor/htmx.min.js' %}"></script>
   <script src="{% static "tracker/js/action_toast.js" %}"></script>
   <script src="{% static "tracker/js/checkbox_bulk.js" %}"></script>
+  <script>
+    (function () {
+      const root = document.querySelector("[data-global-search]");
+      if (!root) return;
+
+      const input = root.querySelector("#global-search-input");
+      const panel = root.querySelector("[data-global-search-panel]");
+      const searchUrl = root.getAttribute("data-search-url") || "";
+      if (!input || !panel || !searchUrl) return;
+
+      let timer = null;
+      let activeIndex = -1;
+
+      function flattenRows() {
+        return Array.from(panel.querySelectorAll("[data-search-row]"));
+      }
+
+      function clearActive() {
+        flattenRows().forEach((row) => row.classList.remove("global-search__row--active"));
+      }
+
+      function setActive(index) {
+        const rows = flattenRows();
+        if (!rows.length) return;
+        activeIndex = index;
+        if (activeIndex < 0) activeIndex = rows.length - 1;
+        if (activeIndex >= rows.length) activeIndex = 0;
+        clearActive();
+        const row = rows[activeIndex];
+        row.classList.add("global-search__row--active");
+        row.scrollIntoView({ block: "nearest" });
+      }
+
+      function closePanel() {
+        panel.classList.add("hidden");
+        panel.innerHTML = "";
+        activeIndex = -1;
+      }
+
+      function openPanel() {
+        panel.classList.remove("hidden");
+      }
+
+      function renderRows(label, rows) {
+        const section = document.createElement("div");
+        section.className = "global-search__section";
+        const title = document.createElement("div");
+        title.className = "global-search__section-title";
+        title.textContent = label;
+        section.appendChild(title);
+        rows.forEach((row) => {
+          const link = document.createElement("a");
+          link.className = "global-search__row";
+          link.href = row.url;
+          link.setAttribute("data-search-row", "1");
+          const rowTitle = document.createElement("span");
+          rowTitle.className = "global-search__title";
+          rowTitle.textContent = row.title;
+          const rowSubtitle = document.createElement("span");
+          rowSubtitle.className = "global-search__subtitle";
+          rowSubtitle.textContent = row.subtitle || "";
+          link.appendChild(rowTitle);
+          link.appendChild(rowSubtitle);
+          section.appendChild(link);
+        });
+        return section;
+      }
+
+      function renderStatus(message) {
+        panel.innerHTML = "";
+        const el = document.createElement("div");
+        el.className = "global-search__status";
+        el.textContent = message;
+        panel.appendChild(el);
+        openPanel();
+      }
+
+      function renderPayload(payload) {
+        panel.innerHTML = "";
+        const userItems = payload?.results?.user_items || [];
+        const library = payload?.results?.library || [];
+        if (userItems.length) panel.appendChild(renderRows("My items", userItems));
+        if (library.length) panel.appendChild(renderRows("Global library", library));
+
+        const createQuery = payload?.query || "";
+        const createUrl = payload?.create_url || "";
+        if (createQuery && createUrl) {
+          const createWrap = document.createElement("div");
+          createWrap.className = "global-search__section";
+          const createHeader = document.createElement("div");
+          createHeader.className = "global-search__section-title";
+          createHeader.textContent = "Quick action";
+          const createLink = document.createElement("a");
+          createLink.className = "global-search__row";
+          createLink.href = createUrl;
+          createLink.setAttribute("data-search-row", "1");
+          const createTitle = document.createElement("span");
+          createTitle.className = "global-search__title";
+          createTitle.textContent = `Create item "${createQuery}"`;
+          const createSubtitle = document.createElement("span");
+          createSubtitle.className = "global-search__subtitle";
+          createSubtitle.textContent = "Add to your list";
+          createWrap.appendChild(createHeader);
+          createLink.appendChild(createTitle);
+          createLink.appendChild(createSubtitle);
+          createWrap.appendChild(createLink);
+          panel.appendChild(createWrap);
+        }
+
+        if (!panel.children.length) {
+          renderStatus("No results.");
+          return;
+        }
+
+        openPanel();
+      }
+
+      async function fetchResults() {
+        const q = (input.value || "").trim();
+        if (q.length < 2) {
+          closePanel();
+          return;
+        }
+
+        renderStatus("Searching...");
+        const params = new URLSearchParams({ q });
+        const response = await fetch(`${searchUrl}?${params.toString()}`);
+        if (!response.ok) {
+          renderStatus("Search unavailable right now.");
+          return;
+        }
+
+        const payload = await response.json();
+        renderPayload(payload);
+      }
+
+      input.addEventListener("input", () => {
+        window.clearTimeout(timer);
+        timer = window.setTimeout(fetchResults, 200);
+      });
+
+      input.addEventListener("keydown", (event) => {
+        const rows = flattenRows();
+        if (event.key === "ArrowDown") {
+          if (!rows.length) return;
+          event.preventDefault();
+          setActive(activeIndex + 1);
+          return;
+        }
+        if (event.key === "ArrowUp") {
+          if (!rows.length) return;
+          event.preventDefault();
+          setActive(activeIndex - 1);
+          return;
+        }
+        if (event.key === "Enter") {
+          if (!rows.length) return;
+          if (activeIndex < 0) {
+            activeIndex = 0;
+          }
+          event.preventDefault();
+          const row = rows[activeIndex];
+          if (row instanceof HTMLAnchorElement) {
+            window.location.assign(row.href);
+          }
+          return;
+        }
+        if (event.key === "Escape") {
+          closePanel();
+        }
+      });
+
+      input.addEventListener("blur", () => {
+        window.setTimeout(() => {
+          const active = document.activeElement;
+          if (!(active instanceof Node) || !root.contains(active)) {
+            closePanel();
+          }
+        }, 120);
+      });
+
+      document.addEventListener("click", (event) => {
+        if (!(event.target instanceof Node)) return;
+        if (!root.contains(event.target)) {
+          closePanel();
+        }
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key !== "/") return;
+        const target = event.target;
+        if (
+          target instanceof HTMLInputElement ||
+          target instanceof HTMLTextAreaElement ||
+          target instanceof HTMLSelectElement ||
+          (target instanceof HTMLElement && target.isContentEditable)
+        ) {
+          return;
+        }
+        event.preventDefault();
+        input.focus();
+      });
+    })();
+  </script>
   <script>
     (function () {
       function getCookie(name) {

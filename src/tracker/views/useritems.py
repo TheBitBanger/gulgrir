@@ -2,12 +2,14 @@ import re
 from collections import defaultdict
 from datetime import date, datetime, time, timedelta
 from typing import Any, cast
+from urllib.parse import urlencode
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
-from django.db.models import Count, Max, Q, Sum
+from django.db.models import Count, Max, Q, Sum, Value
+from django.db.models.functions import Coalesce
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
@@ -471,6 +473,16 @@ class UserItemCreate(LoginRequiredMixin, CreateView):
         kwargs["user"] = self.request.user
 
         return kwargs
+
+    def get_initial(self):
+        initial = super().get_initial()
+        item_title = (self.request.GET.get("item_title") or "").strip()
+        media_type = (self.request.GET.get("media_type") or "").strip()
+        if item_title:
+            initial["item_title"] = item_title
+        if media_type in Item.MediaType.values:
+            initial["media_type"] = media_type
+        return initial
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -997,3 +1009,64 @@ def useritem_item_suggestions(request):
     )
 
     return JsonResponse({"results": results})
+
+
+@login_required
+def useritem_global_search(request):
+    query = (request.GET.get("q") or "").strip()
+    if len(query) < 2:
+        return JsonResponse(
+            {
+                "query": query,
+                "results": {"user_items": [], "library": []},
+                "create_url": "",
+            }
+        )
+
+    user_item_qs = (
+        UserItem.objects.filter(user=request.user)
+        .filter(Q(title_override__icontains=query) | Q(item__title__icontains=query))
+        .select_related("item")
+        .annotate(sort_title=Coalesce("title_override", "item__title", Value("")))
+        .order_by("sort_title", "id")[:8]
+    )
+
+    user_item_rows: list[dict[str, object]] = []
+    for user_item in user_item_qs:
+        item = user_item.item
+        media_display = item.get_media_type_display() if item else "Project"
+        user_item_rows.append(
+            {
+                "type": "user_item",
+                "id": user_item.pk,
+                "title": user_item.display_title,
+                "subtitle": f"{media_display} | {user_item.get_shelf_display()}",
+                "url": reverse("useritem_detail", kwargs={"pk": user_item.pk}),
+            }
+        )
+
+    library_qs = Item.objects.filter(title__icontains=query).order_by("title", "id")[:5]
+    library_rows = [
+        {
+            "type": "library_item",
+            "id": item.pk,
+            "title": item.title,
+            "subtitle": item.get_media_type_display(),
+            "url": reverse("item_edit", kwargs={"pk": item.pk}),
+        }
+        for item in library_qs
+    ]
+
+    create_params = urlencode({"item_title": query, "media_type": Item.MediaType.OTHER})
+    create_url = f"{reverse('useritem_add')}?{create_params}"
+
+    return JsonResponse(
+        {
+            "query": query,
+            "results": {
+                "user_items": user_item_rows,
+                "library": library_rows,
+            },
+            "create_url": create_url,
+        }
+    )

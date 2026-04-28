@@ -32,9 +32,6 @@
   <label class="mr-1 inline-flex items-center gap-1">
     {{ form.is_project }} {{ form.is_project.label }}
   </label>
-  <label class="inline-flex items-center gap-1">
-    {{ form.title_icontains.label_tag }} {{ form.title_icontains }}
-  </label>
   <!-- clear filters -->
   <button type="button" hx-get="{% url 'useritem_dashboard' %}" hx-target="#dash-fragment" hx-swap="outerHTML" hx-params="none" hx-on:click="document.getElementById('filter-form').reset()" class="btn ml-2">
     Clear Filters

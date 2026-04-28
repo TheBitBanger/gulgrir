@@ -64,6 +64,11 @@ useritem_patterns = [
         useritems.useritem_item_suggestions,
         name="useritem_item_suggestions",
     ),
+    path(
+        "global-search/",
+        useritems.useritem_global_search,
+        name="useritem_global_search",
+    ),
 ]
 
 tag_patterns = [

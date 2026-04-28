@@ -113,3 +113,60 @@ class ItemLibraryTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["results"], [])
+
+    def test_global_search_requires_login(self):
+        response = self.client.get(
+            reverse("useritem_global_search"),
+            {"q": "du"},
+        )
+        self.assertEqual(response.status_code, 302)
+
+    def test_global_search_returns_empty_for_short_query(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            reverse("useritem_global_search"),
+            {"q": "d"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["results"]["user_items"], [])
+        self.assertEqual(payload["results"]["library"], [])
+        self.assertEqual(payload["create_url"], "")
+
+    def test_global_search_includes_projects_and_scopes_user(self):
+        other_user = cast(Any, get_user_model().objects).create_user(username="other")
+        Item.objects.create(title="Dune", media_type=Item.MediaType.BOOK)
+        project = UserItem.objects.create(
+            user=self.user,
+            is_project=True,
+            title_override="Project Dune",
+        )
+        UserItem.objects.create(
+            user=other_user,
+            is_project=True,
+            title_override="Project Dune hidden",
+        )
+
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("useritem_global_search"), {"q": "dune"})
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        user_item_ids = [row["id"] for row in payload["results"]["user_items"]]
+        self.assertIn(project.pk, user_item_ids)
+        self.assertEqual(len(user_item_ids), 1)
+
+    def test_global_search_includes_create_url(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(
+            reverse("useritem_global_search"),
+            {"q": "brand new"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertIn(reverse("useritem_add"), payload["create_url"])
+        self.assertIn("item_title=brand+new", payload["create_url"])

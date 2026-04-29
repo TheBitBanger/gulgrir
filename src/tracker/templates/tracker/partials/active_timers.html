@@ -2,8 +2,10 @@
   <div class="active-timers" role="region" aria-label="Active timers">
     {% if current_item %}
       <div class="active-timers__section">
-        <div class="active-timers__header">
-          <span class="active-timers__title">Current item</span>
+        <div class="rail-header-stack">
+          <div class="rail-header rail-header--underline">
+            <span class="rail-header__title">Current item</span>
+          </div>
         </div>
         <div class="active-timers__list">
           <div class="active-timers__row" data-row-href="{{ current_item.detail_url }}">
@@ -41,9 +43,11 @@
 
     {% if active_timers %}
       <div class="active-timers__section">
-        <div class="active-timers__header">
-          <span class="active-timers__title">Active timers</span>
-          <span class="badge">{{ active_timers|length }}</span>
+        <div class="rail-header-stack">
+          <div class="rail-header rail-header--underline">
+            <span class="rail-header__title">Active timers</span>
+            <span class="badge">{{ active_timers|length }}</span>
+          </div>
         </div>
         <div class="active-timers__list">
           {% for timer in active_timers %}
@@ -88,9 +92,11 @@
 
     {% if pinned_items %}
       <div class="active-timers__section">
-        <div class="active-timers__header">
-          <span class="active-timers__title">Pinned</span>
-          <span class="badge">{{ pinned_items|length }}</span>
+        <div class="rail-header-stack">
+          <div class="rail-header rail-header--underline">
+            <span class="rail-header__title">Pinned</span>
+            <span class="badge">{{ pinned_items|length }}</span>
+          </div>
         </div>
         <div class="active-timers__list">
           {% for group in pinned_groups %}

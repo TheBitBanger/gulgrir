@@ -1,4 +1,9 @@
-<div class="space-y-3" aria-label="Focus sprints">
+<div class="space-y-3 rail-section" aria-label="Focus sprints">
+  <div class="rail-header-stack">
+    <div class="rail-header rail-header--underline">
+      <span class="rail-header__title">Tracking</span>
+    </div>
+  </div>
   {% for sprint in focus_open_sprints %}
     <div class="focus-card focus-card--{{ sprint.stage }}">
       <div class="focus-card__head">
@@ -49,10 +54,12 @@
   {% endif %}
 </div>
 
-<div class="saved-filters-sidebar" aria-label="Saved filters">
-  <div class="saved-filters-sidebar__header">
-    <span class="saved-filters-sidebar__title">Saved filters</span>
-    <a class="btn btn-compact" href="{% url 'saved_filter_list' %}">Manage</a>
+<div class="saved-filters-sidebar rail-section" aria-label="Saved filters">
+  <div class="rail-header-stack">
+    <div class="rail-header rail-header--underline">
+      <span class="rail-header__title">Saved filters</span>
+      <a class="btn btn-compact" href="{% url 'saved_filter_list' %}">Manage</a>
+    </div>
   </div>
   {% if global_saved_filters %}
     <div class="saved-filters-sidebar__list">

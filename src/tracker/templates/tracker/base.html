@@ -777,6 +777,56 @@
       gap: 0.5rem;
     }
 
+    .rail-section + .rail-section {
+      margin-top: 0.95rem;
+      padding-top: 0.85rem;
+      border-top: 1px solid color-mix(in oklab, var(--border) 72%, transparent);
+    }
+
+    .rail-header-stack {
+      display: grid;
+      gap: 0.35rem;
+      margin-bottom: 0.55rem;
+    }
+
+    .rail-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    .rail-header__title {
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .rail-header--underline {
+      padding: 0 0.1rem 0.2rem;
+      border-bottom: 1px solid color-mix(in oklab, var(--accent) 52%, transparent);
+    }
+
+    .rail-header--underline .rail-header__title {
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: color-mix(in oklab, var(--accent) 90%, var(--text));
+    }
+
+    .rail-header .badge {
+      margin-left: auto;
+    }
+
+    .rail-header--underline .badge {
+      border-color: color-mix(in oklab, var(--accent) 50%, var(--border));
+      background: color-mix(in oklab, var(--accent) 14%, transparent);
+      color: color-mix(in oklab, var(--accent) 85%, var(--text));
+      font-weight: 700;
+    }
+
     .saved-filters-sidebar__title {
       font-size: 0.76rem;
       font-weight: 600;
@@ -1002,28 +1052,28 @@
     }
 
     .active-timers__header--group {
-      margin-top: 0.65rem;
+      margin-top: 0.55rem;
       margin-bottom: 0.35rem;
-      padding: 0 0.1rem 0.2rem;
-      border-bottom: 1px solid color-mix(in oklab, var(--accent) 45%, transparent);
+      padding: 0 0.1rem 0.15rem;
+      border-bottom: 1px dashed color-mix(in oklab, var(--accent) 28%, transparent);
     }
 
     .active-timers__group-label {
-      font-size: 0.7rem;
-      font-weight: 800;
-      letter-spacing: 0.08em;
+      font-size: 0.66rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
-      color: color-mix(in oklab, var(--accent) 90%, var(--text));
+      color: color-mix(in oklab, var(--accent) 62%, var(--text));
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
     .active-timers__header--group .badge {
-      border-color: color-mix(in oklab, var(--accent) 50%, var(--border));
-      background: color-mix(in oklab, var(--accent) 14%, transparent);
-      color: color-mix(in oklab, var(--accent) 85%, var(--text));
-      font-weight: 700;
+      border-color: color-mix(in oklab, var(--accent) 30%, var(--border));
+      background: color-mix(in oklab, var(--accent) 7%, transparent);
+      color: color-mix(in oklab, var(--accent) 58%, var(--text));
+      font-weight: 600;
     }
 
     .active-timers__list {

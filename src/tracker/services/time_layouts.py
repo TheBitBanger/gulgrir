@@ -38,7 +38,11 @@ def resolve_default_layout(
     if resolved_layout is None:
         resolved_layout = layouts[0]
 
-    if persist_default and profile and profile.time_default_layout_id != resolved_layout.id:
+    if (
+        persist_default
+        and profile
+        and profile.time_default_layout_id != resolved_layout.id
+    ):
         profile.time_default_layout = resolved_layout
         profile.save(update_fields=["time_default_layout"])
 
@@ -82,7 +86,9 @@ def build_assignment_labels_for_items(
             seen.add(current_bucket.id)
             names.append(current_bucket.name)
             parent_id = current_bucket.parent_id
-            current_bucket = bucket_by_id.get(parent_id) if parent_id is not None else None
+            current_bucket = (
+                bucket_by_id.get(parent_id) if parent_id is not None else None
+            )
         if not names:
             return "Unassigned"
         return " / ".join(reversed(names))
@@ -94,7 +100,9 @@ def build_assignment_labels_for_items(
             continue
         if assignment.assignment_mode == TimeBucketAssignment.Mode.BUCKET:
             if assignment.bucket_id is not None:
-                labels[assignment.user_item_id] = bucket_path_label(assignment.bucket_id)
+                labels[assignment.user_item_id] = bucket_path_label(
+                    assignment.bucket_id
+                )
             else:
                 labels[assignment.user_item_id] = "Unassigned"
             continue

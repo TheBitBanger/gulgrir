@@ -1,0 +1,33 @@
+{% extends "tracker/settings_base.html" %}
+{% block settings_head %}
+  {% include "tracker/partials/page_head.html" with title="Goal tracking settings" subtitle="Configure default targets for Bind goals." %}
+{% endblock %}
+{% block settings_content %}
+<div class="panel">
+  <form method="post" class="space-y-4">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+      <div class="text-sm text-muted">
+        {{ form.non_field_errors }}
+      </div>
+    {% endif %}
+    <div>
+      <label class="block mb-1">{{ form.focus_default_target_hours.label }}</label>
+      {{ form.focus_default_target_hours }}
+      <p class="text-sm text-muted mt-1">{{ form.focus_default_target_hours.help_text }}</p>
+      {% if form.focus_default_target_hours.errors %}
+        <div class="text-sm text-muted mt-1">{{ form.focus_default_target_hours.errors }}</div>
+      {% endif %}
+    </div>
+    <div>
+      <label class="block mb-1">{{ form.focus_default_overflow_soft_cap_hours.label }}</label>
+      {{ form.focus_default_overflow_soft_cap_hours }}
+      <p class="text-sm text-muted mt-1">{{ form.focus_default_overflow_soft_cap_hours.help_text }}</p>
+      {% if form.focus_default_overflow_soft_cap_hours.errors %}
+        <div class="text-sm text-muted mt-1">{{ form.focus_default_overflow_soft_cap_hours.errors }}</div>
+      {% endif %}
+    </div>
+    <button class="btn" type="submit">Save</button>
+  </form>
+</div>
+{% endblock %}

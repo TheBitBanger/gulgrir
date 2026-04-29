@@ -1,3 +1,54 @@
+<div class="space-y-3" aria-label="Focus sprints">
+  {% for sprint in focus_open_sprints %}
+    <div class="focus-card focus-card--{{ sprint.stage }}">
+      <div class="focus-card__head">
+        <a class="focus-card__scope link" href="{{ sprint.scope_url }}" title="Jump to this goal scope.">{{ sprint.scope_label }}</a>
+        <span class="focus-card__percent">{{ sprint.completion_percent }}%</span>
+        <span class="focus-card__stage">{{ sprint.stage|title }}</span>
+      </div>
+      <div class="focus-card__meter" aria-hidden="true">
+        <div class="focus-card__meter-fill" style="width: {{ sprint.progress_percent }}%;"></div>
+        {% if sprint.overflow_percent > 0 %}
+          <div class="focus-card__meter-overflow" style="width: {{ sprint.overflow_percent }}%;"></div>
+        {% endif %}
+      </div>
+      <div class="focus-card__meta">{{ sprint.tracked_display }} / {{ sprint.target_display }} + {{ sprint.cap_display }}</div>
+      {% if sprint.overflow_percent > 0 %}
+        <div class="focus-card__overflow">Overflow {{ sprint.overflow_percent }}%</div>
+      {% endif %}
+      <div class="focus-card__actions">
+        <form method="post" action="{{ sprint.close_url }}">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <button class="btn btn-compact" type="submit" title="Close this goal so you can rotate when ready.">Release</button>
+        </form>
+      </div>
+    </div>
+  {% endfor %}
+
+  {% if focus_ghost_suggestion %}
+    <div class="focus-card focus-card--ghost">
+      <div class="focus-card__head">
+        <span class="focus-card__stage">Suggestion</span>
+        <a class="focus-card__scope link" href="{{ focus_ghost_suggestion.url }}" title="Open suggested scope.">{{ focus_ghost_suggestion.title }}</a>
+      </div>
+      <div class="focus-card__actions">
+        <form method="post" action="{% url 'focus_bear_witness' %}">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <input type="hidden" name="kind" value="{{ focus_ghost_suggestion.kind }}">
+          <input type="hidden" name="id" value="{{ focus_ghost_suggestion.id }}">
+          <button class="btn btn-compact" type="submit" title="Accept this suggestion and bind it as a new goal.">Bear witness</button>
+        </form>
+      </div>
+    </div>
+  {% endif %}
+
+  {% if not focus_open_sprints %}
+    <div class="text-sm text-muted">No active bindings.</div>
+  {% endif %}
+</div>
+
 <div class="saved-filters-sidebar" aria-label="Saved filters">
   <div class="saved-filters-sidebar__header">
     <span class="saved-filters-sidebar__title">Saved filters</span>

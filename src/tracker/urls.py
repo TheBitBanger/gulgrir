@@ -3,6 +3,7 @@ from django.urls import include, path
 
 from .views import (
     actions,
+    focus_sprints,
     items,
     preferences,
     saved_filters,
@@ -151,4 +152,20 @@ urlpatterns = [
     ),
     # preferences
     path("settings/preferences/", preferences.preference_view, name="preferences"),
+    path(
+        "settings/focus-goals/",
+        preferences.focus_goal_settings_view,
+        name="focus_settings",
+    ),
+    path("my/focus/bind/", focus_sprints.focus_bind, name="focus_bind"),
+    path(
+        "my/focus/<int:sprint_id>/release/",
+        focus_sprints.focus_release,
+        name="focus_release",
+    ),
+    path(
+        "my/focus/bear-witness/",
+        focus_sprints.focus_bear_witness,
+        name="focus_bear_witness",
+    ),
 ]

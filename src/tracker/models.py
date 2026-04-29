@@ -3,6 +3,7 @@ from typing import Any, cast
 from urllib.parse import urlencode
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.db.models import OuterRef, Q, Subquery
 from django.db.models.functions import Lower
@@ -262,6 +263,8 @@ class Profile(models.Model):
         on_delete=models.SET_NULL,
         related_name="default_for_profiles",
     )
+    focus_default_target_minutes = models.PositiveIntegerField(default=720)
+    focus_default_overflow_soft_cap_minutes = models.PositiveIntegerField(default=300)
 
     def flatpickr_format(self):
         # convert a few common strftime tokens to flatpickr
@@ -467,3 +470,49 @@ class TimeBucketAssignment(models.Model):
 
     def __str__(self):
         return f"{self.user_item} -> {self.bucket or 'Unassigned'}"
+
+
+class FocusSprint(models.Model):
+    class ScopeType(models.TextChoices):
+        BUCKET = "bucket", "Bucket"
+        ITEM = "item", "Item"
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="focus_sprints",
+    )
+    scope_type = models.CharField(max_length=16, choices=ScopeType.choices)
+    time_bucket = models.ForeignKey(
+        TimeBucket,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="focus_sprints",
+    )
+    user_item = models.ForeignKey(
+        UserItem,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="focus_sprints",
+    )
+    target_minutes = models.PositiveIntegerField(default=720)
+    overflow_soft_cap_minutes = models.PositiveIntegerField(default=300)
+    started_at = models.DateTimeField(auto_now_add=True)
+    closed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ("-started_at",)
+
+    def clean(self):
+        bucket_set = self.time_bucket_id is not None
+        item_set = self.user_item_id is not None
+        if self.scope_type == self.ScopeType.BUCKET:
+            if not bucket_set or item_set:
+                raise ValidationError("Bucket scope requires only time_bucket.")
+        elif self.scope_type == self.ScopeType.ITEM:
+            if not item_set or bucket_set:
+                raise ValidationError("Item scope requires only user_item.")
+        if self.target_minutes <= 0:
+            raise ValidationError("Target minutes must be positive.")

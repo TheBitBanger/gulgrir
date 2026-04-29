@@ -9,7 +9,13 @@ from django.urls import reverse
 from django.utils import timezone
 
 from tracker.context_processors import active_timers as active_timers_context
-from tracker.models import Profile, TimeBucket, TimeBucketAssignment, TimeLayout, UserItem
+from tracker.models import (
+    Profile,
+    TimeBucket,
+    TimeBucketAssignment,
+    TimeLayout,
+    UserItem,
+)
 from tracker.services.time_dashboard import BucketNode, build_chart_entries
 from tracker.services.time_windows import build_time_windows, day_range
 
@@ -549,7 +555,9 @@ class TimeDashboardAssignmentTests(TestCase):
     def test_time_dashboard_layout_selection_sets_default_layout(self):
         alt_layout = TimeLayout.objects.create(user=self.user, name="Alt")
         self.client.force_login(self.user)
-        response = self.client.get(f"{reverse('time_dashboard')}?layout={alt_layout.id}")
+        response = self.client.get(
+            f"{reverse('time_dashboard')}?layout={alt_layout.id}"
+        )
         self.assertEqual(response.status_code, 200)
         profile = Profile.objects.get(user=self.user)
         self.assertEqual(profile.time_default_layout_id, alt_layout.id)
@@ -567,7 +575,9 @@ class TimeDashboardAssignmentTests(TestCase):
 
         context = active_timers_context(request)
         active_timers = cast(list[dict[str, object]], context["active_timers"])
-        active_row = next(timer for timer in active_timers if timer["id"] == self.item_work.id)
+        active_row = next(
+            timer for timer in active_timers if timer["id"] == self.item_work.id
+        )
         self.assertEqual(active_row["bucket_label"], self.bucket_work.name)
         self.assertEqual(context["current_default_layout_name"], self.layout.name)
 

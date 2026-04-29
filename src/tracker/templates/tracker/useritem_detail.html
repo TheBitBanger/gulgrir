@@ -41,6 +41,29 @@
            class="btn btn-danger">
           Delete
         </a>
+        <form method="post" action="{% url 'focus_bind' %}" class="inline">
+          {% csrf_token %}
+          <input type="hidden" name="scope_type" value="item">
+          <input type="hidden" name="user_item_id" value="{{ object.pk }}">
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <input
+            type="text"
+            name="target"
+            class="control"
+            style="width: 6.25rem;"
+            placeholder="Target (h)"
+            title="Optional custom target, e.g. 15 or 12h 30m."
+          >
+          <input
+            type="text"
+            name="overflow_cap"
+            class="control"
+            style="width: 6.75rem;"
+            placeholder="Cap (h)"
+            title="Optional custom overflow cap, e.g. 5 or 4h 30m."
+          >
+          <button type="submit" class="btn" title="Start a focus goal on this item.">Bind</button>
+        </form>
       </div>
       {% if assignment_layouts %}
         <form method="post" action="{% url 'time_assignment_update' %}" class="flex flex-wrap items-center gap-2">

@@ -5,8 +5,10 @@
     <div class="panel-title">Settings</div>
     <nav class="space-y-1 text-sm">
       {% url 'preferences' as preferences_url %}
+      {% url 'focus_settings' as focus_settings_url %}
       {% url 'time_settings' as time_settings_url %}
       <a class="block px-2 py-1 rounded {% if request.path == preferences_url %}bg-[var(--surface-2)]{% endif %}" href="{{ preferences_url }}">Global settings</a>
+      <a class="block px-2 py-1 rounded {% if request.path == focus_settings_url %}bg-[var(--surface-2)]{% endif %}" href="{{ focus_settings_url }}">Goal tracking settings</a>
       <a class="block px-2 py-1 rounded {% if request.path == time_settings_url %}bg-[var(--surface-2)]{% endif %}" href="{{ time_settings_url }}">Time tracking settings</a>
     </nav>
   </aside>

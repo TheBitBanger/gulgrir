@@ -50,6 +50,31 @@
                 <span class="text-muted">/</span>
                 <a class="link" href="{% url 'time_dashboard' %}?layout={{ layout.id }}&bucket={{ bucket.id }}{% if mode %}&mode={{ mode }}{% endif %}{% if window %}&window={{ window }}{% endif %}{% if rs %}&range_start={{ rs|date:'Y-m-d' }}{% endif %}{% if re %}&range_end={{ re|date:'Y-m-d' }}{% endif %}{% if ed %}&expand_depth={{ ed }}{% endif %}{% if sd %}&sort_dir={{ sd }}{% endif %}">{{ bucket.name }}</a>
               {% endfor %}
+              {% if selected_bucket %}
+                <form method="post" action="{% url 'focus_bind' %}" class="inline-block ml-2">
+                  {% csrf_token %}
+                  <input type="hidden" name="scope_type" value="bucket">
+                  <input type="hidden" name="time_bucket_id" value="{{ selected_bucket.id }}">
+                  <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                  <input
+                    type="text"
+                    name="target"
+                    class="control"
+                    style="width: 6.25rem;"
+                    placeholder="Target (h)"
+                    title="Optional custom target, e.g. 15 or 12h 30m."
+                  >
+                  <input
+                    type="text"
+                    name="overflow_cap"
+                    class="control"
+                    style="width: 6.75rem;"
+                    placeholder="Cap (h)"
+                    title="Optional custom overflow cap, e.g. 5 or 4h 30m."
+                  >
+                  <button class="btn btn-compact" type="submit" title="Start a focus goal on this bucket.">Bind</button>
+                </form>
+              {% endif %}
             </div>
             <div class="flex flex-wrap items-center gap-2" x-data="{ mode: '{{ mode }}' }">
             <form method="get" class="flex flex-wrap items-center gap-2">

@@ -1,10 +1,17 @@
+from typing import cast
+
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Value
 from django.db.models.functions import Coalesce
 from django.urls import reverse
 
-from .models import Profile, UserItem
+from .models import FocusSprint, Profile, UserItem
+from .services.focus_sprint import (
+    build_ghost_suggestion,
+    build_open_sprint_snapshots,
+    format_minutes_short,
+)
 from .services.time_layouts import (
     build_assignment_labels_for_items,
     resolve_default_layout,
@@ -142,10 +149,10 @@ def active_timers(request):
                 "bucket_label": "Unassigned",
             }
 
-    item_ids = {timer["id"] for timer in active}
-    item_ids.update(item["id"] for item in pinned_items)
+    item_ids: set[int] = {cast(int, timer["id"]) for timer in active}
+    item_ids.update(cast(int, item["id"]) for item in pinned_items)
     if current_item:
-        item_ids.add(current_item["id"])
+        item_ids.add(cast(int, current_item["id"]))
 
     bucket_labels_by_item = build_assignment_labels_for_items(
         layout=default_layout,
@@ -153,15 +160,18 @@ def active_timers(request):
     )
 
     for timer in active:
-        timer["bucket_label"] = bucket_labels_by_item.get(timer["id"], "Unassigned")
+        timer_id = cast(int, timer["id"])
+        timer["bucket_label"] = bucket_labels_by_item.get(timer_id, "Unassigned")
     for pinned_item in pinned_items:
+        pinned_id = cast(int, pinned_item["id"])
         pinned_item["bucket_label"] = bucket_labels_by_item.get(
-            pinned_item["id"],
+            pinned_id,
             "Unassigned",
         )
     if current_item is not None:
+        current_id = cast(int, current_item["id"])
         current_item["bucket_label"] = bucket_labels_by_item.get(
-            current_item["id"],
+            current_id,
             "Unassigned",
         )
 
@@ -181,6 +191,8 @@ def saved_filters_sidebar(request):
         return {
             "global_saved_filters": [],
             "global_active_filter_id": None,
+            "focus_open_sprints": [],
+            "focus_ghost_suggestion": None,
         }
 
     active_filter_id = request.GET.get("sf")
@@ -190,9 +202,36 @@ def saved_filters_sidebar(request):
         except (TypeError, ValueError):
             active_filter_id = None
 
+    open_sprints = build_open_sprint_snapshots(user=request.user)
+    ghost = build_ghost_suggestion(user=request.user, sprints=open_sprints)
+    profile, _ = Profile.objects.get_or_create(user=request.user)
+
+    serialized_sprints = [
+        {
+            "id": sprint.sprint_id,
+            "scope_type": sprint.scope_type,
+            "scope_id": sprint.scope_id,
+            "scope_label": sprint.scope_label,
+            "target_minutes": sprint.target_minutes,
+            "target_display": format_minutes_short(sprint.target_minutes),
+            "cap_display": format_minutes_short(sprint.overflow_soft_cap_minutes),
+            "tracked_display": format_minutes_short(sprint.tracked_minutes),
+            "stage": sprint.stage,
+            "progress_percent": sprint.progress_percent,
+            "completion_percent": sprint.completion_percent,
+            "overflow_percent": sprint.overflow_percent,
+            "scope_url": sprint.scope_url,
+            "close_url": sprint.close_url,
+        }
+        for sprint in open_sprints
+    ]
+
     return {
         "global_saved_filters": list(
             request.user.saved_filters.all().only("id", "name", "definition")
         ),
         "global_active_filter_id": active_filter_id,
+        "focus_open_sprints": serialized_sprints,
+        "focus_ghost_suggestion": ghost,
+        "focus_scope_type_choices": FocusSprint.ScopeType,
     }

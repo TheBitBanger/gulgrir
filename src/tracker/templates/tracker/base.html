@@ -838,6 +838,108 @@
       padding-top: 0.55rem;
     }
 
+    .focus-card {
+      display: grid;
+      gap: 0.35rem;
+      border: 1px solid var(--border);
+      border-radius: 0.6rem;
+      padding: 0.45rem 0.55rem;
+      background: color-mix(in oklab, var(--surface-2) 64%, transparent);
+    }
+
+    .focus-card__head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .focus-card__percent {
+      font-size: 0.72rem;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .focus-card__stage {
+      text-transform: uppercase;
+      font-size: 0.68rem;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .focus-card__scope {
+      font-size: 0.78rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .focus-card__meta,
+    .focus-card__overflow {
+      color: var(--muted);
+      font-size: 0.7rem;
+    }
+
+    .focus-card__meter {
+      height: 0.45rem;
+      background: color-mix(in oklab, var(--surface) 80%, var(--border));
+      border-radius: 999px;
+      overflow: hidden;
+      display: flex;
+    }
+
+    .focus-card__meter-fill {
+      height: 100%;
+      background: var(--accent);
+      flex: 0 0 auto;
+    }
+
+    .focus-card__meter-overflow {
+      height: 100%;
+      background: color-mix(in oklab, var(--warn) 75%, var(--danger));
+      flex: 0 0 auto;
+    }
+
+    .focus-card--starved .focus-card__stage {
+      color: var(--warn);
+    }
+
+    .focus-card--nourished .focus-card__stage {
+      color: var(--accent);
+    }
+
+    .focus-card--sated .focus-card__stage {
+      color: var(--success);
+    }
+
+    .focus-card--gorged .focus-card__stage {
+      color: var(--danger);
+    }
+
+    .focus-card--starved .focus-card__meter-fill {
+      background: var(--warn);
+    }
+
+    .focus-card--nourished .focus-card__meter-fill {
+      background: var(--accent);
+    }
+
+    .focus-card--sated .focus-card__meter-fill {
+      background: var(--success);
+    }
+
+    .focus-card--gorged .focus-card__meter-fill {
+      background: var(--danger);
+    }
+
+    .focus-card--ghost {
+      opacity: 0.66;
+      border-style: dashed;
+    }
+
     .app-shell__right {
       padding-right: 0.65rem;
     }
@@ -1290,12 +1392,13 @@
           <a href="{% url 'saved_filter_list' %}" class="nav-link {% if current_url|slice:':13' == 'saved_filter_' %}nav-link--active{% endif %}">Saved filters</a>
           <a href="{% url 'item_list' %}" class="nav-link {% if current_url|slice:':5' == 'item_' %}nav-link--active{% endif %}">Global library</a>
           <div x-data="{ open: false }" class="relative">
-            <button type="button" class="nav-link nav-link--button {% if current_url == 'preferences' or current_url == 'time_settings' %}nav-link--active{% endif %}" @click="open = !open" @click.outside="open = false">
+            <button type="button" class="nav-link nav-link--button {% if current_url == 'preferences' or current_url == 'focus_settings' or current_url == 'time_settings' %}nav-link--active{% endif %}" @click="open = !open" @click.outside="open = false">
               Settings
               <span class="text-xs">▾</span>
             </button>
             <div x-show="open" x-cloak class="dropdown-panel absolute right-0 mt-2 w-52 rounded-lg border p-2 shadow-lg">
               <a class="block px-2 py-1 rounded hover:underline" href="{% url 'preferences' %}">Global settings</a>
+              <a class="block px-2 py-1 rounded hover:underline" href="{% url 'focus_settings' %}">Goal tracking settings</a>
               <a class="block px-2 py-1 rounded hover:underline" href="{% url 'time_settings' %}">Time tracking settings</a>
             </div>
           </div>

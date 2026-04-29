@@ -4,6 +4,7 @@ from django import forms
 from django.db import IntegrityError
 
 from .models import Item, Profile, Tag, UserItem, UserItemHistory
+from .services.focus_sprint import parse_goal_input_minutes
 from .widgets import FlatpickrISODateInput
 
 
@@ -197,6 +198,74 @@ class ProfileForm(forms.ModelForm):
     class Meta:
         model = Profile
         fields = ["date_format", "timezone", "theme"]
+
+
+class FocusGoalSettingsForm(forms.ModelForm):
+    focus_default_target_hours = forms.CharField(
+        label="Default target",
+        required=False,
+        help_text="Use hours or h/m format (e.g. 12, 10h, 12h 30m).",
+    )
+    focus_default_overflow_soft_cap_hours = forms.CharField(
+        label="Default overflow soft cap",
+        required=False,
+        help_text="Use hours or h/m format (e.g. 5, 4h 30m).",
+    )
+
+    class Meta:
+        model = Profile
+        fields = [
+            "focus_default_target_hours",
+            "focus_default_overflow_soft_cap_hours",
+        ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            target_hours = self.instance.focus_default_target_minutes / 60
+            cap_hours = self.instance.focus_default_overflow_soft_cap_minutes / 60
+            self.fields["focus_default_target_hours"].initial = (
+                str(int(target_hours))
+                if target_hours.is_integer()
+                else f"{target_hours:.1f}"
+            )
+            self.fields["focus_default_overflow_soft_cap_hours"].initial = (
+                str(int(cap_hours)) if cap_hours.is_integer() else f"{cap_hours:.1f}"
+            )
+
+    def clean_focus_default_target_hours(self) -> int:
+        raw = (self.cleaned_data.get("focus_default_target_hours") or "").strip()
+        if not raw:
+            return 720
+        minutes = parse_goal_input_minutes(raw)
+        if minutes is None or minutes <= 0:
+            raise forms.ValidationError("Enter a valid target (for example 12 or 12h).")
+        return minutes
+
+    def clean_focus_default_overflow_soft_cap_hours(self) -> int:
+        raw = (
+            self.cleaned_data.get("focus_default_overflow_soft_cap_hours") or ""
+        ).strip()
+        if not raw:
+            return 300
+        minutes = parse_goal_input_minutes(raw)
+        if minutes is None or minutes < 0:
+            raise forms.ValidationError(
+                "Enter a valid overflow cap (for example 5 or 5h)."
+            )
+        return minutes
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.focus_default_target_minutes = self.cleaned_data[
+            "focus_default_target_hours"
+        ]
+        instance.focus_default_overflow_soft_cap_minutes = self.cleaned_data[
+            "focus_default_overflow_soft_cap_hours"
+        ]
+        if commit:
+            instance.save()
+        return instance
 
 
 class UserItemFilterForm(forms.Form):

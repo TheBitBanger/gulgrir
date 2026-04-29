@@ -39,40 +39,6 @@
       </div>
     {% endif %}
 
-    {% if pinned_items %}
-      <div class="active-timers__section">
-        <div class="active-timers__header">
-          <span class="active-timers__title">Pinned</span>
-          <span class="badge">{{ pinned_items|length }}</span>
-        </div>
-        <div class="active-timers__list">
-          {% for item in pinned_items %}
-            <div class="active-timers__row" data-row-href="{{ item.detail_url }}">
-            <div class="active-timers__main" title="{{ item.title }}">
-              <div class="active-timers__text">
-                <span class="active-timers__name active-timers__name--wrap">{{ item.title }}</span>
-                <span class="active-timers__bucket" title="in: {{ item.bucket_label }}">in: {{ item.bucket_label }}</span>
-              </div>
-            </div>
-              <div class="active-timers__meta">
-                <button
-                  type="button"
-                  class="icon-btn icon-btn--success"
-                  data-start-url="{{ item.start_url }}"
-                  aria-label="Start timer for {{ item.title }}"
-                  title="Start timer"
-                >
-                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                    <polygon points="8,5 20,12 8,19"></polygon>
-                  </svg>
-                </button>
-              </div>
-            </div>
-          {% endfor %}
-        </div>
-      </div>
-    {% endif %}
-
     {% if active_timers %}
       <div class="active-timers__section">
         <div class="active-timers__header">
@@ -116,6 +82,40 @@
               +{{ active_timers|length|add:"-10" }} more
             </div>
           {% endif %}
+        </div>
+      </div>
+    {% endif %}
+
+    {% if pinned_items %}
+      <div class="active-timers__section">
+        <div class="active-timers__header">
+          <span class="active-timers__title">Pinned</span>
+          <span class="badge">{{ pinned_items|length }}</span>
+        </div>
+        <div class="active-timers__list">
+          {% for item in pinned_items %}
+            <div class="active-timers__row" data-row-href="{{ item.detail_url }}">
+            <div class="active-timers__main" title="{{ item.title }}">
+              <div class="active-timers__text">
+                <span class="active-timers__name active-timers__name--wrap">{{ item.title }}</span>
+                <span class="active-timers__bucket" title="in: {{ item.bucket_label }}">in: {{ item.bucket_label }}</span>
+              </div>
+            </div>
+              <div class="active-timers__meta">
+                <button
+                  type="button"
+                  class="icon-btn icon-btn--success"
+                  data-start-url="{{ item.start_url }}"
+                  aria-label="Start timer for {{ item.title }}"
+                  title="Start timer"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <polygon points="8,5 20,12 8,19"></polygon>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          {% endfor %}
         </div>
       </div>
     {% endif %}

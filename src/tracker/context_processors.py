@@ -68,6 +68,7 @@ def active_timers(request):
             "active_timers": [],
             "active_timer_current_id": None,
             "pinned_items": [],
+            "pinned_groups": [],
             "current_item": None,
             "current_default_layout_name": "n/a",
             "current_environment_name": env_name,
@@ -175,10 +176,36 @@ def active_timers(request):
             "Unassigned",
         )
 
+    grouped: dict[str, list[dict[str, object]]] = {}
+    for pinned_item in pinned_items:
+        label = cast(str, pinned_item["bucket_label"])
+        if label not in grouped:
+            grouped[label] = []
+        grouped[label].append(pinned_item)
+
+    pinned_groups = []
+    ordered_labels = sorted(
+        (label for label in grouped if label != "Unassigned"),
+        key=str.lower,
+    )
+    if "Unassigned" in grouped:
+        ordered_labels.append("Unassigned")
+
+    for label in ordered_labels:
+        items = grouped[label]
+        pinned_groups.append(
+            {
+                "label": label,
+                "items": items,
+                "count": len(items),
+            }
+        )
+
     return {
         "active_timers": active,
         "active_timer_current_id": current_id,
         "pinned_items": pinned_items,
+        "pinned_groups": pinned_groups,
         "current_item": current_item,
         "current_default_layout_name": default_layout.name if default_layout else "n/a",
         "current_environment_name": env_name,

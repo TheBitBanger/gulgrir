@@ -93,28 +93,33 @@
           <span class="badge">{{ pinned_items|length }}</span>
         </div>
         <div class="active-timers__list">
-          {% for item in pinned_items %}
-            <div class="active-timers__row" data-row-href="{{ item.detail_url }}">
-            <div class="active-timers__main" title="{{ item.title }}">
-              <div class="active-timers__text">
-                <span class="active-timers__name active-timers__name--wrap">{{ item.title }}</span>
-                <span class="active-timers__bucket" title="in: {{ item.bucket_label }}">in: {{ item.bucket_label }}</span>
-              </div>
+          {% for group in pinned_groups %}
+            <div class="active-timers__header active-timers__header--group">
+              <span class="active-timers__group-label" title="group: {{ group.label }}">{{ group.label }}</span>
+              <span class="badge">{{ group.count }}</span>
             </div>
-              <div class="active-timers__meta">
-                <button
-                  type="button"
-                  class="icon-btn icon-btn--success"
-                  data-start-url="{{ item.start_url }}"
-                  aria-label="Start timer for {{ item.title }}"
-                  title="Start timer"
-                >
-                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                    <polygon points="8,5 20,12 8,19"></polygon>
-                  </svg>
-                </button>
+            {% for item in group.items %}
+              <div class="active-timers__row" data-row-href="{{ item.detail_url }}">
+              <div class="active-timers__main" title="{{ item.title }}">
+                <div class="active-timers__text">
+                  <span class="active-timers__name active-timers__name--wrap">{{ item.title }}</span>
+                </div>
               </div>
-            </div>
+                <div class="active-timers__meta">
+                  <button
+                    type="button"
+                    class="icon-btn icon-btn--success"
+                    data-start-url="{{ item.start_url }}"
+                    aria-label="Start timer for {{ item.title }}"
+                    title="Start timer"
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <polygon points="8,5 20,12 8,19"></polygon>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            {% endfor %}
           {% endfor %}
         </div>
       </div>

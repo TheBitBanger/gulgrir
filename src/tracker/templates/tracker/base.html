@@ -1001,6 +1001,31 @@
       letter-spacing: 0.06em;
     }
 
+    .active-timers__header--group {
+      margin-top: 0.65rem;
+      margin-bottom: 0.35rem;
+      padding: 0 0.1rem 0.2rem;
+      border-bottom: 1px solid color-mix(in oklab, var(--accent) 45%, transparent);
+    }
+
+    .active-timers__group-label {
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: color-mix(in oklab, var(--accent) 90%, var(--text));
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .active-timers__header--group .badge {
+      border-color: color-mix(in oklab, var(--accent) 50%, var(--border));
+      background: color-mix(in oklab, var(--accent) 14%, transparent);
+      color: color-mix(in oklab, var(--accent) 85%, var(--text));
+      font-weight: 700;
+    }
+
     .active-timers__list {
       display: grid;
       gap: 0.35rem;

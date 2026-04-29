@@ -36,6 +36,8 @@ class SprintSnapshot:
     progress_percent: int
     completion_percent: int
     overflow_percent: int
+    target_share_percent: int
+    overflow_used_total_percent: int
     scope_url: str
     close_url: str
 
@@ -218,6 +220,26 @@ def _stage_for(*, tracked: int, target: int, cap: int) -> tuple[str, int, int, i
     return stage, progress_percent, completion_percent, overflow_percent
 
 
+def _target_share_percent(*, target: int, cap: int) -> int:
+    total = target + cap
+    if total <= 0 or cap <= 0:
+        return 100
+    return int((target / total) * 100)
+
+
+def _overflow_used_total_percent(
+    *,
+    target: int,
+    cap: int,
+    overflow_percent: int,
+) -> int:
+    total = target + cap
+    if total <= 0 or cap <= 0 or overflow_percent <= 0:
+        return 0
+    cap_share = 100 - _target_share_percent(target=target, cap=cap)
+    return int((cap_share * overflow_percent) / 100)
+
+
 def build_open_sprint_snapshots(*, user) -> list[SprintSnapshot]:
     profile, _ = Profile.objects.get_or_create(user=user)
     cutoff_time = profile.time_dashboard_day_cutoff
@@ -238,6 +260,10 @@ def build_open_sprint_snapshots(*, user) -> list[SprintSnapshot]:
             target=sprint.target_minutes,
             cap=sprint.overflow_soft_cap_minutes,
         )
+        target_share_percent = _target_share_percent(
+            target=sprint.target_minutes,
+            cap=sprint.overflow_soft_cap_minutes,
+        )
         snapshots.append(
             SprintSnapshot(
                 sprint_id=sprint.id,
@@ -255,6 +281,12 @@ def build_open_sprint_snapshots(*, user) -> list[SprintSnapshot]:
                 progress_percent=progress_percent,
                 completion_percent=completion_percent,
                 overflow_percent=overflow_percent,
+                target_share_percent=target_share_percent,
+                overflow_used_total_percent=_overflow_used_total_percent(
+                    target=sprint.target_minutes,
+                    cap=sprint.overflow_soft_cap_minutes,
+                    overflow_percent=overflow_percent,
+                ),
                 scope_url=_scope_url(sprint),
                 close_url=reverse("focus_release", kwargs={"sprint_id": sprint.id}),
             )

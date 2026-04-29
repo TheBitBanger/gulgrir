@@ -87,7 +87,7 @@
 
     :root {
       --active-timers-top: 7.5rem;
-      --sidebar-left-width: 17rem;
+      --sidebar-left-width: 23rem;
       --sidebar-right-width: 23rem;
       --app-header-top: 0.5rem;
     }
@@ -890,25 +890,71 @@
 
     .focus-card {
       display: grid;
-      gap: 0.35rem;
+      gap: 0.5rem;
       border: 1px solid var(--border);
       border-radius: 0.6rem;
-      padding: 0.45rem 0.55rem;
+      padding: 0.6rem 0.65rem;
       background: color-mix(in oklab, var(--surface-2) 64%, transparent);
     }
 
-    .focus-card__head {
+    .focus-card__line-top {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) auto auto;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
       align-items: center;
-      gap: 0.5rem;
+      gap: 0.3rem;
+      min-width: 0;
+      margin-bottom: 0.45rem;
+      padding-bottom: 0.45rem;
+      border-bottom: 1px solid color-mix(in oklab, var(--border) 72%, transparent);
+    }
+
+    .focus-card__actions {
+      margin-top: 0.35rem;
+      padding-top: 0.35rem;
+      border-top: 1px solid color-mix(in oklab, var(--border) 68%, transparent);
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .focus-card__top-metric {
+      font-size: 0.69rem;
+      font-weight: 600;
+      color: var(--muted);
+      white-space: nowrap;
+      justify-self: center;
+    }
+
+    .focus-card__progress-row {
+      display: grid;
+      grid-template-columns: 4.25rem minmax(0, 1fr);
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    .focus-card__progress-row .focus-card__meter {
+      width: 82%;
+      justify-self: end;
+      height: 0.35rem;
+    }
+
+    .focus-card__progress-row--overflow {
+      grid-template-columns: 4.9rem minmax(0, 1fr);
+    }
+
+    .focus-card__progress-label {
+      font-size: 0.64rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--muted);
+      white-space: nowrap;
     }
 
     .focus-card__percent {
-      font-size: 0.72rem;
+      font-size: 0.68rem;
       color: var(--muted);
       font-variant-numeric: tabular-nums;
-      white-space: nowrap;
+      line-height: 1.2;
     }
 
     .focus-card__stage {
@@ -917,6 +963,7 @@
       letter-spacing: 0.06em;
       color: var(--muted);
       font-weight: 600;
+      justify-self: end;
     }
 
     .focus-card__scope {
@@ -925,32 +972,98 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      min-width: 0;
+      flex: 1 1 auto;
     }
 
     .focus-card__meta,
     .focus-card__overflow {
-      color: var(--muted);
-      font-size: 0.7rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      color: color-mix(in oklab, var(--text) 82%, var(--muted));
+      font-size: 0.68rem;
+      line-height: 1.2;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      padding: 0.08rem 0.35rem;
+      border-radius: 0.35rem;
+      background: color-mix(in oklab, var(--surface) 72%, var(--surface-2));
+      border: 1px solid color-mix(in oklab, var(--border) 72%, transparent);
+    }
+
+    .focus-card__overflow {
+      border-color: color-mix(in oklab, var(--warn) 35%, var(--border));
+      background: color-mix(in oklab, var(--warn) 10%, var(--surface));
+    }
+
+    .focus-card--sated .focus-card__overflow {
+      border-color: color-mix(in oklab, var(--success) 45%, var(--border));
+      background: color-mix(in oklab, var(--success) 12%, var(--surface));
+      color: color-mix(in oklab, var(--success) 75%, var(--text));
+    }
+
+    .focus-card--gorged .focus-card__overflow {
+      border-color: color-mix(in oklab, var(--danger) 45%, var(--border));
+      background: color-mix(in oklab, var(--danger) 12%, var(--surface));
+      color: color-mix(in oklab, var(--danger) 75%, var(--text));
+    }
+
+    .focus-card__meta--target {
+      border-color: color-mix(in oklab, var(--border) 82%, transparent);
+      background: color-mix(in oklab, var(--surface) 78%, var(--surface-2));
+      color: color-mix(in oklab, var(--text) 72%, var(--muted));
+    }
+
+    .focus-card__meta--target-reached {
+      border-color: color-mix(in oklab, var(--success) 45%, var(--border));
+      background: color-mix(in oklab, var(--success) 12%, var(--surface));
+      color: color-mix(in oklab, var(--success) 75%, var(--text));
+    }
+
+    .focus-card__line-percent {
+      margin-left: auto;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+      color: color-mix(in oklab, var(--text) 88%, var(--muted));
     }
 
     .focus-card__meter {
+      position: relative;
       height: 0.45rem;
       background: color-mix(in oklab, var(--surface) 80%, var(--border));
       border-radius: 999px;
       overflow: hidden;
-      display: flex;
     }
 
     .focus-card__meter-fill {
-      height: 100%;
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
       background: var(--accent);
-      flex: 0 0 auto;
+      z-index: 1;
     }
 
-    .focus-card__meter-overflow {
-      height: 100%;
-      background: color-mix(in oklab, var(--warn) 75%, var(--danger));
-      flex: 0 0 auto;
+    .focus-card__target-meter--progress .focus-card__meter-fill {
+      background: var(--accent);
+    }
+
+    .focus-card__target-meter--complete .focus-card__meter-fill {
+      background: var(--success);
+    }
+
+    .focus-card__overflow-meter {
+      background: color-mix(in oklab, var(--success) 16%, var(--surface));
+    }
+
+    .focus-card__overflow-meter--progress .focus-card__meter-fill {
+      background: var(--success);
+    }
+
+    .focus-card__overflow-meter--complete .focus-card__meter-fill {
+      background: var(--danger);
     }
 
     .focus-card--starved .focus-card__stage {
@@ -969,20 +1082,24 @@
       color: var(--danger);
     }
 
-    .focus-card--starved .focus-card__meter-fill {
+    .focus-card--starved .focus-card__target-meter--progress .focus-card__meter-fill {
       background: var(--warn);
     }
 
-    .focus-card--nourished .focus-card__meter-fill {
+    .focus-card--nourished .focus-card__target-meter--progress .focus-card__meter-fill {
       background: var(--accent);
     }
 
-    .focus-card--sated .focus-card__meter-fill {
+    .focus-card--sated .focus-card__target-meter--progress .focus-card__meter-fill {
       background: var(--success);
     }
 
-    .focus-card--gorged .focus-card__meter-fill {
-      background: var(--danger);
+    .focus-card--gorged .focus-card__target-meter--progress .focus-card__meter-fill {
+      background: var(--success);
+    }
+
+    .focus-card--gorged .focus-card__target-meter .focus-card__meter-fill {
+      background: var(--success);
     }
 
     .focus-card--ghost {

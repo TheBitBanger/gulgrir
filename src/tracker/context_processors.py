@@ -243,10 +243,18 @@ def saved_filters_sidebar(request):
             "target_display": format_minutes_short(sprint.target_minutes),
             "cap_display": format_minutes_short(sprint.overflow_soft_cap_minutes),
             "tracked_display": format_minutes_short(sprint.tracked_minutes),
+            "target_logged_display": format_minutes_short(
+                min(sprint.tracked_minutes, sprint.target_minutes)
+            ),
+            "overflow_logged_display": format_minutes_short(
+                max(0, sprint.tracked_minutes - sprint.target_minutes)
+            ),
             "stage": sprint.stage,
             "progress_percent": sprint.progress_percent,
             "completion_percent": sprint.completion_percent,
             "overflow_percent": sprint.overflow_percent,
+            "target_share_percent": sprint.target_share_percent,
+            "overflow_used_total_percent": sprint.overflow_used_total_percent,
             "scope_url": sprint.scope_url,
             "close_url": sprint.close_url,
         }

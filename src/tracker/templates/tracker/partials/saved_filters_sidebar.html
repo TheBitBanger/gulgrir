@@ -6,20 +6,32 @@
   </div>
   {% for sprint in focus_open_sprints %}
     <div class="focus-card focus-card--{{ sprint.stage }}">
-      <div class="focus-card__head">
+      <div class="focus-card__line-top">
         <a class="focus-card__scope link" href="{{ sprint.scope_url }}" title="Jump to this goal scope.">{{ sprint.scope_label }}</a>
-        <span class="focus-card__percent">{{ sprint.completion_percent }}%</span>
+        <span class="focus-card__top-metric">{{ sprint.tracked_display }}</span>
         <span class="focus-card__stage">{{ sprint.stage|title }}</span>
       </div>
-      <div class="focus-card__meter" aria-hidden="true">
-        <div class="focus-card__meter-fill" style="width: {{ sprint.progress_percent }}%;"></div>
-        {% if sprint.overflow_percent > 0 %}
-          <div class="focus-card__meter-overflow" style="width: {{ sprint.overflow_percent }}%;"></div>
-        {% endif %}
+      <div class="focus-card__progress-row">
+        <span class="focus-card__progress-label">Target</span>
+        <div class="focus-card__meter focus-card__target-meter{% if sprint.completion_percent >= 100 %} focus-card__target-meter--complete{% else %} focus-card__target-meter--progress{% endif %}" aria-hidden="true">
+          <div class="focus-card__meter-fill" style="width: {{ sprint.progress_percent }}%;"></div>
+        </div>
       </div>
-      <div class="focus-card__meta">{{ sprint.tracked_display }} / {{ sprint.target_display }} + {{ sprint.cap_display }}</div>
+      <div class="focus-card__meta focus-card__meta--target{% if sprint.completion_percent >= 100 %} focus-card__meta--target-reached{% endif %}">
+        <span>{{ sprint.target_logged_display }} / {{ sprint.target_display }}</span>
+        <span class="focus-card__line-percent">{{ sprint.completion_percent }}%</span>
+      </div>
       {% if sprint.overflow_percent > 0 %}
-        <div class="focus-card__overflow">Overflow {{ sprint.overflow_percent }}%</div>
+        <div class="focus-card__progress-row focus-card__progress-row--overflow">
+          <span class="focus-card__progress-label">Overflow</span>
+          <div class="focus-card__meter focus-card__overflow-meter{% if sprint.overflow_percent >= 100 %} focus-card__overflow-meter--complete{% else %} focus-card__overflow-meter--progress{% endif %}" aria-hidden="true">
+            <div class="focus-card__meter-fill" style="width: {{ sprint.overflow_percent }}%;"></div>
+          </div>
+        </div>
+        <div class="focus-card__overflow">
+          <span>Overflow: {{ sprint.overflow_logged_display }} / {{ sprint.cap_display }}</span>
+          <span class="focus-card__line-percent">{{ sprint.overflow_percent }}%</span>
+        </div>
       {% endif %}
       <div class="focus-card__actions">
         <form method="post" action="{{ sprint.close_url }}">

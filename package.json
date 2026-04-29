@@ -6,11 +6,17 @@
     "htmx.org": "^2.0.5"
   },
   "devDependencies": {
+    "postcss": "^8.5.12",
+    "postcss-html": "^1.8.1",
+    "stylelint": "^16.10.0",
+    "stylelint-config-standard": "^36.0.1",
     "tailwindcss": "^3.4.13"
   },
   "scripts": {
     "sync:vendor": "node scripts/sync-vendor-assets.mjs",
     "postinstall": "npm run sync:vendor",
+    "lint:css": "stylelint \"src/tracker/templates/**/*.html\" \"src/tracker/static/**/*.css\"",
+    "lint:css:fix": "stylelint \"src/tracker/templates/**/*.html\" \"src/tracker/static/**/*.css\" --fix",
     "build:css": "tailwindcss -i src/tracker/static/tracker/css/tailwind.css -o src/tracker/static/tracker/css/app.css --minify",
     "watch:css": "tailwindcss -i src/tracker/static/tracker/css/tailwind.css -o src/tracker/static/tracker/css/app.css --watch"
   }

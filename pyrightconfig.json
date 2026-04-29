@@ -12,6 +12,11 @@
   "typeCheckingMode": "standard",
   "pythonVersion": "3.12",
   "reportMissingTypeStubs": "none",
+  "reportUnknownMemberType": "none",
+  "reportUnknownArgumentType": "none",
+  "reportUnknownVariableType": "none",
+  "reportUnknownParameterType": "none",
+  "reportUnknownLambdaType": "none",
   "executionEnvironments": [
     {
       "root": "src"

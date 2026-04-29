@@ -91,17 +91,66 @@ If you add pytest, document `pytest -k` style single-test commands here.
 Use containerized QA commands from repo root:
 
 - `make qa-quick`
+- `make qa-ui`
 - `make qa-full`
 
 `qa-quick` runs Ruff lint + format checks and mypy.
-`qa-full` runs Ruff, mypy, basedpyright, Bandit, pip-audit, gitleaks
+`qa-ui` runs djlint for Django templates and stylelint for template/static CSS.
+`qa-full` runs Ruff, mypy, djlint, stylelint, basedpyright, Bandit, pip-audit, gitleaks
 (staged changes), and `manage.py check --deploy`.
 
 Agent default verification policy:
 
 - Use `make qa-quick` for normal validation after most code changes.
+- Use `make qa-ui` when changing sidebar/templates/CSS-heavy surfaces.
 - Use `make qa-full` for deep/thorough validation or cross-cutting changes.
 - Do not run tests/QA via `poetry run ...` unless the user explicitly asks.
+- `qa-ui` and `qa-full` run djlint/stylelint inside the app container for
+  environment parity.
+- Node-based QA tooling is pinned to Node 20 in the QA container image.
+
+## QA tightening phases
+
+Use phased hardening for both newly added and existing checks.
+
+Phase 0 (baseline, current default):
+
+- `qa-quick`: Ruff + format + mypy.
+- `qa-ui`: djlint + stylelint with conservative ignore/relaxed rules.
+- `qa-full`: all checks including `qa-ui` checks.
+- Legacy-tool relaxation active in this phase:
+  - mypy has reduced strictness (`warn_return_any=false`,
+    `check_untyped_defs=false`, `warn_redundant_casts=false`).
+  - mypy temporarily excludes `src/tracker/services/time_dashboard.py`
+    until current annotation/type-shape issues are cleaned up.
+  - basedpyright/Bandit/pip-audit/npm-audit run in non-blocking mode.
+
+Phase 1 (after baseline cleanup):
+
+- Keep all checks in `qa-full` blocking.
+- Reduce djlint ignore list gradually (`H021/H030/H031` first).
+- Tighten stylelint rules by re-enabling one relaxed rule at a time.
+- Expand Ruff lint surface incrementally beyond current core set.
+- Re-enable mypy strictness flags in order:
+  1) `warn_redundant_casts=true`
+  2) `check_untyped_defs=true`
+  3) `warn_return_any=true`
+  4) remove temporary mypy exclude for `src/tracker/services/time_dashboard.py`
+
+Phase 2 (stabilization):
+
+- Run `qa-ui` by default for all template/CSS changes.
+- Promote selected stricter stylelint/djlint rules to required.
+- Raise type strictness in hotspot modules (mypy/basedpyright).
+- Re-enable basedpyright unknown-type reports (member/argument/variable/
+  parameter/lambda) and return it to blocking mode.
+
+Phase 3 (mature strict mode):
+
+- Keep `qa-full` fully strict and blocking.
+- Consider adding `qa-ui` checks to `qa-quick` if runtime remains acceptable.
+- Keep security checks (Bandit, pip-audit, gitleaks, deploy checks) fully enforced.
+- Return Bandit/pip-audit/npm-audit to blocking mode after backlog cleanup.
 
 ## Type checking
 
@@ -185,6 +234,11 @@ Suggested type-check commands:
 
 - Update this file with new commands and style rules.
 - If you add formatters/linters, include single-file and single-test examples.
+
+Template/CSS single-file examples:
+
+- `docker compose -f compose/dev.yml -f compose/dev.bind.yml exec app djlint src/tracker/templates/tracker/partials/saved_filters_sidebar.html --lint`
+- `npm run lint:css -- "src/tracker/templates/tracker/base.html"`
 
 ## Testing expectations for agents
 

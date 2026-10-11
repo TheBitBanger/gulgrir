@@ -3,11 +3,11 @@ name: Publish GHCR Image
 on:
   push:
     tags:
-      - "v*"
+      - "r*"
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag to publish (e.g., v1.5 or v1.4.6)"
+        description: "Tag to publish (e.g., r3)"
         required: false
 
 permissions:
@@ -26,10 +26,12 @@ jobs:
       - name: Resolve tag and validate branch
         id: resolve
         shell: bash
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
         run: |
           TAG="${GITHUB_REF_NAME}"
-          if [[ "${GITHUB_REF_TYPE}" != "tag" && -n "${{ inputs.tag }}" ]]; then
-            TAG="${{ inputs.tag }}"
+          if [[ "${GITHUB_REF_TYPE}" != "tag" && -n "${INPUT_TAG}" ]]; then
+            TAG="${INPUT_TAG}"
             git fetch --tags
             git checkout "tags/${TAG}"
           fi
@@ -39,34 +41,24 @@ jobs:
             exit 1
           fi
 
-          git fetch --no-tags origin dev master
-
-          if [[ "${TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            REQUIRED_BRANCH="origin/dev"
-            {
-              echo "image_tags<<EOF"
-              echo "ghcr.io/thebitbanger/gulgrir:dev"
-              echo "ghcr.io/thebitbanger/gulgrir:${TAG}"
-              echo "EOF"
-            } >> "${GITHUB_OUTPUT}"
-          elif [[ "${TAG}" =~ ^v[0-9]+\.[0-9]+$ ]]; then
-            REQUIRED_BRANCH="origin/master"
-            {
-              echo "image_tags<<EOF"
-              echo "ghcr.io/thebitbanger/gulgrir:latest"
-              echo "ghcr.io/thebitbanger/gulgrir:${TAG}"
-              echo "EOF"
-            } >> "${GITHUB_OUTPUT}"
-          else
-            echo "Unsupported tag format: ${TAG}"
-            echo "Use vX.Y.Z for dev or vX.Y for stable."
+          if [[ ! "${TAG}" =~ ^r[1-9][0-9]*$ ]]; then
+            echo "Unsupported tag format: ${TAG}. Releases are tagged rN (r1, r2, ...)."
             exit 1
           fi
 
-          if ! git branch -r --contains "${GITHUB_SHA}" | grep -q "${REQUIRED_BRANCH}"; then
-            echo "Tag ${TAG} must point to a commit reachable from ${REQUIRED_BRANCH}."
+          git fetch --no-tags origin dev
+          if ! git merge-base --is-ancestor HEAD origin/dev; then
+            echo "Tag ${TAG} must point to a commit reachable from origin/dev."
             exit 1
           fi
+
+          {
+            echo "image_tags<<EOF"
+            echo "ghcr.io/thebitbanger/gulgrir:dev"
+            echo "ghcr.io/thebitbanger/gulgrir:${TAG}"
+            echo "EOF"
+            echo "revision=$(git rev-parse HEAD)"
+          } >> "${GITHUB_OUTPUT}"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -90,4 +82,4 @@ jobs:
           tags: ${{ steps.resolve.outputs.image_tags }}
           labels: |
             org.opencontainers.image.source=${{ github.repositoryUrl }}
-            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.revision=${{ steps.resolve.outputs.revision }}

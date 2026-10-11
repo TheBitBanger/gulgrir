@@ -1,0 +1,49 @@
+name: Promote release to latest
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release to promote (e.g., r3)"
+        required: true
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fast-forward master to the release
+        shell: bash
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          if [[ ! "${TAG}" =~ ^r[1-9][0-9]*$ ]]; then
+            echo "Unsupported tag format: ${TAG}. Releases are tagged rN (r1, r2, ...)."
+            exit 1
+          fi
+          git fetch --tags origin
+          # A plain push refuses anything but a fast-forward, so master never loses history.
+          git push origin "refs/tags/${TAG}^{commit}:refs/heads/master"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Point latest at the release image
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          docker buildx imagetools create \
+            --tag ghcr.io/thebitbanger/gulgrir:latest \
+            "ghcr.io/thebitbanger/gulgrir:${TAG}"

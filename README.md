@@ -1,224 +1,33 @@
-# Install (Docker Compose)
+# gulgrir
 
-## Requirements
+Every backlog in one place — books, films, shows, games, music, anime, manga, light novels
+and personal projects — with help rotating through them so binging one thing doesn't bury
+the rest. Self-hosted, for people who keep their data on their own hardware.
 
-- Docker + Docker Compose
+It is in daily use and mid-migration: a TypeScript app is replacing the Django one screen by
+screen, on the same database
+([0003](docs/system/decisions/0003-strangler-migration-on-shared-database.md)).
 
-## Create a compose.yml
-
-Create a `compose.yml` file with the following content. You can use `dev`,
-`latest`, or a pinned version tag like `v0.1.0` for the image. The `backup`
-service is optional; remove it if you do not want a backup container.
-
-```yaml
-name: gulgrir
-services:
-  app:
-    image: ghcr.io/thebitbanger/gulgrir:dev
-    restart: unless-stopped
-    env_file: .env
-    ports:
-      - "${GULGRIR_PORT-8765}:8765"
-    depends_on:
-      - db
-    entrypoint: ["/app/docker/app/entrypoint.sh"]
-    command: "gunicorn gulgrir.wsgi:application --bind 0.0.0.0:8765 --workers 2"
-
-  db:
-    image: postgres:16
-    restart: unless-stopped
-    env_file: .env
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-
-  backup:
-    image: ghcr.io/thebitbanger/kethuroth:v0.1.1
-    restart: unless-stopped
-    env_file: .env
-    depends_on:
-      - db
-    volumes:
-      - ./backups:/backups
-
-volumes:
-  pgdata:
-```
-
-## Environment
-
-Create a `.env` file next to where you run docker compose:
+## Quickstart
 
 ```
-# Django
-DJANGO_SECRET_KEY=replace-me
-DJANGO_DEBUG=false
-DJANGO_ADMIN_USER=admin
-DJANGO_ADMIN_PASS=admin
-DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
-DJANGO_CSRF_TRUSTED_ORIGINS=http://localhost:8765
-DJANGO_SECURE_PROXY_SSL_HEADER=true
-
-# Postgres
-POSTGRES_USER=gulgrir
-POSTGRES_PASSWORD=gulgrir
-POSTGRES_DB=gulgrir
-POSTGRES_HOST=db
-POSTGRES_PORT=5432
-
-# Backup
-BACKUP_SCHEDULE=0 5 * * *
-BACKUP_RETENTION_DAYS=7
-BACKUP_RETENTION_COUNT=30
-BACKUP_UID=1000
-BACKUP_GID=1000
-TZ=UTC
-
-# Gulgrir
-GULGRIR_PORT=8765
-GULGRIR_ENV=dev
-```
-
-Notes:
-- `DJANGO_ADMIN_USER` / `DJANGO_ADMIN_PASS` are used to auto-create a superuser on first run for admin fallback access.
-- Change the defaults for any real deployment.
-- Set `DJANGO_SECRET_KEY` to a long, random, user-defined value (at least 50 characters). Django will raise `security.W009` during `check --deploy` if it is too short or otherwise weak.
-- Keep `DJANGO_SECRET_KEY` out of version control and rotate it carefully in production.
-- `GULGRIR_PORT` controls the host port that maps to container port 8765.
-- `GULGRIR_ENV` controls the environment indicator in the app header.
-  Supported values normalize to `dev`, `staging`, and `production`
-  (aliases like `prod`, `stage`, `qa`, and `live` are accepted).
-- `DJANGO_ALLOWED_HOSTS` should include any hostnames or IPs you use to access the app.
-- `DJANGO_CSRF_TRUSTED_ORIGINS` must include the full scheme + host (and port if used).
-- `DJANGO_SECURE_PROXY_SSL_HEADER` should be `true` only when running behind a reverse proxy.
-- `BACKUP_SCHEDULE` only matters if the backup service is running.
-
-Generate a secure `DJANGO_SECRET_KEY` with one of the following:
-
-```bash
-python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
-```
-
-```bash
-python -c "import secrets; print(secrets.token_urlsafe(64))"
-```
-
-## If using a reverse proxy
-
-Add the public URL(s) and enable proxy headers. Example:
-
-```
-DJANGO_ALLOWED_HOSTS=gulgrir.your-domain.com,your-domain.com
-DJANGO_CSRF_TRUSTED_ORIGINS=https://gulgrir.your-domain.com,http://your-domain.com:8765
-DJANGO_SECURE_PROXY_SSL_HEADER=true
-```
-
-## Start the stack
-
-```
+mkdir gulgrir && cd gulgrir
+# write compose.yml and .env as in docs/operations/install.md
 docker compose up -d
 ```
 
-## Upgrades
+Then open `http://localhost:8765`.
 
-To upgrade to a newer image, pull and recreate the app container:
+## Where to go next
 
-```
-docker compose down
-docker compose pull
-docker compose up -d --force-recreate
-```
+- [docs/](docs/README.md) — what the system must do, how to work on it, how to run it
+- [docs/operations/install.md](docs/operations/install.md) — the full install guide
+- [docs/development/](docs/development/README.md) — working on the code
 
-Migrations run automatically when the container starts.
-
-## Access
-
-Visit: `http://localhost:8765`
-
-You can put a reverse proxy in front of the app if you want (not bundled here).
-
-## Admin user
-
-On first run, the entrypoint auto-creates a superuser using `DJANGO_ADMIN_USER` / `DJANGO_ADMIN_PASS`. Admin is intended as an operational fallback; regular product workflows should use the frontend.
-
-## Database Backup Location
-
-Database backups are written to `./backups` on the host by the optional `backup`
-service.
-
-## Release channel
-
-Only the dev channel is available right now. Stable releases will be added once
-the first stable milestone is ready.
-
-# Backups
-
-The `backup` service uses the standalone kethuroth image. Full docs and
-configuration options live at `https://github.com/TheBitBanger/kethuroth`.
-
-Database backups are written to `./backups` on the host by the optional `backup`
-service. The service creates the directory automatically, but pre-creating it
-(and setting `BACKUP_UID` / `BACKUP_GID`) avoids root-owned files.
-
-## On-demand backup
-
-```
-docker compose run --rm backup backup
-```
-
-# Restores
-
-## Stop app services
-
-```
-docker compose stop app
-```
-
-If you have more services that connect to the database, stop them too. If your
-version of the stack does not include a service named in newer docs, ignore it.
-When in doubt, use the README that matches your image tag.
-
-## Restore the dump
-
-```
-docker compose run --rm backup restore /backups/<dump file>.dump
-```
-
-## Start the application
-
-```
-docker compose start app
-```
-
-# Development
-
-For local development, use `compose/dev.yml`. The `backup` service is available
-for on-demand use and does not run on a schedule unless you opt into it.
-
-The dev app container builds the Docker `qa` target so lint/type/security tools
-are available in-container. Published release images are built from the
-`runtime` target in CI.
-
-Use `make dev-build` when dependencies or Docker layers change. Use
-`make dev-up` for normal bring-up without rebuilding.
-
-## QA and tests
-
-Run all commands from the repository root:
-
-```
-make test
-make qa-quick
-make qa-full
-```
-
-- `make qa-quick` runs `ruff`, formatting checks, and `mypy`.
-- `make qa-full` runs all checks, including `basedpyright`, `bandit`,
-  `pip-audit`, `gitleaks` (staged changes), and `check --deploy`.
-
-To run scheduled backups in dev, start the backup profile:
-
-```
-docker compose --profile backup up -d
-```
-
-For on-demand backups and restores, see `# Backups` and `# Restores` above.
+| Directory  | Holds                                          |
+| ---------- | ---------------------------------------------- |
+| `src/`     | the Django project (`gulgrir`) and app (`tracker`) |
+| `compose/` | Compose files for development                  |
+| `docker/`  | the image's Dockerfile and entrypoint          |
+| `scripts/` | build helpers                                  |
+| `docs/`    | all documentation                              |

@@ -64,7 +64,6 @@ build-backend = "poetry.core.masonry.api"
 django-stubs = {extras = ["compatible-mypy"], version = "^5.2.0"}
 mypy = "^1.15.0"
 ruff = "^0.11.10"
-basedpyright = "^1.29.2"
 bandit = "^1.8.3"
 pip-audit = "^2.9.0"
 types-pytz = "^2025.2.0.20250809"

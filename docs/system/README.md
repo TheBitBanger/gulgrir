@@ -1,9 +1,10 @@
 # System
 
-What gulgrir must do and why. Cross-cutting requirements live here; each domain folder holds
-its own.
+What gulgrir must do, why, and how it is built. Cross-cutting documents live here; each
+domain folder holds its own.
 
 - [requirements.md](requirements.md) — purpose, audience, cross-cutting needs, and what is out of scope
+- [architecture.md](architecture.md) — how the system is structured as built
 - [decisions/](decisions/README.md) — numbered decision records
 
 | Domain                                | Provides                                                       |

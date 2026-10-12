@@ -1,5 +1,6 @@
-from datetime import time, timedelta
+from datetime import UTC, datetime, time, timedelta
 from typing import Any, cast
+from unittest import mock
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -20,9 +21,15 @@ from tracker.services.focus_sprint import (
     build_open_sprint_snapshots,
 )
 
+# Mid-day, so "a few hours ago" stays inside the current goal day.
+NOW = datetime(2026, 4, 30, 12, 0, tzinfo=UTC)
+
 
 class FocusSprintServiceTests(TestCase):
     def setUp(self):
+        clock = mock.patch("django.utils.timezone.now", return_value=NOW)
+        clock.start()
+        self.addCleanup(clock.stop)
         self.user = cast(Any, get_user_model().objects).create_user(
             username="focus-user"
         )

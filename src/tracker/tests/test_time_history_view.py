@@ -1,5 +1,6 @@
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any, cast
+from unittest import mock
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
@@ -18,6 +19,11 @@ from tracker.models import UserItem, UserItemHistory
 )
 class TimeHistoryViewTests(TestCase):
     def setUp(self):
+        # The entries below are dated; the last-30-days views must include them.
+        now = datetime(2026, 4, 30, 12, 0, tzinfo=UTC)
+        clock = mock.patch("django.utils.timezone.now", return_value=now)
+        clock.start()
+        self.addCleanup(clock.stop)
         self.user = cast(Any, get_user_model().objects).create_user(
             username="history-viewer",
         )

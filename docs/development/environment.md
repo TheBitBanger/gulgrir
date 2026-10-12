@@ -11,9 +11,11 @@ tools; published images build the `runtime` target. The app listens on 8765
 | ------------------------------------- | ------------------ |
 | Start db and app                      | `make dev-up`      |
 | Start after dependency or Docker changes | `make dev-build` |
-| Run the scheduled backup service too  | `docker compose -f compose/dev.yml --profile backup up -d` |
+| Run the scheduled backup service too  | `docker compose --env-file .env -f compose/dev.yml --profile backup up -d` |
 
-Migrations run, and a superuser is created, when the app container starts.
+Migrations run when the app container starts. The first start on an empty database also
+creates a superuser, and stops unless `.env` sets `GULGRIR_ADMIN_USER` and
+`GULGRIR_ADMIN_PASSWORD`; set both in your dev `.env`.
 
 ## Django commands
 
@@ -27,6 +29,10 @@ docker compose -f compose/dev.yml -f compose/dev.bind.yml exec app python /app/s
 `makemigrations` needs the bind mount so new migration files land on the host.
 
 ## Dependencies
+
+The new app's packages are managed with pnpm in `app/`. In the dev container they live in
+their own volume over `app/node_modules`, so packages built for the host and for the
+container never mix; `make check` installs them there from the lockfile.
 
 Python dependencies are managed with Poetry on the host (`poetry install`, `poetry lock`).
 Don't run Poetry inside the dev container: the bind mount exposes the host's `.venv`, and

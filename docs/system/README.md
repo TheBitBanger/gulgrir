@@ -12,6 +12,7 @@ domain folder holds its own.
 | [accounts](accounts/)                 | users, isolation, administration                               |
 | [library](library/)                   | tracked items, personal data, tags, filters, collections      |
 | [metadata](metadata/)                 | matching items to real works and keeping catalog data current |
+| [configuration](configuration/)       | settings, their start-up report, and what stops start-up       |
 | [import](import/)                     | bringing in lists from other services and files               |
 | [lifecycle](lifecycle/)               | stages from wishlist to done, and completion history          |
 | [selection](selection/)               | suggesting the next item from a set                            |

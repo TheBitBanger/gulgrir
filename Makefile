@@ -1,11 +1,6 @@
-SHELL := /bin/bash
-.ONESHELL:
+COMPOSE := docker compose --env-file .env -f compose/dev.yml -f compose/dev.bind.yml
 
-COMPOSE := docker compose -f compose/dev.yml -f compose/dev.bind.yml
-APP_EXEC := $(COMPOSE) exec -T -w /workspace app
-APP_MANAGE := $(APP_EXEC) python /app/src/manage.py
-
-.PHONY: dev-build dev-up test test-label check
+.PHONY: dev-build dev-up check
 
 dev-build:
 	$(COMPOSE) up -d --build db app
@@ -13,50 +8,6 @@ dev-build:
 dev-up:
 	$(COMPOSE) up -d db app
 
-test: dev-up
-	$(APP_MANAGE) test
-
-test-label: dev-up
-	$(APP_MANAGE) test $(TEST)
-
-check: dev-up
-	status=0
-	run_check() {
-	  local name="$$1"
-	  shift
-	  printf "\n==> %s\n" "$$name"
-	  if "$$@"; then
-	    printf "[PASS] %s\n" "$$name"
-	  else
-	    rc=$$?
-	    status=1
-	    printf "[FAIL] %s (exit %s)\n" "$$name" "$$rc"
-	  fi
-	}
-	run_check_soft() {
-	  local name="$$1"
-	  shift
-	  printf "\n==> %s\n" "$$name"
-	  if "$$@"; then
-	    printf "[PASS] %s\n" "$$name"
-	  else
-	    rc=$$?
-	    printf "[WARN] %s (non-blocking, exit %s)\n" "$$name" "$$rc"
-	  fi
-	}
-	run_check "ruff check" $(APP_EXEC) ruff check src
-	run_check "ruff format --check" $(APP_EXEC) ruff format --check src
-	run_check "mypy" $(APP_EXEC) mypy src
-	run_check "djlint" $(APP_EXEC) djlint src/tracker/templates --lint
-	run_check "stylelint" $(APP_EXEC) stylelint "src/tracker/templates/**/*.html" "src/tracker/static/**/*.css"
-	run_check_soft "bandit" $(APP_EXEC) bandit -q -r src -c /workspace/pyproject.toml
-	run_check_soft "pip-audit" $(APP_EXEC) pip-audit
-	run_check_soft "npm audit" $(APP_EXEC) npm audit
-	run_check "gitleaks (staged)" sh -lc 'git diff --cached -- . | $(APP_EXEC) gitleaks stdin --no-banner --redact --config /workspace/.gitleaks.toml'
-	run_check "django check --deploy" $(APP_EXEC) env DJANGO_DEBUG=false python /app/src/manage.py check --deploy
-	run_check "tests" $(APP_MANAGE) test
-	if [[ $$status -ne 0 ]]; then
-	  printf "\nCheck completed with failures\n"
-	  exit 1
-	fi
-	printf "\nCheck completed successfully\n"
+check:
+	@$(COMPOSE) --progress quiet up -d db app
+	@$(COMPOSE) exec -T -w /workspace app bash scripts/check.sh

@@ -4,6 +4,12 @@ services:
     volumes:
       - ../src:/app/src
       - ..:/workspace
+      - app_node_modules:/workspace/app/node_modules
     environment:
       DJANGO_DEBUG: "true"
+      # Keeps pnpm's store out of the bind-mounted repository.
+      pnpm_config_store_dir: /root/.local/share/pnpm/store
     command: "python /app/src/manage.py runserver 0.0.0.0:8765"
+
+volumes:
+  app_node_modules:

@@ -1,24 +1,26 @@
 # Testing and checks
 
-`make check` is the single entry point: lint, formatting, types, templates, CSS, secrets in
-staged changes, Django's deploy checks, and the test suite. It runs in the dev container so
-results don't depend on the host. Run it before every commit.
+Each specification item names how it is verified. There are three kinds:
 
-Bandit, pip-audit and npm audit report but don't fail the run.
+| Kind              | What it is                                                                                     | When it runs |
+| ----------------- | ---------------------------------------------------------------------------------------------- | ------------ |
+| code test         | Automated test of logic we wrote, run by `make check`                                          | before every commit |
+| probe             | A manual check, such as `curl` against the dev stack, that an invariant holds where it rests on a library or on wiring rather than on our logic | once, when the invariant is set up or its wiring changes |
+| review            | A rule checked by reading the change                                                           | at the commit checkpoint |
 
-## Running part of the suite
+## make check
 
-While iterating, run one app, module, class or method:
+`make check` is the only quality target ([0006](../system/decisions/0006-one-check-target-with-biome.md)):
+lint, formatting, types, templates, CSS, secrets in staged changes, Django's deploy checks,
+and both apps' test suites, always in full. It runs `scripts/check.sh` in the dev container
+so results don't depend on the host, prints one line per check, and shows a check's output
+only when it fails. Every check runs even after one fails.
 
-```
-make test-label TEST=tracker.tests.test_item_library
-make test-label TEST=tracker.tests.test_item_library.SomeTestCase.test_something
-```
-
-`make test` runs the whole suite alone.
+Bandit, pip-audit and npm audit only warn; the warning names the command that lists their
+findings.
 
 ## Environment
 
 Django's test runner creates a disposable test database on the Compose PostgreSQL and drops
-it after the run; each test case runs in a transaction rolled back at its end. Nothing
-outside the test database is shared.
+it after the run; each test case runs in a transaction rolled back at its end. The new app's
+tests touch nothing outside the process. Nothing else is shared.

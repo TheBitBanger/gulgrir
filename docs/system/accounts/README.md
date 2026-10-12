@@ -3,3 +3,4 @@
 Who can use an instance and what each person can see and manage.
 
 - [requirements.md](requirements.md) — who needs what, and why
+- [specification.md](specification.md) — behavior accounts must show

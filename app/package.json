@@ -1,0 +1,25 @@
+{
+  "name": "gulgrir-app",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.8.1",
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": "26.x",
+      "onFail": "download"
+    }
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome ci --error-on-warnings",
+    "fix": "biome check --write"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "@types/node": "^26.6.4",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3"
+  }
+}

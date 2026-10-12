@@ -25,7 +25,10 @@ services:
   db:
     image: postgres:16
     restart: unless-stopped
-    env_file: .env
+    environment:
+      POSTGRES_USER: ${GULGRIR_DB_USER:-${POSTGRES_USER:-gulgrir}}
+      POSTGRES_PASSWORD: ${GULGRIR_DB_PASSWORD:-${POSTGRES_PASSWORD:-}}
+      POSTGRES_DB: ${GULGRIR_DB_NAME:-${POSTGRES_DB:-gulgrir}}
     volumes:
       - pgdata:/var/lib/postgresql/data
 
@@ -33,6 +36,12 @@ services:
     image: ghcr.io/thebitbanger/kethuroth:v0.1.1
     restart: unless-stopped
     env_file: .env
+    environment:
+      POSTGRES_USER: ${GULGRIR_DB_USER:-${POSTGRES_USER:-gulgrir}}
+      POSTGRES_PASSWORD: ${GULGRIR_DB_PASSWORD:-${POSTGRES_PASSWORD:-}}
+      POSTGRES_DB: ${GULGRIR_DB_NAME:-${POSTGRES_DB:-gulgrir}}
+      POSTGRES_HOST: ${GULGRIR_DB_HOST:-${POSTGRES_HOST:-db}}
+      POSTGRES_PORT: ${GULGRIR_DB_PORT:-${POSTGRES_PORT:-5432}}
     depends_on:
       - db
     volumes:
@@ -54,8 +63,9 @@ docker compose up -d
 ```
 
 Visit `http://localhost:8765`. Migrations run automatically when the container starts. On
-first run the entrypoint creates a superuser from `DJANGO_ADMIN_USER` /
-`DJANGO_ADMIN_PASS`; the Django admin is an operational fallback, not the product UI.
+first run the entrypoint creates a superuser from `GULGRIR_ADMIN_USER` /
+`GULGRIR_ADMIN_PASSWORD`, and stops if either is missing; the Django admin is an
+operational fallback, not the product UI.
 
 A reverse proxy in front is optional and not bundled; see
 [configuration](configuration.md#behind-a-reverse-proxy).
@@ -69,3 +79,11 @@ docker compose up -d --force-recreate
 ```
 
 Migrations run on start.
+
+### Upgrading a compose file whose `db` service has `env_file`
+
+Settings were renamed to `GULGRIR_*`
+([0007](../system/decisions/0007-compose-maps-database-settings.md)). Before pulling, replace
+the `db` service's `env_file: .env` with its `environment:` block above, and add the same
+block, with `POSTGRES_HOST` and `POSTGRES_PORT`, to the `backup` service. Your `.env` keeps
+working as it is; the start-up log lists each old name to rename.

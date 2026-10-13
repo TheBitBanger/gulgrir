@@ -1,14 +1,9 @@
-import os
 from typing import Any, cast
 
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
 
-# The configuration check hands Django each setting under its old name.
-CREDENTIALS = {
-    "DJANGO_ADMIN_USER": "GULGRIR_ADMIN_USER",
-    "DJANGO_ADMIN_PASS": "GULGRIR_ADMIN_PASSWORD",
-}
+from gulgrir.settings import setting
 
 
 class Command(BaseCommand):
@@ -19,15 +14,19 @@ class Command(BaseCommand):
         if User.objects.filter(is_superuser=True).exists():
             self.stdout.write("Superuser already exists - skipping")
             return
+        username = setting("GULGRIR_ADMIN_USER", "DJANGO_ADMIN_USER")
+        password = setting("GULGRIR_ADMIN_PASSWORD", "DJANGO_ADMIN_PASS")
         missing = [
-            setting for name, setting in CREDENTIALS.items() if not os.getenv(name)
+            name
+            for name, value in [
+                ("GULGRIR_ADMIN_USER", username),
+                ("GULGRIR_ADMIN_PASSWORD", password),
+            ]
+            if not value
         ]
         if missing:
             raise CommandError(
                 f"No superuser exists; set {' and '.join(missing)} to create one."
             )
-        username = os.environ["DJANGO_ADMIN_USER"]
         self.stdout.write(f"Creating superuser {username}")
-        cast(Any, User.objects).create_superuser(
-            username=username, password=os.environ["DJANGO_ADMIN_PASS"]
-        )
+        cast(Any, User.objects).create_superuser(username=username, password=password)

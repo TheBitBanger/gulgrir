@@ -21,15 +21,21 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 
+# Names, old names and defaults: docs/operations/configuration.md.
+def setting(name: str, old: str | None = None, default: str = "") -> str:
+    """The new name, else the old one, else the default; an empty value is unset."""
+    return os.getenv(name) or (os.getenv(old) if old else None) or default
+
+
 def parse_env_list(value: str) -> list[str]:
     return [item.strip() for item in value.split(",") if item.strip()]
 
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "replace-me")
+SECRET_KEY = setting("GULGRIR_SECRET_KEY", "DJANGO_SECRET_KEY", "replace-me")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv("DJANGO_DEBUG", "false").lower() == "true"
+DEBUG = setting("GULGRIR_DEBUG", "DJANGO_DEBUG", "false").lower() == "true"
 
 
 def normalize_environment(value: str) -> str:
@@ -41,14 +47,19 @@ def normalize_environment(value: str) -> str:
     return "dev"
 
 
-GULGRIR_ENV = normalize_environment(os.getenv("GULGRIR_ENV", "dev"))
+GULGRIR_ENV = normalize_environment(setting("GULGRIR_ENV", default="dev"))
 
-allowed_hosts = parse_env_list(os.getenv("DJANGO_ALLOWED_HOSTS", ""))
+allowed_hosts = parse_env_list(setting("GULGRIR_ALLOWED_HOSTS", "DJANGO_ALLOWED_HOSTS"))
 ALLOWED_HOSTS = allowed_hosts or ["*"]
 
-CSRF_TRUSTED_ORIGINS = parse_env_list(os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", ""))
+CSRF_TRUSTED_ORIGINS = parse_env_list(
+    setting("GULGRIR_CSRF_TRUSTED_ORIGINS", "DJANGO_CSRF_TRUSTED_ORIGINS")
+)
 
-if os.getenv("DJANGO_SECURE_PROXY_SSL_HEADER", "false").lower() == "true":
+behind_https_proxy = setting(
+    "GULGRIR_BEHIND_HTTPS_PROXY", "DJANGO_SECURE_PROXY_SSL_HEADER", "false"
+)
+if behind_https_proxy.lower() == "true":
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 
@@ -108,11 +119,11 @@ WSGI_APPLICATION = "gulgrir.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.getenv("POSTGRES_DB", "gulgrir"),
-        "USER": os.getenv("POSTGRES_USER", "gulgrir"),
-        "PASSWORD": os.getenv("POSTGRES_PASSWORD", "gulgrir"),
-        "HOST": os.getenv("POSTGRES_HOST", "db"),
-        "PORT": int(os.getenv("POSTGRES_PORT", "5432")),
+        "NAME": setting("GULGRIR_DB_NAME", "POSTGRES_DB", "gulgrir"),
+        "USER": setting("GULGRIR_DB_USER", "POSTGRES_USER", "gulgrir"),
+        "PASSWORD": setting("GULGRIR_DB_PASSWORD", "POSTGRES_PASSWORD", "gulgrir"),
+        "HOST": setting("GULGRIR_DB_HOST", "POSTGRES_HOST", "db"),
+        "PORT": int(setting("GULGRIR_DB_PORT", "POSTGRES_PORT", "5432")),
     }
 }
 

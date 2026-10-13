@@ -107,15 +107,15 @@ export function checkConfig(env: Env): {
     const override = fresh ?? old;
     const value = override ?? s.default;
     const notes: string[] = [];
-    if (fresh && old) notes.push(`both names set; ${s.old} is ignored`);
-    else if (old) notes.push(`${s.old} is deprecated`);
+    if (fresh && old) notes.push(`both names set; ${s.old} is ignored, delete it`);
+    else if (old) notes.push(`${s.old} is deprecated; rename it to ${s.name}`);
 
     let reading = value;
     if (value !== undefined) {
       const result = read(s.kind ?? "text", value);
       reading = result.reading;
       if (override !== undefined && result.note) notes.push(result.note);
-      djangoEnv[s.old ?? s.name] = reading;
+      djangoEnv[s.name] = reading;
     }
     if (s.kind === "port" && !isPort(value ?? "")) {
       faults.push(`${s.name} is not a whole number from 1 to 65535`);
@@ -149,4 +149,14 @@ export function checkConfig(env: Env): {
     report.push(`Start-up stopped: ${faults.join("; ")}${hint}`);
   }
   return { ok: faults.length === 0, report, djangoEnv };
+}
+
+// The entrypoint evaluates stdout as shell exports; the report goes to the log on stderr.
+if (import.meta.main) {
+  const { ok, report, djangoEnv } = checkConfig(process.env);
+  console.error(report.join("\n"));
+  if (!ok) process.exit(1);
+  for (const [key, value] of Object.entries(djangoEnv)) {
+    console.log(`export ${key}='${value.replaceAll("'", `'\\''`)}'`);
+  }
 }

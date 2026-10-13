@@ -1,7 +1,7 @@
 # Development environment
 
 Development runs in Docker Compose: `compose/dev.yml` for the stack, `compose/dev.bind.yml`
-to mount the repository into the app container and run Django's dev server. The dev app
+to mount the repository into the app container and set `GULGRIR_DEBUG` to `true`. The dev app
 container builds the Dockerfile's `qa` target, which carries the lint, type and security
 tools; published images build the `runtime` target. The app listens on 8765
 (`GULGRIR_PORT`), and Compose reads `.env` as described in
@@ -12,6 +12,12 @@ tools; published images build the `runtime` target. The app listens on 8765
 | Start db and app                      | `make dev-up`      |
 | Start after dependency or Docker changes | `make dev-build` |
 | Run the scheduled backup service too  | `docker compose --env-file .env -f compose/dev.yml --profile backup up -d` |
+
+The dev container starts like an install's, through the image's entrypoint
+([design](../system/design.md#start-up)): gunicorn behind the new app's front
+door. Because `GULGRIR_DEBUG` is true, gunicorn reloads when a file under `src/` changes and
+Node restarts when one under `app/src/` does; both are bind-mounted. A change to the
+entrypoint, the Dockerfile or dependencies needs `make dev-build`.
 
 Migrations run when the app container starts. The first start on an empty database also
 creates a superuser, and stops unless `.env` sets `GULGRIR_ADMIN_USER` and

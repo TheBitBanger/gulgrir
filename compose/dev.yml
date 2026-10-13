@@ -13,8 +13,6 @@ services:
       - "${GULGRIR_PORT-8765}:8765"
     depends_on:
       - db
-    entrypoint: ["/app/docker/app/entrypoint.sh"]
-    command: "gunicorn gulgrir.wsgi:application --bind 0.0.0.0:8765 --workers 2"
 
   db:
     image: postgres:16

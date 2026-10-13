@@ -62,7 +62,9 @@ variable.
 docker compose up -d
 ```
 
-Visit `http://localhost:8765`. Migrations run automatically when the container starts. On
+Visit `http://localhost:8765`. Migrations run automatically when the container starts.
+`docker ps` shows the app container as unhealthy when Django stops answering; the
+container keeps running, so read its log before restarting it. On
 first run the entrypoint creates a superuser from `GULGRIR_ADMIN_USER` /
 `GULGRIR_ADMIN_PASSWORD`, and stops if either is missing; the Django admin is an
 operational fallback, not the product UI.
@@ -79,6 +81,10 @@ docker compose up -d --force-recreate
 ```
 
 Migrations run on start.
+
+If your `app` service still sets `entrypoint:` and `command:`, the image ignores them and
+says so in its log; delete both lines when convenient. They stop being accepted in the
+first release after 2027-10-10.
 
 ### Upgrading a compose file whose `db` service has `env_file`
 

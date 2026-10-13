@@ -38,7 +38,7 @@ GULGRIR_ADMIN_PASSWORD=
 | `GULGRIR_DB_NAME`               | `POSTGRES_DB`                    | `gulgrir`   | |
 | `GULGRIR_DB_HOST`               | `POSTGRES_HOST`                  | `db`        | |
 | `GULGRIR_DB_PORT`               | `POSTGRES_PORT`                  | `5432`      | A port number |
-| `GULGRIR_DEBUG`                 | `DJANGO_DEBUG`                   | `false`     | Only `true`, in any case, enables; anything else is `false`, and the start-up report notes any value other than `true` or `false` |
+| `GULGRIR_DEBUG`                 | `DJANGO_DEBUG`                   | `false`     | Only `true`, in any case, enables Django's debug pages and makes both apps reload when their source changes; anything else is `false`, and the start-up report notes any value other than `true` or `false` |
 | `GULGRIR_ENV`                   |                                  | `dev`       | Header badge: `prod`, `production`, `live` → production; `staging`, `stage`, `preprod`, `qa` → staging; anything else → dev, noted in the start-up report |
 | `GULGRIR_ALLOWED_HOSTS`         | `DJANGO_ALLOWED_HOSTS`           | empty: any host | Comma-separated hostnames or IPs used to reach the app |
 | `GULGRIR_CSRF_TRUSTED_ORIGINS`  | `DJANGO_CSRF_TRUSTED_ORIGINS`    | empty       | Comma-separated full origins: scheme, host, and port if used |

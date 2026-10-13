@@ -6,7 +6,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
     curl \
+    ca-certificates \
+    gnupg \
     && rm -rf /var/lib/apt/lists/*
+
+ARG NODE_MAJOR=26
+ARG PNPM_VERSION=12.8.1
+RUN mkdir -p /etc/apt/keyrings \
+    && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
+    && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_${NODE_MAJOR}.x nodistro main" > /etc/apt/sources.list.d/nodesource.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends nodejs \
+    && npm install -g "pnpm@${PNPM_VERSION}" \
+    && rm -rf /var/lib/apt/lists/*
+
+ENTRYPOINT ["/app/docker/app/entrypoint.sh"]
+HEALTHCHECK --start-period=60s CMD curl -fsS -o /dev/null http://127.0.0.1:8765/healthz || exit 1
 
 RUN pip install --no-cache-dir "poetry==2.3.4"
 
@@ -32,6 +47,9 @@ RUN curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEA
 
 FROM runtime-deps AS runtime
 
+COPY ./app/package.json ./app/pnpm-lock.yaml ./app/pnpm-workspace.yaml ./app/
+RUN pnpm -C app install --prod --frozen-lockfile
+COPY ./app/src ./app/src
 COPY ./src ./src
 COPY ./docker/app/entrypoint.sh /app/docker/app/entrypoint.sh
 
@@ -43,17 +61,11 @@ RUN python /app/src/manage.py collectstatic --noinput
 
 FROM qa-deps AS qa
 
-ARG NODE_MAJOR=26
-ARG PNPM_VERSION=12.8.1
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates gnupg \
-    && mkdir -p /etc/apt/keyrings \
-    && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
-    && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_${NODE_MAJOR}.x nodistro main" > /etc/apt/sources.list.d/nodesource.list \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends nodejs \
-    && npm install -g "pnpm@${PNPM_VERSION}" stylelint@16.10.0 stylelint-config-standard@36.0.1 postcss@8.5.12 postcss-html@1.8.1 \
-    && rm -rf /var/lib/apt/lists/*
+RUN npm install -g stylelint@16.10.0 stylelint-config-standard@36.0.1 postcss@8.5.12 postcss-html@1.8.1
 
+COPY ./app/package.json ./app/pnpm-lock.yaml ./app/pnpm-workspace.yaml ./app/
+RUN pnpm -C app install --prod --frozen-lockfile
+COPY ./app/src ./app/src
 COPY ./src ./src
 COPY ./docker/app/entrypoint.sh /app/docker/app/entrypoint.sh
 

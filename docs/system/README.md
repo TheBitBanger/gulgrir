@@ -4,7 +4,7 @@ What gulgrir must do, why, and how it is built. Cross-cutting documents live her
 domain folder holds its own.
 
 - [requirements.md](requirements.md) — purpose, audience, cross-cutting needs, and what is out of scope
-- [architecture.md](architecture.md) — how the system is structured as built
+- [design.md](design.md) — how the system meets its cross-cutting requirements, such as running beside Django, and how that is verified
 - [decisions/](decisions/README.md) — numbered decision records
 
 | Domain                                | Provides                                                       |

@@ -28,6 +28,7 @@ skills, who value privacy.
 | SYS-8 | A user needs numbers and charts about their library and their time.                                                                   | So they can see their patterns and adjust how they work.                    |
 | SYS-9 | An administrator needs instance backups that can be restored.                                                                         | Losing a library curated over years is the worst failure.                   |
 | SYS-10 | Data already in the running instance (items, history, tags, filters, time entries) needs to survive any change of technology.        | The system is in daily use.                                                 |
+| SYS-11 | Every released version needs to keep everything the previous release did working.                                                   | The instance is in daily use, and a broken release means lost days or lost data. |
 
 ## Out of scope
 

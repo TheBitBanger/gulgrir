@@ -30,7 +30,7 @@ const SETTINGS = [
   "GULGRIR_PORT",
 ];
 
-// [new name, old name (also the name Django reads), a value, another value]
+// [new name, old name, a value, another value]
 const RENAMED = [
   ["GULGRIR_SECRET_KEY", "DJANGO_SECRET_KEY", "a".repeat(64), "b".repeat(64)],
   ["GULGRIR_DB_PASSWORD", "POSTGRES_PASSWORD", "pw-new", "pw-old"],
@@ -69,7 +69,7 @@ function cell(report: string[], setting: string, column: Column): string {
   return line!.slice(from, to).trim();
 }
 
-describe("defaults", () => {
+describe("defaults (CFG-V7)", () => {
   it("starts with only the required secrets set, every other setting at its default", () => {
     const { ok, report, djangoEnv } = run();
 
@@ -90,13 +90,13 @@ describe("defaults", () => {
       expect(cell(report, setting, "IN EFFECT"), setting).toBe(value);
     }
     expect(djangoEnv).toMatchObject({
-      POSTGRES_USER: "gulgrir",
-      POSTGRES_DB: "gulgrir",
-      POSTGRES_HOST: "db",
-      POSTGRES_PORT: "5432",
-      DJANGO_DEBUG: "false",
+      GULGRIR_DB_USER: "gulgrir",
+      GULGRIR_DB_NAME: "gulgrir",
+      GULGRIR_DB_HOST: "db",
+      GULGRIR_DB_PORT: "5432",
+      GULGRIR_DEBUG: "false",
       GULGRIR_ENV: "dev",
-      DJANGO_SECURE_PROXY_SSL_HEADER: "false",
+      GULGRIR_BEHIND_HTTPS_PROXY: "false",
     });
   });
 
@@ -108,35 +108,34 @@ describe("defaults", () => {
     expect(cell(report, "GULGRIR_ADMIN_USER", "OVERRIDE")).toBe("");
     expect(cell(report, "GULGRIR_ADMIN_PASSWORD", "DEFAULT")).toBe("(none)");
     expect(cell(report, "GULGRIR_ADMIN_PASSWORD", "OVERRIDE")).toBe("(missing)");
-    expect(djangoEnv.DJANGO_ADMIN_USER).toBeUndefined();
-    expect(djangoEnv.DJANGO_ADMIN_PASS).toBeUndefined();
+    expect(djangoEnv.GULGRIR_ADMIN_USER).toBeUndefined();
+    expect(djangoEnv.GULGRIR_ADMIN_PASSWORD).toBeUndefined();
   });
 });
 
-describe("renamed settings", () => {
+describe("renamed settings (CFG-V3)", () => {
   it.each(RENAMED)(
-    "%s still works under its old name %s, reported as deprecated",
+    "%s still works under its old name %s, and the note names both",
     (name, old, value) => {
       const { ok, report, djangoEnv } = run({ [name]: undefined, [old]: value });
 
       expect(ok).toBe(true);
-      expect(djangoEnv[old]).toBe(value);
+      expect(djangoEnv[name]).toBe(value);
       const note = cell(report, name, "NOTE");
       expect(note).toContain(old);
-      expect(note).toMatch(/deprecated/i);
+      expect(note).toContain(name);
     },
   );
 
   it.each(RENAMED)(
-    "%s wins over %s when both are set, and the report says so",
+    "%s wins over %s when both are set, and the note names the old one",
     (name, old, value, other) => {
       const { ok, report, djangoEnv } = run({ [name]: value, [old]: other });
 
       expect(ok).toBe(true);
-      expect(djangoEnv[old]).toBe(value);
+      expect(djangoEnv[name]).toBe(value);
       const note = cell(report, name, "NOTE");
       expect(note).toContain(old);
-      expect(note).toMatch(/both/i);
     },
   );
 
@@ -145,12 +144,12 @@ describe("renamed settings", () => {
     const { ok, report, djangoEnv } = run({ GULGRIR_SECRET_KEY: "", DJANGO_SECRET_KEY: old });
 
     expect(ok).toBe(true);
-    expect(djangoEnv.DJANGO_SECRET_KEY).toBe(old);
-    expect(cell(report, "GULGRIR_SECRET_KEY", "NOTE")).toMatch(/deprecated/i);
+    expect(djangoEnv.GULGRIR_SECRET_KEY).toBe(old);
+    expect(cell(report, "GULGRIR_SECRET_KEY", "NOTE")).toContain("DJANGO_SECRET_KEY");
   });
 });
 
-describe("values handed to Django", () => {
+describe("values handed to Django (CFG-V4)", () => {
   it("passes settings without fixed meanings exactly as written", () => {
     const written = {
       GULGRIR_SECRET_KEY: `a$b#c'd"e\\f ${"x".repeat(50)}`,
@@ -168,16 +167,16 @@ describe("values handed to Django", () => {
     const { djangoEnv } = run(written);
 
     expect(djangoEnv).toMatchObject({
-      DJANGO_SECRET_KEY: written.GULGRIR_SECRET_KEY,
-      POSTGRES_PASSWORD: written.GULGRIR_DB_PASSWORD,
-      POSTGRES_USER: written.GULGRIR_DB_USER,
-      POSTGRES_DB: written.GULGRIR_DB_NAME,
-      POSTGRES_HOST: written.GULGRIR_DB_HOST,
-      POSTGRES_PORT: written.GULGRIR_DB_PORT,
-      DJANGO_ALLOWED_HOSTS: written.GULGRIR_ALLOWED_HOSTS,
-      DJANGO_CSRF_TRUSTED_ORIGINS: written.GULGRIR_CSRF_TRUSTED_ORIGINS,
-      DJANGO_ADMIN_USER: written.GULGRIR_ADMIN_USER,
-      DJANGO_ADMIN_PASS: written.GULGRIR_ADMIN_PASSWORD,
+      GULGRIR_SECRET_KEY: written.GULGRIR_SECRET_KEY,
+      GULGRIR_DB_PASSWORD: written.GULGRIR_DB_PASSWORD,
+      GULGRIR_DB_USER: written.GULGRIR_DB_USER,
+      GULGRIR_DB_NAME: written.GULGRIR_DB_NAME,
+      GULGRIR_DB_HOST: written.GULGRIR_DB_HOST,
+      GULGRIR_DB_PORT: written.GULGRIR_DB_PORT,
+      GULGRIR_ALLOWED_HOSTS: written.GULGRIR_ALLOWED_HOSTS,
+      GULGRIR_CSRF_TRUSTED_ORIGINS: written.GULGRIR_CSRF_TRUSTED_ORIGINS,
+      GULGRIR_ADMIN_USER: written.GULGRIR_ADMIN_USER,
+      GULGRIR_ADMIN_PASSWORD: written.GULGRIR_ADMIN_PASSWORD,
     });
   });
 
@@ -192,15 +191,12 @@ describe("values handed to Django", () => {
     [" true", "false", true],
   ] as const;
 
-  describe.each([
-    ["GULGRIR_DEBUG", "DJANGO_DEBUG"],
-    ["GULGRIR_BEHIND_HTTPS_PROXY", "DJANGO_SECURE_PROXY_SSL_HEADER"],
-  ])("%s", (setting, djangoName) => {
+  describe.each(["GULGRIR_DEBUG", "GULGRIR_BEHIND_HTTPS_PROXY"])("%s", (setting) => {
     it.each(FLAGS)("reads %j as %s", (written, reading, noted) => {
       const { ok, report, djangoEnv } = run({ [setting]: written });
 
       expect(ok).toBe(true);
-      expect(djangoEnv[djangoName]).toBe(reading);
+      expect(djangoEnv[setting]).toBe(reading);
       expect(cell(report, setting, "IN EFFECT")).toBe(reading);
       const note = cell(report, setting, "NOTE");
       if (noted) {
@@ -246,7 +242,7 @@ describe("values handed to Django", () => {
   });
 });
 
-describe("what stops start-up", () => {
+describe("what stops start-up (CFG-V9)", () => {
   it.each([
     ["GULGRIR_SECRET_KEY", undefined],
     ["GULGRIR_SECRET_KEY", ""],
@@ -287,7 +283,7 @@ describe("what stops start-up", () => {
   });
 });
 
-describe("unknown variables", () => {
+describe("unknown variables (CFG-V3)", () => {
   it("flags a misspelled setting and names the one it is close to, without its value", () => {
     const { ok, report } = run({ GULGRIR_DEBGU: "value-of-typo" });
 
@@ -325,7 +321,7 @@ describe("unknown variables", () => {
   });
 });
 
-describe("secrets", () => {
+describe("secrets (CFG-V10)", () => {
   const MARKER = "s3cr3t-MARKER-value";
 
   it("never shows a secret's value, under any name", () => {
@@ -357,7 +353,7 @@ describe("secrets", () => {
   });
 });
 
-describe("report layout", () => {
+describe("report layout (CFG-V8)", () => {
   it("has the five columns and one row per setting, in the order of the settings list", () => {
     const { report } = run();
 

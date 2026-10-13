@@ -38,7 +38,7 @@ warn "bandit" bandit -q -r src -c pyproject.toml
 warn "pip-audit" pip-audit
 warn "npm audit" npm audit
 run "gitleaks (staged)" sh -c 'git -c safe.directory=/workspace diff --cached | gitleaks stdin --no-banner --redact --config .gitleaks.toml'
-run "django check --deploy" env DJANGO_DEBUG=false python /app/src/manage.py check --deploy
+run "django check --deploy" env GULGRIR_DEBUG=false python /app/src/manage.py check --deploy
 run "django tests" python /app/src/manage.py test
 run "app install" pnpm -C app install --frozen-lockfile
 run "biome" pnpm -C app lint

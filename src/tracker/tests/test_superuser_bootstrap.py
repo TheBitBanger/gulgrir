@@ -8,7 +8,7 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import TestCase
 
-# The configuration check hands Django the admin credentials under these names.
+# Old names, which Django falls back to outside start-up.
 CREDENTIALS = {"DJANGO_ADMIN_USER": "owner", "DJANGO_ADMIN_PASS": "a-long-password"}
 SETTING_NAMES = {
     "DJANGO_ADMIN_USER": "GULGRIR_ADMIN_USER",
@@ -18,7 +18,8 @@ SETTING_NAMES = {
 
 class SuperuserBootstrapTests(TestCase):
     def bootstrap(self, **env: str) -> None:
-        clean = {k: v for k, v in os.environ.items() if k not in CREDENTIALS}
+        names = {*SETTING_NAMES, *SETTING_NAMES.values()}
+        clean = {k: v for k, v in os.environ.items() if k not in names}
         with mock.patch.dict(os.environ, {**clean, **env}, clear=True):
             call_command("createsuperuser_if_none", stdout=io.StringIO())
 
@@ -68,3 +69,41 @@ class SuperuserBootstrapTests(TestCase):
         )
 
         self.bootstrap()
+
+    def test_reads_new_names_before_old_ones(self):
+        """CFG-V6: the new name wins; an empty or missing one falls back to the old."""
+        cases = [
+            (
+                {"GULGRIR_ADMIN_USER": "new", "GULGRIR_ADMIN_PASSWORD": "new-password"},
+                "new",
+                "new-password",
+            ),
+            (
+                {
+                    **CREDENTIALS,
+                    "GULGRIR_ADMIN_USER": "new",
+                    "GULGRIR_ADMIN_PASSWORD": "new-password",
+                },
+                "new",
+                "new-password",
+            ),
+            (
+                {**CREDENTIALS, "GULGRIR_ADMIN_USER": "", "GULGRIR_ADMIN_PASSWORD": ""},
+                "owner",
+                "a-long-password",
+            ),
+            (
+                {"GULGRIR_ADMIN_USER": "new", "DJANGO_ADMIN_PASS": "a-long-password"},
+                "new",
+                "a-long-password",
+            ),
+        ]
+        for env, username, password in cases:
+            with self.subTest(env=env):
+                get_user_model().objects.all().delete()
+
+                self.bootstrap(**env)
+
+                user = get_user_model().objects.get()
+                self.assertEqual(user.username, username)
+                self.assertTrue(user.check_password(password))

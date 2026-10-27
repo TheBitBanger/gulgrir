@@ -46,9 +46,11 @@ GULGRIR_ADMIN_PASSWORD=
 | `GULGRIR_ADMIN_USER`            | `DJANGO_ADMIN_USER`              | none        | Username of the superuser created when none exists; unused afterwards |
 | `GULGRIR_ADMIN_PASSWORD`        | `DJANGO_ADMIN_PASS`              | none, secret | Password of that superuser; unused afterwards |
 | `GULGRIR_PORT`                  |                                  | `8765`      | Host port Compose maps to the app; not read by the app |
+| `GULGRIR_VERSION`               |                                  | `latest`; `dev` until the first promotion | Image tag Compose runs: `latest`, `dev` or a release `rN`, see [releasing](../development/releasing.md); not read by the app |
 
 The database and backup services read the database settings under their old `POSTGRES_*`
-names; the compose file in [install](install.md) maps the `GULGRIR_DB_*` settings to them.
+names; `compose.yml` and the backup service in [backups](backups.md) map the `GULGRIR_DB_*`
+settings to them.
 
 The backup service, [kethuroth](https://github.com/TheBitBanger/kethuroth), reads `BACKUP_SCHEDULE`, `BACKUP_RETENTION_DAYS`,
 `BACKUP_RETENTION_COUNT`, `BACKUP_UID`, `BACKUP_GID` and `TZ`; see [backups](backups.md).

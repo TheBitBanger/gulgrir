@@ -12,3 +12,4 @@ Numbered records of significant choices. Numbers are unique across the repositor
 | [0006](0006-one-check-target-with-biome.md)             | One check target, with Biome for the TypeScript app | accepted |
 | [0007](0007-compose-maps-database-settings.md)          | The compose file maps database settings to the database and backup services | accepted |
 | [0008](0008-django-reads-the-new-setting-names.md)     | Django reads the new setting names, falling back to the old ones | accepted |
+| [0009](0009-installs-download-the-compose-file-the-project-tests.md) | Installs download the compose file the project runs and tests | accepted |

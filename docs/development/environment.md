@@ -1,9 +1,10 @@
 # Development environment
 
-Development runs in Docker Compose: `compose/dev.yml` for the stack, `compose/dev.bind.yml`
-to mount the repository into the app container and set `GULGRIR_DEBUG` to `true`. The dev app
-container builds the Dockerfile's `qa` target, which carries the lint, type and security
-tools; published images build the `runtime` target. The app listens on 8765
+Development runs in Docker Compose: `compose.yml`, the stack installs run, with
+`compose.dev.yml` on top to build the app locally, mount the repository into it and set
+`GULGRIR_DEBUG` to `true`. The dev app container builds the Dockerfile's `qa` target, which
+carries the lint, type and security tools; published images build the `runtime` target. The
+dev stack has no backup service. The app listens on 8765
 (`GULGRIR_PORT`), and Compose reads `.env` as described in
 [configuration](../operations/configuration.md).
 
@@ -11,7 +12,6 @@ tools; published images build the `runtime` target. The app listens on 8765
 | ------------------------------------- | ------------------ |
 | Start db and app                      | `make dev-up`      |
 | Start after dependency or Docker changes | `make dev-build` |
-| Run the scheduled backup service too  | `docker compose --env-file .env -f compose/dev.yml --profile backup up -d` |
 
 The dev container starts like an install's, through the image's entrypoint
 ([design](../system/design.md#start-up)): gunicorn behind the new app's front
@@ -29,7 +29,7 @@ The database host is `db`, reachable only on the Compose network, so run Django 
 the container:
 
 ```
-docker compose -f compose/dev.yml -f compose/dev.bind.yml exec app python /app/src/manage.py <command>
+docker compose -f compose.yml -f compose.dev.yml exec app python /app/src/manage.py <command>
 ```
 
 `makemigrations` needs the bind mount so new migration files land on the host.

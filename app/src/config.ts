@@ -32,6 +32,7 @@ const SETTINGS: Setting[] = [
   { name: "GULGRIR_ADMIN_USER", old: "DJANGO_ADMIN_USER" },
   { name: "GULGRIR_ADMIN_PASSWORD", old: "DJANGO_ADMIN_PASS", secret: true },
   { name: "GULGRIR_PORT", default: "8765" },
+  { name: "GULGRIR_VERSION", default: "dev" },
 ];
 
 const ENV_ALIASES: Record<string, string[]> = {

@@ -28,6 +28,7 @@ const SETTINGS = [
   "GULGRIR_ADMIN_USER",
   "GULGRIR_ADMIN_PASSWORD",
   "GULGRIR_PORT",
+  "GULGRIR_VERSION",
 ];
 
 // [new name, old name, a value, another value]

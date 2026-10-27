@@ -26,7 +26,9 @@ stable is exactly what ran on `dev`. It also fast-forwards `master` to `rN`, so
 
 Problems are fixed forward in a new release, never by rolling a channel back.
 
-Until the first promotion `:latest` doesn't exist, so the install guide uses `:dev`;
-switch it to `:latest` right after the first promotion.
+Until the first promotion `:latest` doesn't exist, so `GULGRIR_VERSION` defaults to `dev`,
+in `compose.yml` and the configuration check, and the install guide downloads `compose.yml`
+from `dev`. Right after the first promotion, switch the default to `latest` and the guide to
+`master`.
 
 Tags before `r1` (`v0.1.0` to `v0.3.0`) used an earlier scheme and stay as published.

@@ -70,7 +70,7 @@ whether a superuser exists.
 
 | ID     | Serves               | Method        | Check |
 | ------ | -------------------- | ------------- | ----- |
-| CFG-V1 | SYS-4, CFG-1         | inspection    | The compose files in `compose/` and [install](../../operations/install.md) give the app `.env`, give the database service no `.env`, and map each `GULGRIR_DB_*` setting to its `POSTGRES_*` name with the old name, then the default, as fallback. |
+| CFG-V1 | SYS-4, CFG-1         | inspection    | `compose.yml` and the backup override in [backups](../../operations/backups.md) give the app `.env`, give the database service no `.env`, and map each `GULGRIR_DB_*` setting to its `POSTGRES_*` name with the old name, then the default, as fallback. |
 | CFG-V2 | SYS-4                | demonstration | With an `.env` holding only `GULGRIR_DB_PASSWORD`, then only `POSTGRES_PASSWORD`, `docker compose config` shows that value as the database service's `POSTGRES_PASSWORD`, and the stack starts. |
 | CFG-V3 | SYS-11, CFG-1        | test          | `config.test.ts`, "renamed settings (CFG-V3)" and "unknown variables (CFG-V3)" |
 | CFG-V4 | SYS-11               | test          | `config.test.ts`, "values handed to Django (CFG-V4)" |

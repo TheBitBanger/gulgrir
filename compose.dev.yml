@@ -1,10 +1,14 @@
-name: gulgrir
 services:
   app:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+      target: qa
+    image: gulgrir:dev
     volumes:
-      - ../src:/app/src
-      - ../app/src:/app/app/src
-      - ..:/workspace
+      - ./src:/app/src
+      - ./app/src:/app/app/src
+      - .:/workspace
       - app_node_modules:/workspace/app/node_modules
     environment:
       GULGRIR_DEBUG: "true"

@@ -1,4 +1,4 @@
-COMPOSE := docker compose --env-file .env -f compose/dev.yml -f compose/dev.bind.yml
+COMPOSE := docker compose -f compose.yml -f compose.dev.yml
 
 .PHONY: dev-build dev-up check smoke-test-image
 

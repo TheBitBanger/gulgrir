@@ -12,7 +12,8 @@ screen, on the same database
 
 ```
 mkdir gulgrir && cd gulgrir
-# write compose.yml and .env as in docs/operations/install.md
+curl -fsSLO https://raw.githubusercontent.com/TheBitBanger/gulgrir/dev/compose.yml
+# write .env as in docs/operations/install.md
 docker compose up -d
 ```
 
@@ -27,7 +28,6 @@ Then open `http://localhost:8765`.
 | Directory  | Holds                                          |
 | ---------- | ---------------------------------------------- |
 | `src/`     | the Django project (`gulgrir`) and app (`tracker`) |
-| `compose/` | Compose files for development                  |
 | `docker/`  | the image's Dockerfile and entrypoint          |
 | `scripts/` | build helpers                                  |
 | `docs/`    | all documentation                              |

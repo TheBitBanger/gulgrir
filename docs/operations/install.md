@@ -4,57 +4,25 @@ Requires Docker with Compose.
 
 ## compose.yml
 
-Use `latest`, `dev`, or a pinned tag for the image; see
-[releasing](../development/releasing.md) for what each means. The `backup` service is
-optional.
+In an empty directory, download [`compose.yml`](../../compose.yml), the required stack of app
+and database:
 
-```yaml
-name: gulgrir
-services:
-  app:
-    image: ghcr.io/thebitbanger/gulgrir:dev
-    restart: unless-stopped
-    env_file: .env
-    ports:
-      - "${GULGRIR_PORT-8765}:8765"
-    depends_on:
-      - db
-    entrypoint: ["/app/docker/app/entrypoint.sh"]
-    command: "gunicorn gulgrir.wsgi:application --bind 0.0.0.0:8765 --workers 2"
-
-  db:
-    image: postgres:16
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${GULGRIR_DB_USER:-${POSTGRES_USER:-gulgrir}}
-      POSTGRES_PASSWORD: ${GULGRIR_DB_PASSWORD:-${POSTGRES_PASSWORD:-}}
-      POSTGRES_DB: ${GULGRIR_DB_NAME:-${POSTGRES_DB:-gulgrir}}
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-
-  backup:
-    image: ghcr.io/thebitbanger/kethuroth:v0.1.1
-    restart: unless-stopped
-    env_file: .env
-    environment:
-      POSTGRES_USER: ${GULGRIR_DB_USER:-${POSTGRES_USER:-gulgrir}}
-      POSTGRES_PASSWORD: ${GULGRIR_DB_PASSWORD:-${POSTGRES_PASSWORD:-}}
-      POSTGRES_DB: ${GULGRIR_DB_NAME:-${POSTGRES_DB:-gulgrir}}
-      POSTGRES_HOST: ${GULGRIR_DB_HOST:-${POSTGRES_HOST:-db}}
-      POSTGRES_PORT: ${GULGRIR_DB_PORT:-${POSTGRES_PORT:-5432}}
-    depends_on:
-      - db
-    volumes:
-      - ./backups:/backups
-
-volumes:
-  pgdata:
 ```
+curl -fsSLO https://raw.githubusercontent.com/TheBitBanger/gulgrir/dev/compose.yml
+```
+
+Never edit it: an upgrade replaces it. It runs the image `GULGRIR_VERSION` names, `dev`
+until the first release is promoted. To pin a release `rN`, download from `rN` instead of
+`dev` and set `GULGRIR_VERSION=rN` in `.env`; [releasing](../development/releasing.md) says
+what each tag means.
+
+Anything else, such as the optional [backup service](backups.md), goes in a
+`compose.override.yml` beside it, which Compose loads on its own.
 
 ## .env
 
-Write a `.env` next to `compose.yml`; [configuration](configuration.md) lists every
-variable.
+Write a `.env` next to `compose.yml`, with the secrets and first administrator
+[configuration](configuration.md#minimal-env) asks for. Every other setting has a default.
 
 ## Start
 
@@ -74,22 +42,30 @@ A reverse proxy in front is optional and not bundled; see
 
 ## Upgrade
 
+Download `compose.yml` again, from the same place as above, then:
+
 ```
 docker compose down
 docker compose pull
-docker compose up -d --force-recreate
+docker compose up -d
 ```
 
-Migrations run on start.
+Migrations run on start. `.env` and `compose.override.yml` stay as they are; the start-up
+log lists any old setting name to rename. A release that needs more than this is marked as a
+breaking change, and its extra step is added here.
 
-If your `app` service still sets `entrypoint:` and `command:`, the image ignores them and
-says so in its log; delete both lines when convenient. They stop being accepted in the
-first release after 2027-10-10.
+### Switching from a compose file copied from this guide
 
-### Upgrading a compose file whose `db` service has `env_file`
+Earlier versions of this guide held a compose file to copy. It keeps working until the first
+release after 2027-10-10, which stops accepting its `entrypoint:` and `command:` lines.
+Switch once before then:
 
-Settings were renamed to `GULGRIR_*`
-([0007](../system/decisions/0007-compose-maps-database-settings.md)). Before pulling, replace
-the `db` service's `env_file: .env` with its `environment:` block above, and add the same
-block, with `POSTGRES_HOST` and `POSTGRES_PORT`, to the `backup` service. Your `.env` keeps
-working as it is; the start-up log lists each old name to rename.
+1. Move whatever you changed in your copy into `compose.override.yml`, holding only those
+   changes. If you run the backup service, add it there as [backups](backups.md) shows.
+2. Stop the stack with your old file: `docker compose down`.
+3. If root owns `backups/`, hand it to the backup service's user, since the old copy ran
+   it as root: `sudo chown -R "${BACKUP_UID:-1000}:${BACKUP_GID:-1000}" backups`, with
+   the values from your `.env`.
+4. Download `compose.yml` over your copy, as above, and run `docker compose up -d`.
+
+The project name `gulgrir` and the database volume are unchanged, so your data stays.

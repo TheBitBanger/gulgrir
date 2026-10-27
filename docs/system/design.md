@@ -4,11 +4,21 @@ Contracts and Verification bind; Structure describes the system as built.
 
 ## Contracts
 
+### Installing
+
+| Serves          | Contract |
+| --------------- | -------- |
+| SYS-12, SYS-14  | The project ships one compose file, `compose.yml` at the repository root, holding the required stack: the app and the database ([0009](decisions/0009-installs-download-the-compose-file-the-project-tests.md)). It runs the image tag `GULGRIR_VERSION` names, `latest` by default. An install downloads it from `master`, or from the `rN` tag of the release it pins. Until the first promotion the default is `dev` and installs download it from `dev` ([releasing](../development/releasing.md)). The install guide links to it and holds no copy. |
+| SYS-12          | Every release's smoke test runs `compose.yml` unchanged, in an empty directory with an install's `.env`, against the image being released. The dev stack runs it too, with `compose.dev.yml` on top. |
+| SYS-13, SYS-14  | Everything an install chooses lives outside `compose.yml`. A default install sets only the required secrets in `.env`; every other setting, including `GULGRIR_VERSION` to pin a release and `GULGRIR_PORT`, has a default and is set there only to change it. Anything a setting cannot express, such as the optional backup service, goes in the administrator's own `compose.override.yml`, which Compose loads on its own. The guide never asks them to edit `compose.yml`; [backups](../operations/backups.md) gives the backup service as an override. |
+| SYS-10, SYS-13  | `compose.yml` keeps the project name `gulgrir` and the database volume `pgdata`, so an install that switches to it from the guide's old copy keeps its database. |
+| SYS-13          | An install that copied its compose file from the guide switches once, following [install](../operations/install.md): it moves its own changes, and the backup service if it runs one, into `compose.override.yml`, downloads `compose.yml`, gives `backups/` to `BACKUP_UID` if root owns it (the old copy ran the backup service as root; the override runs it as that user), and recreates the stack. |
+
 ### Upgrading
 
 | Serves         | Contract |
 | -------------- | -------- |
-| SYS-4, SYS-11  | An install upgrades by pulling the new image, with its compose file and `.env` unchanged. The image brings its own entrypoint, which starts both apps whatever command it is handed. |
+| SYS-4, SYS-11, SYS-13 | An install upgrades by replacing `compose.yml` with the new release's and pulling its image; `.env` and `compose.override.yml` stay unchanged. A release whose compose change needs more than that is marked as a breaking change and adds a step to the guide's Upgrade section. The image brings its own entrypoint, which starts both apps whatever command it is handed. |
 | SYS-4, SYS-11  | A compose file that still sets the old `entrypoint` and `command` gets the image's defaults anyway, and the start-up log says those lines are deprecated and can be removed. This compatibility is removed in the first release after 2027-10-10. |
 | SYS-4, SYS-11  | The app answers on the host port the compose file maps to the container, 8765 by default. |
 | SYS-10         | Starting a release on a database last used by the previous release keeps every row of every existing table, and the old screens show it as before. |
@@ -73,6 +83,26 @@ With `GULGRIR_DEBUG` true, gunicorn gets `--reload` and Node `--watch`. Both wri
 container log. Nothing restarts gunicorn if it dies: the front door keeps answering 502 and
 the health check turns unhealthy, so the failure stays visible.
 
+### Compose files
+
+| File              | Holds                                                                         | Used by              |
+| ----------------- | ----------------------------------------------------------------------------- | -------------------- |
+| `compose.yml`     | app and database                                                              | installs, dev, smoke |
+| `compose.dev.yml` | builds the `qa` image, mounts the repository, sets `GULGRIR_DEBUG`           | dev                  |
+
+Both sit at the root so Compose finds `compose.yml` and `.env` with no flags, and so the dev
+overlay's paths, which Compose resolves from the first file's directory, read from the root.
+Neither names its containers, so the smoke test can run `compose.yml` beside the dev stack;
+`docker ps` tells them apart by image, `gulgrir:dev` for a local build. The
+smoke test copies it into a temporary directory, as an install downloads it. It builds the
+image under `compose.yml`'s image name with a local-only tag and pins that tag with
+`GULGRIR_VERSION`, as an install pins a release, so `compose.yml`'s image line is exercised
+too. Its only override shortens the image's health-check interval, which `compose.yml`
+doesn't set. It runs under its own project name, so it never touches the dev stack's volume.
+
+Optional parts are the administrator's override, documented in the guide; `compose.yml`
+stays the required stack. None ships yet, so no seam is needed.
+
 ### Image
 
 Node and pnpm are installed in the Dockerfile's `base` stage, so the `runtime` and `qa`
@@ -84,7 +114,8 @@ WhiteNoise.
 ## Verification
 
 Tests named `smoke` are checks in `scripts/smoke-test-image.sh`, run by
-`make smoke-test-image`; the others are in `app/test/front-door.test.ts`.
+`make smoke-test-image` and before every publish; the others are in
+`app/test/front-door.test.ts`.
 
 | ID      | Serves         | Method        | Check |
 | ------- | -------------- | ------------- | ----- |
@@ -102,3 +133,6 @@ Tests named `smoke` are checks in `scripts/smoke-test-image.sh`, run by
 | SYS-V12 | SYS-4          | test          | smoke: "the image's health check reports healthy (SYS-V12)", "with Django dead the health check reports unhealthy (SYS-V12)" and "with Django dead the container keeps running (SYS-V12)" |
 | SYS-V13 | SYS-11         | inspection    | Every path the new app serves has a screen covering everything its Django screen did. |
 | SYS-V14 | SYS-10         | inspection    | The new app has no database code; once it gets a table, this becomes a test. |
+| SYS-V15 | SYS-12         | test          | smoke: every smoke check starts the release image through `compose.yml`, copied unchanged into an empty directory beside an install's `.env`; a release that `compose.yml` no longer starts fails before publishing. |
+| SYS-V16 | SYS-10, SYS-12, SYS-13, SYS-14 | inspection | `compose.yml` holds only the app and database and no container names; its project name and volume key give `gulgrir_pgdata`, the volume the guide's old copy created; every `GULGRIR_*` variable it reads is in the configuration check's list; [install](../operations/install.md) links to it, holds no copy, and never asks to edit it; [backups](../operations/backups.md) gives the backup service as an override. |
+| SYS-V17 | SYS-10, SYS-13 | demonstration | Once, on a dev stack started from the guide's old copy, with data in it and a root-owned `backups/`: follow the guide's switch steps; the old screens show the same data, and `docker compose run --rm backup backup` writes a dump. |

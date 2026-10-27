@@ -29,6 +29,9 @@ skills, who value privacy.
 | SYS-9 | An administrator needs instance backups that can be restored.                                                                         | Losing a library curated over years is the worst failure.                   |
 | SYS-10 | Data already in the running instance (items, history, tags, filters, time entries) needs to survive any change of technology.        | The system is in daily use.                                                 |
 | SYS-11 | Every released version needs to keep everything the previous release did working.                                                   | The instance is in daily use, and a broken release means lost days or lost data. |
+| SYS-12 | An administrator needs the stack they install from to be the one every release is checked against.                                  | A copy kept by hand drifts, and a release can then break real installs with nobody noticing until a user does. |
+| SYS-13 | An administrator needs their own choices kept apart from the stack the project ships, so taking a new one never loses them. Releases change that stack rarely, and when one does, it says so. | A hand merge on every upgrade is where self-hosters get stuck or lose settings. |
+| SYS-14 | An administrator needs to see which parts of the stack are required and which are optional, and to turn an optional part on without touching the stack the project ships. | Only the app and its database are required; anything else is a choice, and should cost nothing to skip. |
 
 ## Out of scope
 

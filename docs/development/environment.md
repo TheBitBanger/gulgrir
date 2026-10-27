@@ -34,6 +34,22 @@ docker compose -f compose.yml -f compose.dev.yml exec app python /app/src/manage
 
 `makemigrations` needs the bind mount so new migration files land on the host.
 
+## Restore a production backup
+
+A release rehearsal runs on a copy of production's data. The dumps are `pg_dump` custom
+format, so the dev database container restores them itself. This replaces the dev data, so
+dump it first if you want it back:
+
+```
+docker compose -f compose.yml -f compose.dev.yml exec -T db sh -c 'pg_dump -Fc -U "$POSTGRES_USER" -d "$POSTGRES_DB"' > backups/dev_pre_restore.dump
+scp <prod host>:<prod install>/backups/<dump file>.dump backups/
+docker compose -f compose.yml -f compose.dev.yml stop app
+docker compose -f compose.yml -f compose.dev.yml exec -T db sh -c 'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists --no-owner' < backups/<dump file>.dump
+make dev-up
+```
+
+`backups/` is ignored by git. Migrations newer than the dump apply when the app starts.
+
 ## Dependencies
 
 The new app's packages are managed with pnpm in `app/`. In the dev container they live in

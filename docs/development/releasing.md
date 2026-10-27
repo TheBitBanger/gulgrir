@@ -16,7 +16,9 @@ stable is exactly what ran on `dev`. It also fast-forwards `master` to `rN`, so
 ## Cutting a release
 
 1. Run `make check` and `make smoke-test-image`, exercise the change in development, and
-   rehearse on a copy of the production backup if the release changes data or routing.
+   rehearse on a copy of the production backup
+   ([restoring it into dev](environment.md#restore-a-production-backup)) if the release
+   changes data or routing.
 2. Tag and push: `git tag rN && git push origin rN`. The publish workflow refuses a tag
    that isn't `rN` or isn't on `dev`.
 3. Pull `:dev` on the server and use it.
